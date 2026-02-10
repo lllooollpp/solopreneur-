@@ -427,3 +427,81 @@ The executable will be in `ui/src-tauri/target/release/bundle/`.
 ---
 
 谢谢使用 nanobot！
+
+## 公司愿景（Solo SaaS / 一人软件公司规划）
+
+本仓库不仅是一个开源代理项目，也是我们打造“一人软件公司”的产品核心。
+
+- 愿景：构建可独立交付、易于维护、便于商业化的个人/小型团队智能助理产品线。 
+- 目标用户：独立开发者、咨询型自由职业者、小型企业与技术团队。
+
+## 当前产品定位与商业模式
+
+- 产品形态：开源核心（本仓库）+ 增值模块（私有插件、托管服务、商业支持）。
+- 收益方式：付费托管、订阅制功能（高级技能）、企业/顾问支持、付费模板与定制开发。
+- 发行策略：公开仓库保持开源曝光，提供付费二进制/镜像与托管服务以变现。
+
+## 当前规划（短期 / 中期里程碑）
+
+短期（0-3 个月）
+- 打磨核心体验：稳定的 agent loop、可配置模型提供者、基本渠道（Telegram/WhatsApp）
+- 文档化：完整的快速上手、部署与示例场景（此 README 属于该项）
+
+中期（3-9 个月）
+- 商业化组件：托管镜像、付费插件市场、付费支持套餐页面
+- 支付与订阅：接入 Stripe / Paddle，提供订阅管理与授权插件
+
+长期（9+ 个月）
+- 企业功能：多租户、审计日志、团队管理与 SSO
+- 市场与生态：为第三方开发者提供 SDK 与插件入口
+
+## 品牌、发行与版本策略
+
+- 版本管理：使用语义化版本（SemVer），在 `main` 上维护日常开发，使用 `release/*` 分支与 `tags` 进行发布。
+- 发布流程：PR → CI（测试/lint）→ 合并到 `main` → 打 tag（vX.Y.Z）→ 生成 Release Notes。
+- 发行工件：PyPI 包、Docker 镜像（hub）、可下载二进制与示例配置。
+
+## 商业与法律（建议）
+
+- 开源许可：当前为 MIT（见 LICENSE），适合开源曝光与社区贡献。
+- 商业支持：建议对外提供商业授权或双许可证（开源 MIT + 商业许可）以保护高级付费特性。
+- 隐私与合规：若提供托管服务，需要在 Privacy Policy 中说明数据保留与第三方模型调用策略。
+
+## 支持、付费服务与联系
+
+- 支持渠道：GitHub Issues（缺陷/功能）、电子邮件（付费支持/咨询）、付费工单系统（优先支持）。
+- 商务联系：请在仓库 Issue 或私信中注明“Business/Support”，我们会另行跟进联系方式（email/Zoom）。
+
+## CI / 部署示例（建议）
+
+- 建议使用 GitHub Actions：基本工作流包括 `lint`、`unit tests`、`build wheel`、`publish`（仅在 tag 时）。
+- 容器化：构建 `Dockerfile`，在发布时推送到镜像仓库（Docker Hub / GitHub Container Registry）。
+
+示例（GitHub Actions 简要）：
+
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with: {python-version: '3.11'}
+      - run: pip install -e .[dev]
+      - run: pytest -q
+```
+
+## 如何加入或购买支持
+
+- 开源贡献：Fork → PR → 通过 CI 后合并。
+- 商业支持：在仓库 Issue 标注“Support”并描述需求，我会回复报价与交付计划。
+
+## 下一步（我可以代劳的事）
+
+1. 帮你把 README 中的“部署/CI/付费页面”扩展为独立文档（如 `docs/DEPLOY.md`、`docs/SALES.md`）。
+2. 根据你要的商业化模型，我可以草拟一份「服务条款 & 付费套餐说明页」。
+3. 搭建基本的 GitHub Actions CI 与发布 workflow（把示例放到 `.github/workflows/ci.yml`）。
+
+告诉我你现在优先想做哪一点（选 1/2/3 或 都做），我将继续执行并把改动推到仓库。
