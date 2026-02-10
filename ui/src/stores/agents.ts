@@ -92,7 +92,7 @@ export const useAgentsStore = defineStore('agents', () => {
       if (filters?.source) params.append('source', filters.source)
       
       const response = await client.get(`/api/v1/agents?${params}`)
-      agents.value = response.data.agents || []
+      agents.value = response.agents || []
     } catch (err: any) {
       error.value = err.response?.data?.detail || '加载 Agents 失败'
       console.error('Failed to load agents:', err)
