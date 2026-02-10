@@ -11,15 +11,15 @@ from loguru import logger
 from nanobot.bus.events import InboundMessage, OutboundMessage
 from nanobot.bus.queue import MessageBus
 from nanobot.providers.base import LLMProvider
-from nanobot.agent.context import ContextBuilder
-from nanobot.agent.compaction import CompactionEngine
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.agent.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
-from nanobot.agent.tools.shell import ExecTool
-from nanobot.agent.tools.web import WebSearchTool, WebFetchTool
-from nanobot.agent.tools.message import MessageTool
-from nanobot.agent.tools.spawn import SpawnTool
-from nanobot.agent.subagent import SubagentManager
+from nanobot.agent.core.context import ContextBuilder
+from nanobot.agent.core.compaction import CompactionEngine
+from nanobot.agent.core.tools.registry import ToolRegistry
+from nanobot.agent.core.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
+from nanobot.agent.core.tools.shell import ExecTool
+from nanobot.agent.core.tools.web import WebSearchTool, WebFetchTool
+from nanobot.agent.core.tools.message import MessageTool
+from nanobot.agent.core.tools.spawn import SpawnTool
+from nanobot.agent.core.subagent import SubagentManager
 from nanobot.session.manager import SessionManager
 
 # 安全限制常量（默认值，可通过 config 覆盖）
@@ -84,7 +84,7 @@ class AgentLoop:
         )
 
         # 延迟导入以避免循环依赖
-        from nanobot.agents.manager import AgentManager
+        from nanobot.agent.definitions.manager import AgentManager
         from nanobot.workflow.engine import WorkflowEngine
 
         self.agent_manager = AgentManager(
@@ -128,7 +128,7 @@ class AgentLoop:
         self.tools.register(spawn_tool)
         
         # 角色委派工具 (delegate，用于将任务委派给软件工程角色)
-        from nanobot.agent.tools.delegate import DelegateTool
+        from nanobot.agent.core.tools.delegate import DelegateTool
         delegate_tool = DelegateTool(
             manager=self.subagents,
             role_manager=self.role_manager,

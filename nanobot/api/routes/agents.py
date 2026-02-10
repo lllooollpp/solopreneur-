@@ -10,8 +10,8 @@ from loguru import logger
 from pathlib import Path
 
 from nanobot.config.loader import load_config
-from nanobot.agents.manager import AgentManager
-from nanobot.agents.definition import AgentDefinition, AgentType
+from nanobot.agent.definitions.manager import AgentManager
+from nanobot.agent.definitions.definition import AgentDefinition, AgentType
 
 router = APIRouter()
 

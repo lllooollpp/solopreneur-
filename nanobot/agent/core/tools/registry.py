@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from nanobot.agent.tools.base import Tool
+from nanobot.agent.core.tools.base import Tool
 
 
 class ToolRegistry:

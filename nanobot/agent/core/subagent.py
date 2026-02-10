@@ -13,14 +13,14 @@ from loguru import logger
 from nanobot.bus.events import InboundMessage
 from nanobot.bus.queue import MessageBus
 from nanobot.providers.base import LLMProvider
-from nanobot.agent.tools.registry import ToolRegistry
-from nanobot.agent.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
-from nanobot.agent.tools.shell import ExecTool
-from nanobot.agent.tools.web import WebSearchTool, WebFetchTool
+from nanobot.agent.core.tools.registry import ToolRegistry
+from nanobot.agent.core.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
+from nanobot.agent.core.tools.shell import ExecTool
+from nanobot.agent.core.tools.web import WebSearchTool, WebFetchTool
 
 if TYPE_CHECKING:
-    from nanobot.agents.definition import AgentDefinition
-    from nanobot.agents.manager import AgentManager
+    from nanobot.agent.definitions.definition import AgentDefinition
+    from nanobot.agent.definitions.manager import AgentManager
 
 
 class SubagentManager:
@@ -366,7 +366,7 @@ class SubagentManager:
         )
 
         # 子代理也使用微压缩来控制上下文膨胀
-        from nanobot.agent.compaction import CompactionEngine
+        from nanobot.agent.core.compaction import CompactionEngine
         compactor = CompactionEngine(
             provider=self.provider,
             workspace=self.workspace,

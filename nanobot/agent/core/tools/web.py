@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from nanobot.agent.tools.base import Tool
+from nanobot.agent.core.tools.base import Tool
 
 # Shared constants
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_2) AppleWebKit/537.36"

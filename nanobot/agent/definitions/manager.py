@@ -7,11 +7,11 @@ High-level manager for agent operations, replacing RoleManager.
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from nanobot.agents.definition import AgentDefinition
-from nanobot.agents.registry import AgentRegistry
+from nanobot.agent.definitions.definition import AgentDefinition
+from nanobot.agent.definitions.registry import AgentRegistry
 
 if TYPE_CHECKING:
-    from nanobot.agent.skills import SkillsLoader
+    from nanobot.agent.core.skills import SkillsLoader
 
 
 class AgentManager:
@@ -35,7 +35,7 @@ class AgentManager:
     def skills(self) -> "SkillsLoader":
         """Lazy load SkillsLoader."""
         if self._skills_loader is None:
-            from nanobot.agent.skills import SkillsLoader
+            from nanobot.agent.core.skills import SkillsLoader
             self._skills_loader = SkillsLoader(self.workspace)
         return self._skills_loader
     

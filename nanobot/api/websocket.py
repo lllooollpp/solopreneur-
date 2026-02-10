@@ -107,7 +107,7 @@ async def get_agent_loop():
         from nanobot.providers.litellm_provider import LiteLLMProvider
         from nanobot.providers.github_copilot import GitHubCopilotProvider
         from nanobot.api.routes.auth import get_copilot_provider
-        from nanobot.agent.loop import AgentLoop
+        from nanobot.agent.core.loop import AgentLoop
 
         config = load_config()
         

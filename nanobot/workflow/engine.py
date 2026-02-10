@@ -9,10 +9,10 @@ from typing import Any, TYPE_CHECKING
 from loguru import logger
 
 if TYPE_CHECKING:
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.agents.manager import AgentManager
+    from nanobot.agent.core.subagent import SubagentManager
+    from nanobot.agent.definitions.manager import AgentManager
 
-from nanobot.agent.tools.base import Tool
+from nanobot.agent.core.tools.base import Tool
 
 
 @dataclass

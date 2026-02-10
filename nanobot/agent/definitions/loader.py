@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 from loguru import logger
 
-from nanobot.agents.definition import AgentDefinition
+from nanobot.agent.definitions.definition import AgentDefinition
 
 
 class AgentLoader:

@@ -4,12 +4,12 @@ Delegate 委派工具 - 将任务委派给指定的 Agent。
 
 from typing import Any, TYPE_CHECKING
 
-from nanobot.agent.tools.base import Tool
-from nanobot.agents.registry import AgentRegistry
+from nanobot.agent.core.tools.base import Tool
+from nanobot.agent.definitions.registry import AgentRegistry
 
 if TYPE_CHECKING:
-    from nanobot.agent.subagent import SubagentManager
-    from nanobot.agents.manager import AgentManager
+    from nanobot.agent.core.subagent import SubagentManager
+    from nanobot.agent.definitions.manager import AgentManager
 
 
 class DelegateTool(Tool):

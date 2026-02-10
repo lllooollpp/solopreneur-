@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any
 from loguru import logger
 
-from nanobot.agents.definition import AgentDefinition
-from nanobot.agents.loader import AgentLoader
+from nanobot.agent.definitions.definition import AgentDefinition
+from nanobot.agent.definitions.loader import AgentLoader
 
 
 class AgentRegistry:

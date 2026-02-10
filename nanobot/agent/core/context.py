@@ -5,8 +5,8 @@ import mimetypes
 from pathlib import Path
 from typing import Any
 
-from nanobot.agent.memory import MemoryStore
-from nanobot.agent.skills import SkillsLoader
+from nanobot.agent.core.memory import MemoryStore
+from nanobot.agent.core.skills import SkillsLoader
 
 
 class ContextBuilder:
@@ -69,7 +69,7 @@ Skills with available="false" need dependencies installed first - you can try in
         
         # 3. Agent 团队系统 - 让主 Agent 知道可以委派任务
         try:
-            from nanobot.agents.manager import AgentManager
+            from nanobot.agent.definitions.manager import AgentManager
             agent_mgr = AgentManager(self.workspace, self.skills)
             agents_summary = agent_mgr.build_agent_summary()
             if agents_summary:

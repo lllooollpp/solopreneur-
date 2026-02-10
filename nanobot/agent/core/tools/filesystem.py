@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 from loguru import logger
 
-from nanobot.agent.tools.base import Tool
+from nanobot.agent.core.tools.base import Tool
 
 
 def _validate_path(path: str, workspace: Path | None = None) -> tuple[Path, str | None]:

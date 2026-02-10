@@ -8,7 +8,7 @@ from typing import Any, TYPE_CHECKING
 from nanobot.roles.definitions import Role, ROLES, get_role, list_roles
 
 if TYPE_CHECKING:
-    from nanobot.agent.skills import SkillsLoader
+    from nanobot.agent.core.skills import SkillsLoader
 
 
 class RoleManager:
@@ -27,7 +27,7 @@ class RoleManager:
     def skills(self) -> "SkillsLoader":
         """延迟加载 SkillsLoader 以避免循环依赖。"""
         if self._skills_loader is None:
-            from nanobot.agent.skills import SkillsLoader
+            from nanobot.agent.core.skills import SkillsLoader
             self._skills_loader = SkillsLoader(self.workspace)
         return self._skills_loader
 

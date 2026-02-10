@@ -161,7 +161,7 @@ def gateway(
     from nanobot.config.loader import load_config, get_data_dir
     from nanobot.bus.queue import MessageBus
     from nanobot.providers.litellm_provider import LiteLLMProvider
-    from nanobot.agent.loop import AgentLoop
+    from nanobot.agent.core.loop import AgentLoop
     from nanobot.channels.manager import ChannelManager
     from nanobot.cron.service import CronService
     from nanobot.cron.types import CronJob
@@ -288,7 +288,7 @@ def agent(
     from nanobot.config.loader import load_config
     from nanobot.bus.queue import MessageBus
     from nanobot.providers.litellm_provider import LiteLLMProvider
-    from nanobot.agent.loop import AgentLoop
+    from nanobot.agent.core.loop import AgentLoop
     
     config = load_config()
     
