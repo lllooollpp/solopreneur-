@@ -8,6 +8,10 @@ from rich.console import Console
 from rich.table import Table
 
 from nanobot import __version__, __logo__
+from nanobot.config.logging import setup_logging
+
+# 初始化日志
+setup_logging()
 
 app = typer.Typer(
     name="nanobot",

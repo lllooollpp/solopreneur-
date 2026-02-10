@@ -58,6 +58,13 @@
               👁
             </button>
             <button 
+              class="btn-icon" 
+              @click="editAgent(agent)"
+              title="编辑"
+            >
+              ✏️
+            </button>
+            <button 
               v-if="agent.source === 'custom'"
               class="btn-icon danger" 
               @click="deleteAgent(agent.name)"
@@ -181,6 +188,66 @@
         </div>
       </div>
     </div>
+
+    <!-- 编辑 Agent 模态框 -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>编辑 Agent</h3>
+          <button class="btn-close" @click="showEditModal = false">×</button>
+        </div>
+        <form @submit.prevent="updateAgent" class="create-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>标题</label>
+              <input v-model="editingAgent.title" placeholder="例如: 儿科医生" />
+            </div>
+            <div class="form-group small">
+              <label>Emoji</label>
+              <input v-model="editingAgent.emoji" placeholder="🤖" maxlength="2" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>描述</label>
+            <input v-model="editingAgent.description" placeholder="简要描述 Agent 的用途" />
+          </div>
+          <div class="form-group">
+            <label>System Prompt</label>
+            <textarea 
+              v-model="editingAgent.system_prompt" 
+              rows="8"
+              placeholder="定义 Agent 的行为和职责..."
+            ></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>类型</label>
+              <select v-model="editingAgent.type">
+                <option value="subagent">子 Agent</option>
+                <option value="master">主 Agent</option>
+                <option value="standalone">独立 Agent</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>最大迭代次数</label>
+              <input v-model.number="editingAgent.max_iterations" type="number" min="1" max="100" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>技能 (逗号分隔)</label>
+            <input v-model="editingAgent.skills" placeholder="例如: diagnosis, medical_record" />
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" @click="showEditModal = false">
+              取消
+            </button>
+            <button type="submit" class="btn-primary" :disabled="editing">
+              {{ editing ? '保存中...' : '保存' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -196,8 +263,11 @@ const filterDomain = ref('')
 const filterSource = ref('')
 const showCreateModal = ref(false)
 const showDetailModal = ref(false)
+const showEditModal = ref(false)
 const selectedAgent = computed(() => agentsStore.currentAgent)
 const creating = ref(false)
+const editing = ref(false)
+const editingAgent = ref<Partial<CreateAgentRequest>>({})
 
 const newAgent = ref<CreateAgentRequest>({
   name: '',
@@ -263,6 +333,40 @@ function closeDetail() {
 async function deleteAgent(name: string) {
   if (!confirm(`确定要删除 Agent "${name}" 吗？`)) return
   await agentsStore.deleteAgent(name)
+}
+
+function editAgent(agent: any) {
+  editingAgent.value = {
+    title: agent.title,
+    emoji: agent.emoji,
+    description: agent.description,
+    system_prompt: '', // 需要重新加载详情获取
+    type: agent.type,
+    skills: agent.skills || [],
+    max_iterations: 15,
+  }
+  // 加载完整详情
+  agentsStore.loadAgentDetail(agent.name).then(() => {
+    if (agentsStore.currentAgent) {
+      editingAgent.value.system_prompt = agentsStore.currentAgent.system_prompt
+      editingAgent.value.skills = agentsStore.currentAgent.skills || []
+      editingAgent.value.max_iterations = agentsStore.currentAgent.max_iterations
+    }
+  })
+  showEditModal.value = true
+}
+
+async function updateAgent() {
+  editing.value = true
+  try {
+    const name = agentsStore.currentAgent?.name
+    if (!name) return
+    
+    await agentsStore.updateAgent(name, editingAgent.value)
+    showEditModal.value = false
+  } finally {
+    editing.value = false
+  }
 }
 
 function resetForm() {

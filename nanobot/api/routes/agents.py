@@ -227,9 +227,9 @@ async def update_agent(
     request: AgentUpdateRequest = None
 ):
     """
-    更新自定义 Agent
+    更新 Agent
     
-    注意：只能更新自定义 Agent，预设 Agent 不可修改
+    支持更新自定义 Agent，或基于预设 Agent 创建自定义覆盖版本。
     
     Args:
         agent_name: Agent 名称
@@ -245,15 +245,8 @@ async def update_agent(
         if not existing:
             raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' 不存在")
         
-        # 检查是否为预设
-        if existing.metadata.get("source") == "preset":
-            raise HTTPException(
-                status_code=400, 
-                detail="预设 Agent 不可修改，请创建自定义 Agent"
-            )
-        
-        # 构建更新后的 Agent
-        update_data = existing.model_dump()
+        # 构建更新数据
+        update_data = {}
         if request.title is not None:
             update_data["title"] = request.title
         if request.emoji is not None:
@@ -273,16 +266,14 @@ async def update_agent(
         if request.output_format is not None:
             update_data["output_format"] = request.output_format
         if request.metadata is not None:
-            update_data["metadata"] = {**existing.metadata, **request.metadata}
+            update_data["metadata"] = request.metadata
         
-        updated_agent = AgentDefinition(**update_data)
-        
-        # 删除旧版本，创建新版本
-        manager.delete_agent(agent_name)
-        if manager.create_agent(updated_agent):
+        # 使用 manager.update_agent 处理（支持预设 Agent 创建自定义覆盖）
+        if manager.update_agent(agent_name, update_data):
+            source_msg = "（基于预设创建自定义版本）" if existing.metadata.get("source") == "preset" else ""
             return {
                 "success": True,
-                "message": f"Agent '{agent_name}' 更新成功",
+                "message": f"Agent '{agent_name}' 更新成功{source_msg}",
             }
         else:
             raise HTTPException(status_code=500, detail="更新 Agent 失败")

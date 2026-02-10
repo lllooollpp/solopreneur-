@@ -131,7 +131,7 @@ class AgentLoop:
         from nanobot.agent.core.tools.delegate import DelegateTool
         delegate_tool = DelegateTool(
             manager=self.subagents,
-            role_manager=self.role_manager,
+            agent_manager=self.agent_manager,
         )
         self.tools.register(delegate_tool)
         

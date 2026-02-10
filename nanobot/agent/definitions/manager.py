@@ -184,8 +184,48 @@ class AgentManager:
         """Create a new custom agent."""
         return self._registry.create_custom(agent)
     
+    def update_agent(self, name: str, updates: dict[str, Any]) -> bool:
+        """
+        Update an existing agent.
+        
+        For preset agents, this creates a custom override.
+        For custom agents, this updates the existing file.
+        
+        Args:
+            name: Agent name to update
+            updates: Dictionary of fields to update
+            
+        Returns:
+            True if successful
+        """
+        existing = self._registry.get(name)
+        if not existing:
+            return False
+        
+        # Merge existing with updates
+        agent_dict = existing.model_dump()
+        agent_dict.update(updates)
+        
+        # Ensure metadata reflects this is now a custom agent
+        agent_dict["metadata"] = {**existing.metadata, "source": "custom"}
+        
+        updated_agent = AgentDefinition(**agent_dict)
+        
+        # If it was a preset, create new custom; if custom, update existing
+        if existing.metadata.get("source") == "preset":
+            return self._registry.create_custom(updated_agent)
+        else:
+            # Delete old version and create new
+            self._registry.delete_custom(name)
+            return self._registry.create_custom(updated_agent)
+    
     def delete_agent(self, name: str) -> bool:
-        """Delete a custom agent."""
+        """
+        Delete an agent.
+        
+        For preset agents, this creates a 'disabled' marker in custom.
+        For custom agents, this deletes the file.
+        """
         return self._registry.delete_custom(name)
     
     def reload(self):
