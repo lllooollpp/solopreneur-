@@ -1,6 +1,6 @@
 <div align="center">
   <img src="nanobot_logo.png" alt="nanobot" width="420">
-  <h1>nanobot：轻量级 AI Agent 框架</h1>
+  <h1>nanobot：可配置的多领域 AI Agent 框架</h1>
   <p>
     <a href="https://pypi.org/project/nanobot-ai/"><img src="https://img.shields.io/pypi/v/nanobot-ai" alt="PyPI"></a>
     <a href="https://pepy.tech/project/nanobot-ai"><img src="https://static.pepy.tech/badge/nanobot-ai" alt="Downloads"></a>
@@ -11,15 +11,16 @@
   </p>
 </div>
 
-🐈 **nanobot** 是一个轻量级 AI Agent 框架，基于 Python 构建，支持多 LLM 提供商、多聊天渠道、工具调用和软件工程角色协作。核心代码约 4,000 行，易于理解、修改和部署。
+🐈 **nanobot** 是一个轻量级、可配置的多领域 AI Agent 框架。通过 YAML/JSON 配置即可定义任意领域的 Agent（软件工程、医疗、法律、教育等），支持多 LLM 提供商、多聊天渠道、工具调用和 Agent 协作。核心代码约 4,000 行，易于理解、修改和部署。
 
 ## 核心特性
 
+- **完全可配置的 Agent 系统**：通过 YAML/JSON 定义 Agent，支持任意领域
 - **Agent 循环**：支持工具调用（最多 20 次迭代）、上下文三层压缩、Token 限制和超时控制（30 分钟）
 - **多 LLM 支持**：通过 LiteLLM 支持 OpenRouter、Anthropic、OpenAI、Gemini、Groq、vLLM/本地模型，以及 GitHub Copilot（多账号 Token 池）
-- **工具系统**：文件操作、Shell 执行、Web 搜索/获取、消息发送、子 Agent 衍生、角色委派、工作流执行
-- **角色系统**：6 个软件工程角色（产品经理、架构师、开发工程师、代码审查员、测试工程师、DevOps）
-- **工作流引擎**：预定义功能开发、Bug 修复、代码审查、部署上线流水线，支持自动和分步交互模式
+- **工具系统**：文件操作、Shell 执行、Web 搜索/获取、消息发送、子 Agent 衍生、Agent 委派、工作流执行
+- **多领域预设 Agent**：软件工程、医疗、法律、通用等领域预设 Agent
+- **工作流引擎**：预定义流水线（功能开发、Bug 修复等），支持自动和分步交互模式
 - **聊天渠道**：WhatsApp、Telegram、企业微信（WeCom），支持白名单权限控制
 - **记忆系统**：每日笔记（YYYY-MM-DD.md）+ 长期记忆（MEMORY.md）
 - **定时任务**：支持 interval、cron 表达式、一次性任务，可交付到聊天渠道
@@ -45,8 +46,18 @@ nanobot/
 │       ├── web.py          # web_search, web_fetch
 │       ├── message.py      # message
 │       ├── spawn.py        # spawn (子 Agent)
-│       ├── delegate.py     # delegate (角色委派)
+│       ├── delegate.py     # delegate (Agent 委派)
 │       └── ...
+├── agents/         # 可配置 Agent 系统
+│   ├── definition.py      # Agent 定义模型
+│   ├── loader.py          # YAML/JSON 配置加载
+│   ├── registry.py        # Agent 注册表
+│   ├── manager.py         # Agent 管理器
+│   └── presets/           # 预设 Agent（按领域组织）
+│       ├── software/      # 软件工程领域
+│       ├── medical/       # 医疗领域
+│       ├── legal/         # 法律领域
+│       └── general/       # 通用领域
 ├── providers/      # LLM 提供商
 │   ├── litellm_provider.py  # LiteLLM 统一接口
 │   ├── github_copilot.py    # GitHub Copilot 特殊处理
@@ -55,10 +66,8 @@ nanobot/
 │   ├── whatsapp.py   # WhatsApp (通过 Bridge)
 │   ├── telegram.py   # Telegram Bot
 │   └── wecom.py      # 企业微信
-├── roles/          # 软件工程角色
-│   └── definitions.py  # 6 个预定义角色
 ├── workflow/       # 工作流引擎
-│   └── engine.py   # 功能开发/Bug修复/代码审查/部署上线
+│   └── engine.py   # 多 Agent 协作流水线
 ├── cron/           # 定时任务服务
 ├── heartbeat/      # 心跳服务
 ├── session/        # 会话管理
@@ -117,6 +126,8 @@ nanobot gateway
 
 ## 配置
 
+### 全局配置
+
 配置文件：`~/.nanobot/config.json`
 
 ```json
@@ -154,6 +165,42 @@ nanobot gateway
 ```
 
 支持环境变量：`NANOBOT_PROVIDERS__OPENROUTER__API_KEY`
+
+### 自定义 Agent
+
+在工作区 `~/.nanobot/workspace/agents/` 创建 YAML 文件：
+
+```yaml
+# pediatrician.yaml
+name: pediatrician
+type: subagent
+title: 儿科医生
+emoji: 👶
+description: 专注于儿童健康的医疗顾问
+tools:
+  - web_search
+  - read_file
+max_iterations: 8
+temperature: 0.3
+
+system_prompt: |
+  你是一位经验丰富的儿科医生，擅长儿童常见病的诊断和健康咨询。
+  
+  ## 职责范围
+  - 儿童常见症状分析和建议
+  - 生长发育评估
+  - 疫苗接种咨询
+  
+  ## 重要限制
+  - 遇到急重症必须建议立即就医
+  - 不提供处方，仅提供健康建议
+
+metadata:
+  domain: medical
+  category: clinical
+```
+
+创建后自动生效，可通过 API 或前端管理。
 
 ## 命令行
 
@@ -223,6 +270,7 @@ Token 池特性：
 | `AGENTS.md` | Agent 指令和准则 |
 | `SOUL.md` | Agent 性格和价值观 |
 | `USER.md` | 用户信息和偏好 |
+| `agents/` | 自定义 Agent 配置目录 |
 | `memory/MEMORY.md` | 长期记忆 |
 | `memory/YYYY-MM-DD.md` | 每日笔记（自动创建） |
 
@@ -241,16 +289,16 @@ Agent 可用的工具：
 | `web_fetch` | 获取网页内容 |
 | `message` | 发送消息给用户 |
 | `spawn` | 创建子 Agent 处理子任务 |
-| `delegate` | 委派给指定角色 |
-| `run_workflow` | 执行开发工作流 |
+| `delegate` | 委派给指定 Agent |
+| `run_workflow` | 执行工作流 |
 | `workflow_control` | 控制工作流（next/skip/inject/status/abort） |
 
-## 角色
+## 预设 Agent
 
-6 个软件工程角色：
+### 软件工程领域
 
-| 角色 | emoji | 职责 |
-|------|-------|------|
+| Agent | emoji | 职责 |
+|-------|-------|------|
 | `product_manager` | 📋 | 需求分析、PRD 撰写 |
 | `architect` | 🏗️ | 架构设计、技术选型 |
 | `developer` | 💻 | 编码实现 |
@@ -258,9 +306,28 @@ Agent 可用的工具：
 | `tester` | 🧪 | 测试策略、自动化测试 |
 | `devops` | 🚀 | CI/CD、容器化、部署 |
 
+### 医疗领域
+
+| Agent | emoji | 职责 |
+|-------|-------|------|
+| `pediatrician` | 👶 | 儿科健康咨询 |
+| `nutritionist` | 🥗 | 营养评估和饮食规划 |
+
+### 法律领域
+
+| Agent | emoji | 职责 |
+|-------|-------|------|
+| `legal_advisor` | ⚖️ | 法律咨询、合同审查 |
+
+### 通用
+
+| Agent | emoji | 职责 |
+|-------|-------|------|
+| `assistant` | 🤖 | 通用助手 |
+
 ## 工作流
 
-4 个预定义开发流水线：
+4 个预定义流水线：
 
 | 工作流 | 步骤 |
 |--------|------|
@@ -289,6 +356,15 @@ Agent 可用的工具：
 
 启动网关后提供 REST API：
 
+### Agent 管理
+- `GET /api/v1/agents` - 列出所有 Agents
+- `GET /api/v1/agents/{name}` - 获取 Agent 详情
+- `POST /api/v1/agents` - 创建自定义 Agent
+- `PUT /api/v1/agents/{name}` - 更新自定义 Agent
+- `DELETE /api/v1/agents/{name}` - 删除自定义 Agent
+- `POST /api/v1/agents/reload` - 重载所有 Agents
+
+### 其他
 - `GET /api/v1/status` - 服务状态
 - `POST /api/v1/chat` - 发送消息
 - `WebSocket /ws` - 实时聊天
