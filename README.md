@@ -20,6 +20,41 @@
 
 - **2026-02-01** 🎉 nanobot launched! Welcome to try 🐈 nanobot!
 
+## 简体中文：项目简介与快速开始
+
+nanobot 是一个超轻量级的个人 AI 助手，目标是提供研究友好、易扩展且低成本的代理框架。此仓库包含完整的后端、前端以及若干示例技能（如 GitHub、天气、TMUX 等）。
+
+- 适用人群：研究者、开发者、想要搭建本地/私有代理服务的工程师
+- 核心优势：小巧、模块化、方便调试和二次开发
+
+快速开始（中文）
+
+1) 克隆仓库并进入目录：
+
+```bash
+git clone https://github.com/lllooollpp/solopreneur-.git
+cd nanobot
+```
+
+2) 创建并激活虚拟环境（推荐 Python 3.11+）：
+
+```bash
+python -m venv .venv
+source .venv/Scripts/activate   # Windows PowerShell: .venv\\Scripts\\Activate.ps1
+pip install -e .
+```
+
+3) 初始化配置并运行（示例）：
+
+```bash
+nanobot onboard
+nanobot agent -m "你好，帮我写个 TODO 列表。"
+```
+
+配置文件位于 `~/.nanobot/config.json`，常见项包括 LLM 提供者、默认模型与渠道（Telegram/WhatsApp）。
+
+如果你希望我帮你把当前仓库配置为默认部署、或需要把 README 翻译为完整的中文版本，请告诉我想要的结构和内容。
+
 ## Key Features of nanobot:
 
 🪶 **Ultra-Lightweight**: Just ~4,000 lines of code — 99% smaller than Clawdbot - core functionality.
