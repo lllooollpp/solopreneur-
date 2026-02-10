@@ -84,16 +84,16 @@ class AgentLoop:
         )
 
         # 延迟导入以避免循环依赖
-        from nanobot.roles.manager import RoleManager
+        from nanobot.agents.manager import AgentManager
         from nanobot.workflow.engine import WorkflowEngine
 
-        self.role_manager = RoleManager(
+        self.agent_manager = AgentManager(
             workspace=workspace,
             skills_loader=self.context.skills,
         )
         self.workflow_engine = WorkflowEngine(
             subagent_manager=self.subagents,
-            role_manager=self.role_manager,
+            agent_manager=self.agent_manager,
             workspace=workspace,
         )
         

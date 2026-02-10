@@ -67,15 +67,15 @@ Skills with available="false" need dependencies installed first - you can try in
 
 {skills_summary}""")
         
-        # 3. 角色团队系统 - 让主 Agent 知道可以委派任务
+        # 3. Agent 团队系统 - 让主 Agent 知道可以委派任务
         try:
-            from nanobot.roles.manager import RoleManager
-            role_mgr = RoleManager(self.workspace, self.skills)
-            roles_summary = role_mgr.build_roles_summary()
-            if roles_summary:
-                parts.append(roles_summary)
+            from nanobot.agents.manager import AgentManager
+            agent_mgr = AgentManager(self.workspace, self.skills)
+            agents_summary = agent_mgr.build_agent_summary()
+            if agents_summary:
+                parts.append(agents_summary)
         except Exception:
-            pass  # 角色系统加载失败时静默跳过
+            pass  # Agent 系统加载失败时静默跳过
         
         return "\n\n---\n\n".join(parts)
     

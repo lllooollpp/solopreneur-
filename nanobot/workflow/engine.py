@@ -1,4 +1,4 @@
-"""工作流引擎 - 编排多角色协作的开发流水线，支持自动/分步/混合模式。"""
+﻿"""工作流引擎 - 编排多Agent协作的开发流水线，支持自动/分步/混合模式。"""
 
 import time
 import uuid
@@ -10,7 +10,7 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from nanobot.agent.subagent import SubagentManager
-    from nanobot.roles.manager import RoleManager
+    from nanobot.agents.manager import AgentManager
 
 from nanobot.agent.tools.base import Tool
 
@@ -19,7 +19,12 @@ from nanobot.agent.tools.base import Tool
 class WorkflowStep:
     """工作流的一个步骤。"""
 
-    role: str  # 执行该步骤的角色名
+    agent: str  # 执行该步骤的 Agent 名称（原 role）
+    
+    # 兼容性属性，role 别名指向 agent
+    @property
+    def role(self) -> str:
+        return self.agent
     task_template: str  # 任务描述模板，可包含 {description} 和 {prev_output} 占位符
     label: str  # 步骤标签
     save_as: str = ""  # 输出保存的文件名（相对于项目目录），留空不保存
@@ -79,11 +84,11 @@ class WorkflowSession:
                 emoji = {"success": "✅", "error": "❌", "skipped": "⏭️", "injected": "📌"}.get(
                     self.step_statuses[i], "❓"
                 )
-                lines.append(f"  {emoji} 步骤 {i + 1}: {step.label} ({step.role})")
+                lines.append(f"  {emoji} 步骤 {i + 1}: {step.label} ({step.agent})")
             elif i == self.current_step:
-                lines.append(f"  ▶️ 步骤 {i + 1}: {step.label} ({step.role}) — **当前待办**")
+                lines.append(f"  ▶️ 步骤 {i + 1}: {step.label} ({step.agent}) — **当前待办**")
             else:
-                lines.append(f"  ⬜ 步骤 {i + 1}: {step.label} ({step.role})")
+                lines.append(f"  ⬜ 步骤 {i + 1}: {step.label} ({step.agent})")
         
         if self.finished:
             lines.append("\n🏁 **状态**: 已完成")
@@ -105,7 +110,7 @@ FEATURE_WORKFLOW = Workflow(
     description="完整的功能开发流程：需求分析 → 架构设计 → 编码实现 → 代码审查 → 测试",
     steps=[
         WorkflowStep(
-            role="product_manager",
+            agent="product_manager",
             label="需求分析",
             task_template=(
                 "分析以下功能需求，输出产品需求文档（PRD）。\n"
@@ -114,7 +119,7 @@ FEATURE_WORKFLOW = Workflow(
             save_as="docs/requirements.md",
         ),
         WorkflowStep(
-            role="architect",
+            agent="architect",
             label="架构设计",
             task_template=(
                 "基于以下需求文档，设计技术方案。\n"
@@ -125,7 +130,7 @@ FEATURE_WORKFLOW = Workflow(
             save_as="docs/architecture.md",
         ),
         WorkflowStep(
-            role="developer",
+            agent="developer",
             label="编码实现",
             task_template=(
                 "根据以下技术设计方案进行编码实现。\n\n"
@@ -144,7 +149,7 @@ FEATURE_WORKFLOW = Workflow(
             ),
         ),
         WorkflowStep(
-            role="code_reviewer",
+            agent="code_reviewer",
             label="代码审查",
             task_template=(
                 "审查本次功能开发的代码变更。\n"
@@ -156,7 +161,7 @@ FEATURE_WORKFLOW = Workflow(
             save_as="docs/review.md",
         ),
         WorkflowStep(
-            role="tester",
+            agent="tester",
             label="测试",
             task_template=(
                 "为以下功能编写和执行测试。\n"
@@ -176,7 +181,7 @@ BUGFIX_WORKFLOW = Workflow(
     description="Bug 修复流程：问题分析 → 修复实现 → 代码审查 → 测试验证",
     steps=[
         WorkflowStep(
-            role="developer",
+            agent="developer",
             label="问题分析与修复",
             task_template=(
                 "分析并修复以下 Bug。\n"
@@ -186,7 +191,7 @@ BUGFIX_WORKFLOW = Workflow(
             ),
         ),
         WorkflowStep(
-            role="code_reviewer",
+            agent="code_reviewer",
             label="修复审查",
             task_template=(
                 "审查以下 Bug 修复的代码变更。\n"
@@ -197,7 +202,7 @@ BUGFIX_WORKFLOW = Workflow(
             save_as="docs/bugfix-review.md",
         ),
         WorkflowStep(
-            role="tester",
+            agent="tester",
             label="回归测试",
             task_template=(
                 "针对以下 Bug 修复编写回归测试并执行。\n"
@@ -215,7 +220,7 @@ REVIEW_WORKFLOW = Workflow(
     description="独立代码审查流程：审查代码 → 安全检查 → 测试补充建议",
     steps=[
         WorkflowStep(
-            role="code_reviewer",
+            agent="code_reviewer",
             label="代码审查",
             task_template=(
                 "审查以下代码或变更。\n"
@@ -224,7 +229,7 @@ REVIEW_WORKFLOW = Workflow(
             save_as="docs/review.md",
         ),
         WorkflowStep(
-            role="tester",
+            agent="tester",
             label="测试建议",
             task_template=(
                 "根据代码审查结果建议需要补充的测试。\n"
@@ -242,7 +247,7 @@ DEPLOY_WORKFLOW = Workflow(
     description="部署流程：测试验证 → 部署配置 → 上线",
     steps=[
         WorkflowStep(
-            role="tester",
+            agent="tester",
             label="部署前测试",
             task_template=(
                 "执行部署前的完整测试验证。\n"
@@ -250,7 +255,7 @@ DEPLOY_WORKFLOW = Workflow(
             ),
         ),
         WorkflowStep(
-            role="devops",
+            agent="devops",
             label="部署配置与执行",
             task_template=(
                 "配置并执行部署。\n"
@@ -277,7 +282,7 @@ class WorkflowEngine:
     """
     执行预定义的开发工作流。
 
-    逐步调用不同角色的子 Agent，将每步产出传递给下一步，
+    逐步调用不同Agent的子 Agent，将每步产出传递给下一步，
     并保存中间产物到项目目录。
     支持自动流水线模式和分步交互模式。
     """
@@ -285,11 +290,11 @@ class WorkflowEngine:
     def __init__(
         self,
         subagent_manager: "SubagentManager",
-        role_manager: "RoleManager",
+        agent_manager: "AgentManager",
         workspace: Path,
     ):
         self.subagent_manager = subagent_manager
-        self.role_manager = role_manager
+        self.agent_manager = agent_manager
         self.workspace = workspace
         self.sessions: dict[str, WorkflowSession] = {}
 
@@ -357,10 +362,10 @@ class WorkflowEngine:
 
         step_idx = session.current_step
         step = session.workflow.steps[step_idx]
-        role_def = self.role_manager.get_role(step.role)
+        agent_def = self.agent_manager.get_agent(step.agent)
         
-        if not role_def:
-            error = f"错误: 角色 '{step.role}' 不存在"
+        if not agent_def:
+            error = f"错误: Agent '{step.agent}' 不存在"
             session.step_outputs.append(error)
             session.step_statuses.append("error")
             session.current_step += 1
@@ -368,7 +373,7 @@ class WorkflowEngine:
 
         # 通知进度
         if on_progress:
-            await on_progress(step_idx + 1, session.total_steps, step.role, step.label, "running")
+            await on_progress(step_idx + 1, session.total_steps, step.agent, step.label, "running")
 
         logger.info(f"会话 {session_id} 步骤 {step_idx + 1}/{session.total_steps}: "
                     f"{role_def.emoji} {role_def.title} - {step.label}")
@@ -388,9 +393,9 @@ class WorkflowEngine:
         )
 
         try:
-            result = await self.subagent_manager.run_with_role(
-                role_def=role_def,
-                role_manager=self.role_manager,
+            result = await self.subagent_manager.run_with_agent(
+                agent_def=agent_def,
+                agent_manager=self.agent_manager,
                 task=task,
                 context=session.prev_output,
                 project_dir=project_dir,
@@ -442,7 +447,7 @@ class WorkflowEngine:
             session.finished = True
 
         if on_progress:
-            await on_progress(session.current_step, session.total_steps, step.role, step.label, status)
+            await on_progress(session.current_step, session.total_steps, step.agent, step.label, status)
 
         return result
 
@@ -457,7 +462,7 @@ class WorkflowEngine:
         session.step_outputs.append("")
         session.step_statuses.append("skipped")
         session.current_step += 1
-        return f"已跳过步骤 {step_idx + 1}: {step.label} ({step.role})"
+        return f"已跳过步骤 {step_idx + 1}: {step.label} ({step.agent})"
 
     async def inject_step(self, session_id: str, content: str) -> str:
         """在当前步骤注入手动结果，并作为下一步的输入。"""
@@ -505,7 +510,7 @@ class WorkflowEngine:
         for i, step in enumerate(workflow.steps):
             status = session.step_statuses[i] if i < len(session.step_statuses) else "pending"
             status_emoji = {"success": "✅", "error": "❌", "skipped": "⏭️", "injected": "📌"}.get(status, "⬜")
-            report_lines.append(f"## {status_emoji} 步骤 {i + 1}: {step.label} ({step.role})\n")
+            report_lines.append(f"## {status_emoji} 步骤 {i + 1}: {step.label} ({step.agent})\n")
             if i < len(session.step_outputs):
                 output = session.step_outputs[i]
                 # 截断过长的步骤输出以控制报告总长度
@@ -563,7 +568,7 @@ class RunWorkflowTool(Tool):
                 },
                 "description": {
                     "type": "string",
-                    "description": "任务描述，会传递给工作流中的每个角色",
+                    "description": "任务描述，会传递给工作流中的每个Agent",
                 },
                 "project_name": {
                     "type": "string",

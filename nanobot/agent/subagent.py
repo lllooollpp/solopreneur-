@@ -19,8 +19,8 @@ from nanobot.agent.tools.shell import ExecTool
 from nanobot.agent.tools.web import WebSearchTool, WebFetchTool
 
 if TYPE_CHECKING:
-    from nanobot.roles.definitions import Role
-    from nanobot.roles.manager import RoleManager
+    from nanobot.agents.definition import AgentDefinition
+    from nanobot.agents.manager import AgentManager
 
 
 class SubagentManager:
@@ -266,16 +266,18 @@ class SubagentManager:
 
     # ── 角色系统：同步角色执行 ─────────────────────────────────────
 
-    def _build_role_tools(
+    def _build_agent_tools(
         self,
-        role_def: "Role",
+        agent_def: "AgentDefinition",
     ) -> ToolRegistry:
         """
-        为指定角色构建工具集。
+        为指定 Agent 构建工具集。
 
-        根据角色的 allowed_tools 过滤可用工具。
+        根据 Agent 的 allowed_tools 过滤可用工具。
         如果 allowed_tools 为 None，则提供全部工具。
         """
+        # 兼容性别名
+        _build_role_tools = self._build_agent_tools
         all_tools = {
             "read_file": ReadFileTool(workspace=self.workspace),
             "write_file": WriteFileTool(workspace=self.workspace),
@@ -310,46 +312,48 @@ class SubagentManager:
     _LLM_CALL_MAX_RETRIES = 3  # LLM 调用瞬时错误最大重试次数
     _LLM_CALL_RETRY_BASE_DELAY = 5  # 重试基础延时（秒）
 
-    async def run_with_role(
+    async def run_with_agent(
         self,
-        role_def: "Role",
-        role_manager: "RoleManager",
+        agent_def: "AgentDefinition",
+        agent_manager: "AgentManager",
         task: str,
         context: str = "",
         project_dir: str = "",
     ) -> str:
         """
-        以指定角色同步执行任务并返回结果。
+        以指定 Agent 同步执行任务并返回结果。
 
-        与 spawn() 不同，此方法会等待角色完成任务后再返回，
-        适用于需要将结果传递给下一个角色的工作流场景。
+        与 spawn() 不同，此方法会等待 Agent 完成任务后再返回，
+        适用于需要将结果传递给下一个 Agent 的工作流场景。
 
         Args:
-            role_def: 角色定义。
-            role_manager: 角色管理器（用于构建提示词）。
+            agent_def: Agent 定义。
+            agent_manager: Agent 管理器（用于构建提示词）。
             task: 任务描述。
-            context: 前序角色的产出（可选）。
-            project_dir: 项目目录路径（可选），用于告知角色代码文件的存放位置。
+            context: 前序 Agent 的产出（可选）。
+            project_dir: 项目目录路径（可选），用于告知 Agent 代码文件的存放位置。
 
         Returns:
-            角色执行的结果文本。
+            Agent 执行的结果文本。
         """
-        role_id = f"{role_def.name}-{str(uuid.uuid4())[:6]}"
+        # 兼容性别名
+        run_with_role = self.run_with_agent
+        agent_id = f"{agent_def.name}-{str(uuid.uuid4())[:6]}"
         logger.info(
-            f"{role_def.emoji} 角色 [{role_def.title}] ({role_id}) 开始执行任务"
+            f"{agent_def.emoji} Agent [{agent_def.title}] ({agent_id}) 开始执行任务"
         )
 
-        tools = self._build_role_tools(role_def)
+        tools = self._build_agent_tools(agent_def)
 
-        # 使用 RoleManager 构建角色专属消息
-        messages = role_manager.build_role_messages(
-            role=role_def,
+        # 使用 AgentManager 构建 Agent 专属消息
+        messages = agent_manager.build_agent_messages(
+            agent=agent_def,
             task=task,
             context=context,
             project_dir=project_dir,
         )
 
-        max_iterations = role_def.max_iterations
+        max_iterations = agent_def.max_iterations
         iteration = 0
         final_result: str | None = None
 
@@ -358,7 +362,7 @@ class SubagentManager:
         write_file_count = 0
         reminder_count = 0
         must_write = (
-            role_def.name in self._MUST_WRITE_ROLES and bool(project_dir)
+            agent_def.name in self._MUST_WRITE_ROLES and bool(project_dir)
         )
 
         # 子代理也使用微压缩来控制上下文膨胀
@@ -429,7 +433,7 @@ class SubagentManager:
                     if tool_call.name == "write_file":
                         write_file_count += 1
                     logger.debug(
-                        f"{role_def.emoji} [{role_id}] 执行工具: {tool_call.name}"
+                        f"{agent_def.emoji} [{agent_id}] 执行工具: {tool_call.name}"
                     )
                     result = await tools.execute(
                         tool_call.name, tool_call.arguments
@@ -471,7 +475,7 @@ class SubagentManager:
                         ),
                     })
                     logger.warning(
-                        f"{role_def.emoji} [{role_id}] 未调用 write_file，"
+                        f"{agent_def.emoji} [{agent_id}] 未调用 write_file，"
                         f"发送提醒 ({reminder_count}/{self._TOOL_REMINDER_MAX})"
                     )
                     continue  # 不退出循环，继续要求模型调用工具
@@ -479,7 +483,7 @@ class SubagentManager:
                 # 通用工具使用检查：architect/code_reviewer 等角色至少应使用一次工具
                 # 如果完全没用过工具就想结束，提醒它先查看项目目录
                 if (
-                    role_def.name in self._MUST_USE_TOOLS_ROLES
+                    agent_def.name in self._MUST_USE_TOOLS_ROLES
                     and not tools_called
                     and reminder_count < self._TOOL_REMINDER_MAX
                     and bool(project_dir)
@@ -500,7 +504,7 @@ class SubagentManager:
                         ),
                     })
                     logger.warning(
-                        f"{role_def.emoji} [{role_id}] 未使用任何工具，"
+                        f"{agent_def.emoji} [{agent_id}] 未使用任何工具，"
                         f"发送工具使用提醒 ({reminder_count}/{self._TOOL_REMINDER_MAX})"
                     )
                     continue

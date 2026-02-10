@@ -37,14 +37,20 @@
       </div>
     </div>
     
-    <!-- Agent 配置区域 -->
+    <!-- Agents 管理区域 -->
     <div class="config-section">
-      <h3>🤖 Agent 配置</h3>
+      <h3>🤖 Agents 管理</h3>
+      <AgentsManager />
+    </div>
+    
+    <!-- Agent 个性配置区域 -->
+    <div class="config-section">
+      <h3>🎭 Agent 个性 (SOUL.md)</h3>
       <div class="agent-config">
         <button class="btn-primary" @click="openAgentEditor">
-          编辑 Agent 定义 (SOUL.md)
+          编辑 Agent 个性定义
         </button>
-        <p class="hint">Agent 定义将自动保存并热加载</p>
+        <p class="hint">定义 Agent 的基本性格和价值观，将自动保存并热加载</p>
       </div>
     </div>
     
@@ -96,6 +102,7 @@ import { useSkillsStore } from '@/stores/skills'
 import { SkillSource } from '@/types/skill'
 import { getAuthStatus } from '@/api/auth'
 import AgentEditor from '@/components/AgentEditorNew.vue'
+import AgentsManager from '@/components/AgentsManager.vue'
 
 const skillsStore = useSkillsStore()
 
