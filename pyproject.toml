@@ -54,10 +54,12 @@ packages = ["nanobot"]
 [tool.hatch.build.targets.wheel.sources]
 "nanobot" = "nanobot"
 
-# Include non-Python files in skills
+# Include non-Python files in skills and agent presets
 [tool.hatch.build]
 include = [
     "nanobot/**/*.py",
+    "nanobot/**/*.yaml",
+    "nanobot/**/*.yml",
     "nanobot/skills/**/*.md",
     "nanobot/skills/**/*.sh",
 ]
