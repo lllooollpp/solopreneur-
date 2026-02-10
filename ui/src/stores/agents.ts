@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { client } from '@/api/client'
+import { apiClient as client } from '@/api/client'
 
 /**
  * Agent 类型
