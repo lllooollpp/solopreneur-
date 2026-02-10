@@ -1,0 +1,47 @@
+openapi: 3.0.0
+info:
+  title: Nanobot Sidecar API
+  version: 1.0.0
+  description: 后端 Python Agent 与 前端 Vue UI 之间的接口契约
+
+paths:
+  /api/status:
+    get:
+      summary: 获取系统运行状态
+      responses:
+        '200':
+          description: 返回当前 Agent 和各渠道的状态
+  
+  /api/chat:
+    post:
+      summary: 发送消息给 Agent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: {type: string}
+  
+  /api/config/skills:
+    get:
+      summary: 获取所有可用技能列表
+    put:
+      summary: 批量更新技能开启状态
+  
+  /api/auth/github/device:
+    post:
+      summary: 启动 GitHub Copilot 设备流认证
+      responses:
+        '200':
+          description: 返回 device_code 和 verification_uri
+
+  /api/auth/github/token:
+    get:
+      summary: 轮询并获取 Access Token (由后台同步处理)
+
+webhooks:
+  /ws/events:
+    get:
+      summary: WebSocket 事件推流
+      description: 推送消息总线上的所有事件 ( agent.status, agent.thought, trace.log )

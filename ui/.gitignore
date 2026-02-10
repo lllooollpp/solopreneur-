@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vscode/
+.DS_Store
+*.log
+.env*
+src-tauri/target/
+src-tauri/WixTools/
