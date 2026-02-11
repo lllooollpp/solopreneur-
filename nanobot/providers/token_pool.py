@@ -9,13 +9,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 from loguru import logger
 
 try:
-    from nanobot.providers.github_copilot import (
-        _encrypt_token, _decrypt_token, CRYPTO_AVAILABLE,
-    )
+    from nanobot.providers.github_copilot import _encrypt_token, _decrypt_token, CRYPTO_AVAILABLE
 except ImportError:
     CRYPTO_AVAILABLE = False
     _encrypt_token = _decrypt_token = lambda t: t
@@ -44,6 +41,19 @@ class TokenSlot:
     last_used_at: float = 0.0           # 上次使用时间
     label: str = ""                      # 可选标签（如 "账号A"）
 
+    # Token 限制配置
+    max_tokens_per_day: int = 0           # 每日最大 Token 限制（0=无限制）
+    max_requests_per_day: int = 0         # 每日最大请求次数限制（0=无限制）
+    max_requests_per_hour: int = 0        # 每小时最大请求次数限制（0=无限制）
+
+    # 使用统计
+    tokens_used_today: int = 0           # 今日已使用 Token
+    tokens_used_history: list[dict] = field(default_factory=list)  # 历史使用记录
+    requests_today: int = 0               # 今日请求数
+    requests_hour: int = 0                # 当前小时请求数
+    last_reset_date: str = ""             # 上次重置日期
+    last_reset_hour: int = -1             # 上次重置小时
+
     @property
     def is_available(self) -> bool:
         """当前是否可用于请求"""
@@ -60,31 +70,126 @@ class TokenSlot:
         """Copilot token 是否已过期或即将过期"""
         return datetime.now() + timedelta(minutes=5) >= self.expires_at
 
+    def check_rate_limit(self) -> tuple[bool, str | None]:
+        """
+        检查是否达到自定义速率限制
+
+        Returns:
+            (是否允许, 拒绝原因)
+        """
+        self._reset_counters_if_needed()
+
+        # 检查每秒 Token 限制
+        if self.max_tokens_per_day > 0 and self.tokens_used_today >= self.max_tokens_per_day:
+            return False, f"达到每日 Token 限制 ({self.tokens_used_today}/{self.max_tokens_per_day})"
+
+        # 检查每日请求限制
+        if self.max_requests_per_day > 0 and self.requests_today >= self.max_requests_per_day:
+            return False, f"达到每日请求限制 ({self.requests_today}/{self.max_requests_per_day})"
+
+        # 检查每小时请求限制
+        if self.max_requests_per_hour > 0 and self.requests_hour >= self.max_requests_per_hour:
+            return False, f"达到每小时请求限制 ({self.requests_hour}/{self.max_requests_per_hour})"
+
+        return True, None
+
+    def record_usage(self, tokens_used: int = 0):
+        """记录 Token 使用"""
+        self._reset_counters_if_needed()
+
+        if tokens_used > 0:
+            self.tokens_used_today += tokens_used
+
+            # 记录历史
+            self.tokens_used_history.append({
+                "timestamp": datetime.now().isoformat(),
+                "tokens": tokens_used,
+            })
+            # 保留最近 7 天的记录
+            cutoff = datetime.now() - timedelta(days=7)
+            self.tokens_used_history = [
+                h for h in self.tokens_used_history
+                if datetime.fromisoformat(h["timestamp"]) > cutoff
+            ]
+
+        self.requests_today += 1
+        self.requests_hour += 1
+
+    def get_usage_summary(self) -> dict:
+        """获取使用统计摘要"""
+        self._reset_counters_if_needed()
+        return {
+            "tokens_used_today": self.tokens_used_today,
+            "requests_today": self.requests_today,
+            "requests_hour": self.requests_hour,
+            "tokens_limit": self.max_tokens_per_day or "无限制",
+            "requests_day_limit": self.max_requests_per_day or "无限制",
+            "requests_hour_limit": self.max_requests_per_hour or "无限制",
+        }
+
+    def _reset_counters_if_needed(self):
+        """重置计数器（按日期和小时）"""
+        now = datetime.now()
+        today = now.strftime("%Y-%m-%d")
+        current_hour = now.hour
+
+        # 日重置
+        if self.last_reset_date != today:
+            self.last_reset_date = today
+            self.requests_today = 0
+            self.tokens_used_today = 0
+            logger.debug(f"[TokenPool] Slot {self.slot_id} 计数器日重置")
+
+        # 小时重置
+        if self.last_reset_hour != current_hour:
+            self.last_reset_hour = current_hour
+            self.requests_hour = 0
+            logger.debug(f"[TokenPool] Slot {self.slot_id} 计数器小时重置")
+
 
 class TokenPool:
     """
     多账号 Token 池管理器
-    
+
     特性：
     - 轮询 (Round-Robin) 负载均衡
     - 熔断器 (Circuit Breaker)：429 → 自动冷却
     - 指数退避冷却时间：30s → 60s → 120s → 最大 300s
     - 自动 Token 刷新
     - 全部冷却时智能等待
+    - 支持从配置文件读取全局默认值
     """
 
-    # 冷却策略常量
+    # 默认冷却策略常量（可被配置覆盖）
     BASE_COOLDOWN_S = 30           # 基础冷却时间（秒）
     MAX_COOLDOWN_S = 300           # 最大冷却时间（秒）
     DEAD_THRESHOLD = 10            # 连续错误次数达到此值标记为 DEAD
 
-    def __init__(self, pool_dir: Path | None = None):
+    # 默认 Token 限制（可被配置覆盖）
+    DEFAULT_MAX_TOKENS_PER_DAY = 0
+    DEFAULT_MAX_REQUESTS_PER_DAY = 0
+    DEFAULT_MAX_REQUESTS_PER_HOUR = 0
+
+    def __init__(self, pool_dir: Path | None = None, config=None):
         self._pool_dir = pool_dir or (Path.home() / ".nanobot" / "pool")
         self._pool_dir.mkdir(parents=True, exist_ok=True)
         self._slots: dict[int, TokenSlot] = {}
         self._current_index = 0  # 轮询指针
         self._lock = asyncio.Lock()
-        
+
+        # 从配置文件加载全局默认值
+        if config and hasattr(config, 'token_pool'):
+            tp = config.token_pool
+            self.BASE_COOLDOWN_S = tp.base_cooldown_seconds
+            self.MAX_COOLDOWN_S = tp.max_cooldown_seconds
+            self.DEAD_THRESHOLD = tp.dead_threshold
+            self.DEFAULT_MAX_TOKENS_PER_DAY = tp.max_tokens_per_day
+            self.DEFAULT_MAX_REQUESTS_PER_DAY = tp.max_requests_per_day
+            self.DEFAULT_MAX_REQUESTS_PER_HOUR = tp.max_requests_per_hour
+            logger.info(f"[TokenPool] 从配置加载: max_tokens/day={self.DEFAULT_MAX_TOKENS_PER_DAY or '无限制'}, "
+                       f"max_requests/day={self.DEFAULT_MAX_REQUESTS_PER_DAY or '无限制'}, "
+                       f"max_requests/hour={self.DEFAULT_MAX_REQUESTS_PER_HOUR or '无限制'}")
+
         # 启动时加载所有已保存的 slot
         self._load_all_slots()
 
@@ -114,6 +219,9 @@ class TokenPool:
         copilot_token: str,
         expires_at: datetime,
         label: str = "",
+        max_tokens_per_day: int | None = None,
+        max_requests_per_day: int | None = None,
+        max_requests_per_hour: int | None = None,
     ) -> TokenSlot:
         """
         添加或更新一个 Token 槽位
@@ -124,10 +232,29 @@ class TokenPool:
             copilot_token: Copilot API Token
             expires_at: Token 过期时间
             label: 可选的标签名
+            max_tokens_per_day: 每日最大 Token 限制（None=使用配置默认值, 0=无限制）
+            max_requests_per_day: 每日最大请求次数限制（None=使用配置默认值, 0=无限制）
+            max_requests_per_hour: 每小时最大请求次数限制（None=使用配置默认值, 0=无限制）
 
         Returns:
             创建/更新后的 TokenSlot
         """
+        # 如果 slot 已存在，保留现有限制配置
+        existing_limits = {}
+        if slot_id in self._slots:
+            existing = self._slots[slot_id]
+            existing_limits = {
+                "max_tokens_per_day": existing.max_tokens_per_day,
+                "max_requests_per_day": existing.max_requests_per_day,
+                "max_requests_per_hour": existing.max_requests_per_hour,
+                "tokens_used_today": existing.tokens_used_today,
+                "requests_today": existing.requests_today,
+                "requests_hour": existing.requests_hour,
+                "last_reset_date": existing.last_reset_date,
+                "last_reset_hour": existing.last_reset_hour,
+                "tokens_used_history": existing.tokens_used_history,
+            }
+
         slot = TokenSlot(
             slot_id=slot_id,
             github_access_token=github_access_token,
@@ -135,6 +262,10 @@ class TokenPool:
             expires_at=expires_at,
             state=SlotState.ACTIVE,
             label=label or f"账号{slot_id}",
+            max_tokens_per_day=max_tokens_per_day if max_tokens_per_day is not None else self.DEFAULT_MAX_TOKENS_PER_DAY,
+            max_requests_per_day=max_requests_per_day if max_requests_per_day is not None else self.DEFAULT_MAX_REQUESTS_PER_DAY,
+            max_requests_per_hour=max_requests_per_hour if max_requests_per_hour is not None else self.DEFAULT_MAX_REQUESTS_PER_HOUR,
+            **existing_limits,
         )
         self._slots[slot_id] = slot
         self._save_slot(slot)
@@ -158,12 +289,13 @@ class TokenPool:
 
         策略：
         1. 从上次位置开始轮询，找到第一个 available 的 slot
-        2. 如果冷却中的 slot 已过冷却期，自动恢复
-        3. 如果所有 slot 都在冷却，等待最早恢复的那个
+        2. 检查 slot 的自定义速率限制
+        3. 如果冷却中的 slot 已过冷却期，自动恢复
+        4. 如果所有 slot 都在冷却或限制，等待最早恢复的那个
 
         Returns:
             TokenSlot: 选中的槽位
-            
+
         Raises:
             RuntimeError: 池中没有任何 slot
         """
@@ -189,6 +321,12 @@ class TokenPool:
                     logger.info(f"[TokenPool] Slot {slot.slot_id} 冷却结束，已恢复")
 
                 if slot.is_available:
+                    # 检查自定义速率限制
+                    allowed, reason = slot.check_rate_limit()
+                    if not allowed:
+                        logger.debug(f"[TokenPool] Slot {slot.slot_id} 跳过: {reason}")
+                        continue
+
                     slot.last_used_at = time.time()
                     slot.total_requests += 1
                     self._current_index = (idx + 1) % n
@@ -201,18 +339,21 @@ class TokenPool:
         # 所有 slot 都不可用 → 等待最早恢复的
         return await self._wait_for_recovery()
 
-    def report_success(self, slot_id: int):
-        """报告请求成功，重置连续错误计数"""
+    def report_success(self, slot_id: int, tokens_used: int = 0):
+        """报告请求成功，重置连续错误计数，记录 Token 使用"""
         if slot_id in self._slots:
             slot = self._slots[slot_id]
             slot.consecutive_errors = 0
             if slot.state == SlotState.COOLING:
                 slot.state = SlotState.ACTIVE
+            # 记录 Token 使用
+            if tokens_used > 0:
+                slot.record_usage(tokens_used)
 
     def report_rate_limit(self, slot_id: int, retry_after: int | None = None):
         """
         报告 429 Rate Limit 错误，触发熔断冷却
-        
+
         Args:
             slot_id: 触发错误的槽位 ID
             retry_after: 服务器建议的重试等待时间（秒）
@@ -284,6 +425,9 @@ class TokenPool:
                 secs = max(0, slot.cooling_until - time.time())
                 remaining = f"{secs:.0f}s"
 
+            # 获取使用统计
+            usage = slot.get_usage_summary()
+
             result.append({
                 "slot_id": slot.slot_id,
                 "label": slot.label,
@@ -292,6 +436,12 @@ class TokenPool:
                 "total_requests": slot.total_requests,
                 "total_429s": slot.total_429s,
                 "token_expires": slot.expires_at.isoformat(),
+                "limits": {
+                    "max_tokens_per_day": slot.max_tokens_per_day or "无限制",
+                    "max_requests_per_day": slot.max_requests_per_day or "无限制",
+                    "max_requests_per_hour": slot.max_requests_per_hour or "无限制",
+                },
+                "usage": usage,
             })
         return result
 
@@ -363,6 +513,17 @@ class TokenPool:
                 "label": slot.label,
                 "total_requests": slot.total_requests,
                 "total_429s": slot.total_429s,
+                # Token 限制配置
+                "max_tokens_per_day": slot.max_tokens_per_day,
+                "max_requests_per_day": slot.max_requests_per_day,
+                "max_requests_per_hour": slot.max_requests_per_hour,
+                # 使用统计
+                "tokens_used_today": slot.tokens_used_today,
+                "requests_today": slot.requests_today,
+                "requests_hour": slot.requests_hour,
+                "last_reset_date": slot.last_reset_date,
+                "last_reset_hour": slot.last_reset_hour,
+                "tokens_used_history": slot.tokens_used_history,
                 "_encrypted": CRYPTO_AVAILABLE,
             }
             with open(slot_file, "w", encoding="utf-8") as f:
@@ -410,6 +571,17 @@ class TokenPool:
                     label=data.get("label", f"账号{slot_id}"),
                     total_requests=data.get("total_requests", 0),
                     total_429s=data.get("total_429s", 0),
+                    # Token 限制配置
+                    max_tokens_per_day=data.get("max_tokens_per_day", 0),
+                    max_requests_per_day=data.get("max_requests_per_day", 0),
+                    max_requests_per_hour=data.get("max_requests_per_hour", 0),
+                    # 使用统计
+                    tokens_used_today=data.get("tokens_used_today", 0),
+                    requests_today=data.get("requests_today", 0),
+                    requests_hour=data.get("requests_hour", 0),
+                    last_reset_date=data.get("last_reset_date", ""),
+                    last_reset_hour=data.get("last_reset_hour", -1),
+                    tokens_used_history=data.get("tokens_used_history", []),
                 )
                 self._slots[slot_id] = slot
                 logger.info(
