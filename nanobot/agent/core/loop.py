@@ -87,6 +87,8 @@ class AgentLoop:
         from nanobot.agent.definitions.manager import AgentManager
         from nanobot.workflow.engine import WorkflowEngine
 
+        # 直接创建 AgentManager（独立实例，不使用组件管理器）
+        # 这允许每个 AgentLoop 有自己的 AgentManager
         self.agent_manager = AgentManager(
             workspace=workspace,
             skills_loader=self.context.skills,

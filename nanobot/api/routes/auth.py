@@ -11,16 +11,16 @@ from nanobot.providers.github_copilot import GitHubCopilotProvider
 
 router = APIRouter()
 
-# 全局 Provider 实例
-_copilot_provider: Optional[GitHubCopilotProvider] = None
-
 
 def get_copilot_provider() -> GitHubCopilotProvider:
-    """获取或创建 Copilot Provider 实例"""
-    global _copilot_provider
-    if _copilot_provider is None:
-        _copilot_provider = GitHubCopilotProvider()
-    return _copilot_provider
+    """
+    获取或创建 Copilot Provider 实例
+
+    使用组件管理器统一管理单例
+    """
+    from nanobot.core.dependencies import get_component_manager
+    manager = get_component_manager()
+    return manager.get_copilot_provider()
 
 
 # ========================================================================
@@ -86,6 +86,8 @@ class PoolSlotInfo(BaseModel):
     total_requests: int
     total_429s: int
     token_expires: str
+    limits: dict = {}     # Token 限制配置
+    usage: dict = {}      # 当前使用统计
 
 
 class PoolStatusResponse(BaseModel):
@@ -99,6 +101,13 @@ class PoolStatusResponse(BaseModel):
 class AddSlotRequest(BaseModel):
     """添加槽位请求"""
     label: str = ""
+
+
+class SlotLimitRequest(BaseModel):
+    """账号 Token 限制配置请求"""
+    max_tokens_per_day: int = 0      # 每日最大 Token 限制（0=无限制）
+    max_requests_per_day: int = 0     # 每日最大请求次数（0=无限制）
+    max_requests_per_hour: int = 0    # 每小时最大请求次数（0=无限制）
 
 
 # ========================================================================
@@ -405,17 +414,124 @@ async def pool_update_label(slot_id: int = PathParam(..., ge=1), request: AddSlo
     """更新指定 slot 的标签"""
     provider = get_copilot_provider()
     pool = provider.pool
-    
+
     target = None
     for slot in pool.all_slots:
         if slot.slot_id == slot_id:
             target = slot
             break
-    
+
     if target is None:
         raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
-    
+
     target.label = request.label or f"账号{slot_id}"
     pool._save_slot(target)
-    
+
     return {"success": True, "label": target.label}
+
+
+@router.put("/auth/pool/{slot_id}/limits")
+async def pool_set_limits(
+    slot_id: int = PathParam(..., ge=1),
+    request: SlotLimitRequest = SlotLimitRequest()
+):
+    """
+    设置指定账号的 Token 使用限制
+
+    Args:
+        slot_id: 账号槽位 ID
+        max_tokens_per_day: 每日最大 Token 数（0=无限制）
+        max_requests_per_day: 每日最大请求次数（0=无限制）
+        max_requests_per_hour: 每小时最大请求次数（0=无限制）
+    """
+    provider = get_copilot_provider()
+    pool = provider.pool
+
+    # 找到目标 slot
+    target = None
+    for slot in pool.all_slots:
+        if slot.slot_id == slot_id:
+            target = slot
+            break
+
+    if target is None:
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
+
+    # 更新限制配置
+    target.max_tokens_per_day = request.max_tokens_per_day
+    target.max_requests_per_day = request.max_requests_per_day
+    target.max_requests_per_hour = request.max_requests_per_hour
+    pool._save_slot(target)
+
+    logger.info(
+        f"Slot {slot_id} 限制已更新: "
+        f"tokens/day={request.max_tokens_per_day or '无'}, "
+        f"req/day={request.max_requests_per_day or '无'}, "
+        f"req/hour={request.max_requests_per_hour or '无'}"
+    )
+
+    return {
+        "success": True,
+        "message": f"Slot {slot_id} 的 Token 限制已更新",
+        "limits": {
+            "max_tokens_per_day": request.max_tokens_per_day or "无限制",
+            "max_requests_per_day": request.max_requests_per_day or "无限制",
+            "max_requests_per_hour": request.max_requests_per_hour or "无限制",
+        }
+    }
+
+
+@router.get("/auth/pool/{slot_id}/usage")
+async def pool_get_usage(slot_id: int = PathParam(..., ge=1)):
+    """获取指定账号的 Token 使用统计"""
+    provider = get_copilot_provider()
+    pool = provider.pool
+
+    # 找到目标 slot
+    target = None
+    for slot in pool.all_slots:
+        if slot.slot_id == slot_id:
+            target = slot
+            break
+
+    if target is None:
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
+
+    usage = target.get_usage_summary()
+
+    return {
+        "slot_id": slot_id,
+        "label": target.label,
+        "state": target.state.value,
+        "usage": usage,
+    }
+
+
+@router.post("/auth/pool/{slot_id}/reset-usage")
+async def pool_reset_usage(slot_id: int = PathParam(..., ge=1)):
+    """重置指定账号的使用统计"""
+    provider = get_copilot_provider()
+    pool = provider.pool
+
+    # 找到目标 slot
+    target = None
+    for slot in pool.all_slots:
+        if slot.slot_id == slot_id:
+            target = slot
+            break
+
+    if target is None:
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
+
+    # 重置计数器
+    target.tokens_used_today = 0
+    target.requests_today = 0
+    target.requests_hour = 0
+    pool._save_slot(target)
+
+    logger.info(f"Slot {slot_id} 使用统计已重置")
+
+    return {
+        "success": True,
+        "message": f"Slot {slot_id} 的使用统计已重置"
+    }

@@ -31,13 +31,12 @@ class ChannelManager:
     
     def _init_channels(self) -> None:
         """根据配置初始化通道。"""
-        
+
         # 企业微信通道
         if hasattr(self.config.channels, 'wecom') and self.config.channels.wecom.enabled:
             try:
-                from nanobot.channels.wecom import WeComConfig
-                from nanobot.api.routes.wecom import init_wecom
-                
+                from nanobot.channels.wecom import WeComChannel, WeComConfig
+
                 wecom_config = WeComConfig(
                     corp_id=self.config.channels.wecom.corp_id,
                     agent_id=self.config.channels.wecom.agent_id,
@@ -45,10 +44,39 @@ class ChannelManager:
                     token=self.config.channels.wecom.token,
                     aes_key=self.config.channels.wecom.aes_key
                 )
-                init_wecom(wecom_config)
+                channel = WeComChannel(config=wecom_config, bus=self.bus)
+                self.channels['wecom'] = channel
                 logger.info("企业微信通道已启用")
             except (ImportError, AttributeError) as e:
                 logger.warning(f"企业微信通道不可用: {e}")
+
+        # Telegram 通道
+        if hasattr(self.config.channels, 'telegram') and self.config.channels.telegram.enabled:
+            try:
+                from nanobot.channels.telegram import TelegramChannel
+
+                channel = TelegramChannel(
+                    config=self.config.channels.telegram,
+                    bus=self.bus
+                )
+                self.channels['telegram'] = channel
+                logger.info("Telegram 通道已启用")
+            except (ImportError, AttributeError) as e:
+                logger.warning(f"Telegram 通道不可用: {e}")
+
+        # WhatsApp 通道
+        if hasattr(self.config.channels, 'whatsapp') and self.config.channels.whatsapp.enabled:
+            try:
+                from nanobot.channels.whatsapp import WhatsAppChannel
+
+                channel = WhatsAppChannel(
+                    config=self.config.channels.whatsapp,
+                    bus=self.bus
+                )
+                self.channels['whatsapp'] = channel
+                logger.info("WhatsApp 通道已启用")
+            except (ImportError, AttributeError) as e:
+                logger.warning(f"WhatsApp 通道不可用: {e}")
     
     async def start_all(self) -> None:
         """启动所有通道和传出调度器。"""

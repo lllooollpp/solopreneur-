@@ -18,28 +18,69 @@ def get_data_dir() -> Path:
     return get_data_path()
 
 
-def load_config(config_path: Path | None = None) -> Config:
+# 全局配置缓存（单例模式）
+_config_cache: Config | None = None
+_config_path_cache: Path | None = None
+
+
+def load_config(config_path: Path | None = None, force_reload: bool = False) -> Config:
     """
-    从文件加载配置或创建默认配置。
-    
+    从文件加载配置或创建默认配置（支持缓存）。
+
     参数:
         config_path: 可选的配置文件路径。如果不提供，则使用默认路径。
-    
+        force_reload: 强制重新加载配置，忽略缓存。
+
     返回:
         加载的配置对象。
     """
+    global _config_cache, _config_path_cache
+
     path = config_path or get_config_path()
-    
+
+    # 检查缓存
+    if not force_reload and _config_cache is not None:
+        if _config_path_cache == path:
+            # 检查文件是否被修改
+            if path.exists():
+                try:
+                    current_mtime = path.stat().st_mtime
+                    cached_mtime = getattr(_config_cache, "_mtime", 0)
+                    if current_mtime <= cached_mtime:
+                        return _config_cache
+                except Exception:
+                    pass  # 文件检查失败，继续加载
+
     if path.exists():
         try:
             with open(path) as f:
                 data = json.load(f)
-            return Config.model_validate(convert_keys(data))
+            config = Config.model_validate(convert_keys(data))
+            # 缓存配置和文件修改时间
+            _config_cache = config
+            _config_path_cache = path
+            try:
+                _config_cache._mtime = path.stat().st_mtime
+            except Exception:
+                _config_cache._mtime = 0
+            return config
         except (json.JSONDecodeError, ValueError) as e:
             print(f"警告：无法从 {path} 加载配置: {e}")
             print("正在使用默认配置。")
-    
-    return Config()
+
+    # 使用默认配置
+    config = Config()
+    _config_cache = config
+    _config_path_cache = path
+    _config_cache._mtime = 0
+    return config
+
+
+def invalidate_config_cache():
+    """使配置缓存失效，下次调用 load_config 时会重新加载。"""
+    global _config_cache, _config_path_cache
+    _config_cache = None
+    _config_path_cache = None
 
 
 def save_config(config: Config, config_path: Path | None = None) -> None:

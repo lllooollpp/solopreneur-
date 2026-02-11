@@ -18,7 +18,6 @@ class TelegramConfig(BaseModel):
     token: str = ""  # Bot token from @BotFather
     allow_from: list[str] = Field(default_factory=list)  # Allowed user IDs or usernames
 
-
 class WeComConfig(BaseModel):
     """企业微信通道配置"""
     enabled: bool = False
@@ -104,6 +103,16 @@ class ToolsConfig(BaseModel):
     exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
 
 
+class TokenPoolConfig(BaseModel):
+    """Token pool configuration for multi-account management."""
+    max_tokens_per_day: int = 0  # 每个账号每日最大Token限制（0=无限制）
+    max_requests_per_day: int = 0  # 每个账号每日最大请求次数限制（0=无限制）
+    max_requests_per_hour: int = 0  # 每个账号每小时最大请求次数限制（0=无限制）
+    base_cooldown_seconds: int = 30  # 429错误后基础冷却时间（秒）
+    max_cooldown_seconds: int = 300  # 最大冷却时间（秒）
+    dead_threshold: int = 10  # 连续错误多少次标记为DEAD
+
+
 class Config(BaseSettings):
     """Root configuration for nanobot."""
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
@@ -111,6 +120,7 @@ class Config(BaseSettings):
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    token_pool: TokenPoolConfig = Field(default_factory=TokenPoolConfig)
     
     @property
     def workspace_path(self) -> Path:

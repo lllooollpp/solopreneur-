@@ -21,15 +21,16 @@ _wecom_crypto: Optional[WeComCrypto] = None
 
 
 def _ensure_config():
-    """确保配置已加载"""
+    """确保配置已加载（使用组件管理器）"""
     global _wecom_config, _wecom_crypto
-    
+
     if _wecom_config is None:
         # 从配置文件加载
         try:
-            from nanobot.config.loader import load_config
-            config = load_config()
-            
+            from nanobot.core.dependencies import get_component_manager
+            manager = get_component_manager()
+            config = manager.get_config()
+
             if config.channels.wecom.enabled:
                 _wecom_config = WeComConfig(
                     corp_id=config.channels.wecom.corp_id,

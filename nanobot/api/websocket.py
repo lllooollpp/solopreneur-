@@ -90,56 +90,14 @@ _agent_loop_lock = asyncio.Lock()
 
 
 async def get_agent_loop():
-    """获取或创建 AgentLoop 实例（支持工具调用），线程安全。"""
-    global _agent_loop
-    
-    # Double-check locking pattern
-    if _agent_loop is not None:
-        return _agent_loop
-    
-    async with _agent_loop_lock:
-        # 再次检查，防止竞态条件
-        if _agent_loop is not None:
-            return _agent_loop
+    """
+    获取或创建 AgentLoop 实例（支持工具调用），线程安全。
 
-        from nanobot.config.loader import load_config
-        from nanobot.bus.queue import MessageBus
-        from nanobot.providers.litellm_provider import LiteLLMProvider
-        from nanobot.providers.github_copilot import GitHubCopilotProvider
-        from nanobot.api.routes.auth import get_copilot_provider
-        from nanobot.agent.core.loop import AgentLoop
-
-        config = load_config()
-        
-        # 尝试优先使用已经认证的 Copilot Provider
-        copilot = get_copilot_provider()
-        if copilot.session:
-            logger.info("Using authenticated GitHub Copilot provider for web chat")
-            provider = copilot
-        else:
-            logger.info("Using LiteLLM provider for web chat")
-            api_key = config.get_api_key()
-            api_base = config.get_api_base()
-            provider = LiteLLMProvider(
-                api_key=api_key,
-                api_base=api_base,
-                default_model=config.agents.defaults.model
-            )
-
-        bus = MessageBus()
-        _agent_loop = AgentLoop(
-            bus=bus,
-            provider=provider,
-            workspace=config.workspace_path,
-            model=config.agents.defaults.model,
-            max_iterations=config.agents.defaults.max_tool_iterations,
-            brave_api_key=config.tools.web.search.api_key or None,
-            exec_config=config.tools.exec,
-            max_session_tokens=config.agents.defaults.max_tokens_per_session,
-            max_total_time=config.agents.defaults.agent_timeout,
-        )
-
-        return _agent_loop
+    使用组件管理器统一管理
+    """
+    from nanobot.core.dependencies import get_component_manager
+    manager = get_component_manager()
+    return await manager.get_agent_loop()
 
 
 # ==================== 工作流状态管理 ====================

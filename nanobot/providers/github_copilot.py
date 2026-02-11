@@ -112,7 +112,7 @@ class GitHubCopilotProvider(LLMProvider):
     # 池调度：429 重试次数上限
     MAX_POOL_RETRIES = 5
 
-    def __init__(self, api_key: str | None = None, api_base: str | None = None):
+    def __init__(self, api_key: str | None = None, api_base: str | None = None, config=None):
         super().__init__(api_key=api_key or "", api_base=api_base)
         # 添加 VS Code User-Agent
         self._http_client = httpx.AsyncClient(
@@ -124,7 +124,7 @@ class GitHubCopilotProvider(LLMProvider):
         )
 
         # ── Token Pool（多账号负载均衡） ──
-        self._pool = TokenPool()
+        self._pool = TokenPool(config=config)
 
         # 兼容旧单文件 token：自动迁移到 slot 1
         legacy_token_file = Path.home() / ".nanobot" / ".copilot_token.json"

@@ -74,9 +74,10 @@ class AgentUpdateRequest(BaseModel):
 
 
 def _get_agent_manager() -> AgentManager:
-    """获取 AgentManager 实例"""
-    config = load_config()
-    return AgentManager(workspace=config.workspace_path)
+    """获取 AgentManager 实例（使用组件管理器）"""
+    from nanobot.core.dependencies import get_component_manager
+    manager = get_component_manager()
+    return manager.get_agent_manager()
 
 
 @router.get("/agents", response_model=AgentsResponse)
