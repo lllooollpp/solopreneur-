@@ -25,21 +25,19 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理。"""
     # 启动时
     logger.info("Nanobot API starting up...")
-    
+
     yield
-    
+
     # 关闭时
     logger.info("Nanobot API shutting down...")
-    
-    # 清理资源
-    from nanobot.api.routes.auth import get_copilot_provider
+
+    # 使用组件管理器清理所有资源
+    from nanobot.core.dependencies import get_component_manager
     try:
-        provider = get_copilot_provider()
-        if provider:
-            await provider.close()
-            logger.info("GitHub Copilot provider closed")
+        manager = get_component_manager()
+        await manager.shutdown()
     except Exception as e:
-        logger.error(f"Error closing provider: {e}")
+        logger.error(f"Error during shutdown: {e}")
 
 # 配置 loguru 日志输出
 logger.remove()
