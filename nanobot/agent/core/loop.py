@@ -597,6 +597,9 @@ class AgentLoop:
             total_prompt_tokens += prompt_tokens
             total_completion_tokens += completion_tokens
 
+            # 调试日志
+            logger.info(f"LLM usage data: {response.usage}, tokens: prompt={prompt_tokens}, completion={completion_tokens}, total={step_tokens}")
+
             # 发送 LLM 调用结束事件
             await _emit_trace({
                 "event": "llm_end",

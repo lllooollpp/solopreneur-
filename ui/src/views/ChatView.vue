@@ -411,7 +411,7 @@ function connectWebSocket() {
   
   ws.onmessage = async (event) => {
     const data = JSON.parse(event.data)
-    
+
     if (data.type === 'chunk') {
       if (currentAssistantMessageId) {
         const msg = messages.value.find(m => m.id === currentAssistantMessageId)
@@ -437,6 +437,11 @@ function connectWebSocket() {
       scrollToBottom()
     } else if (data.type === 'system') {
       messages.value = []
+    } else if (data.type === 'trace') {
+      // 转发 trace 事件到 TracePanel
+      if (tracePanelRef.value) {
+        tracePanelRef.value.handleTraceEvent(data)
+      }
     } else if (data.type === 'activity') {
       if (currentAssistantMessageId) {
         const msg = messages.value.find(m => m.id === currentAssistantMessageId)

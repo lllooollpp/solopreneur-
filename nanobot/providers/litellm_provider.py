@@ -260,12 +260,12 @@ class LiteLLMProvider(LLMProvider):
             finish_reason=finish_reason,
             usage=usage,
         )
-    
+
     def _parse_response(self, response: Any) -> LLMResponse:
         """Parse LiteLLM response into our standard format."""
         choice = response.choices[0]
         message = choice.message
-        
+
         tool_calls = []
         if hasattr(message, "tool_calls") and message.tool_calls:
             for tc in message.tool_calls:
@@ -276,13 +276,13 @@ class LiteLLMProvider(LLMProvider):
                         args = json.loads(args)
                     except json.JSONDecodeError:
                         args = {"raw": args}
-                
+
                 tool_calls.append(ToolCallRequest(
                     id=tc.id,
                     name=tc.function.name,
                     arguments=args,
                 ))
-        
+
         usage = {}
         if hasattr(response, "usage") and response.usage:
             usage = {
@@ -290,7 +290,12 @@ class LiteLLMProvider(LLMProvider):
                 "completion_tokens": response.usage.completion_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
-        
+        else:
+            # 调试：记录没有 usage 的情况
+            logger.warning(f"LLM response missing usage data. Response type: {type(response)}")
+            if hasattr(response, '__dict__'):
+                logger.warning(f"Response attributes: {list(response.__dict__.keys())}")
+
         return LLMResponse(
             content=message.content,
             tool_calls=tool_calls,

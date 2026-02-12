@@ -235,6 +235,16 @@ const completionPercent = computed(() => {
 })
 
 function handleTraceEvent(event: TraceEvent) {
+  // 调试日志
+  if (event.event === 'llm_end') {
+    console.log('TracePanel: 收到 llm_end 事件', {
+      prompt_tokens: event.prompt_tokens,
+      completion_tokens: event.completion_tokens,
+      total_tokens: event.total_tokens,
+      duration_ms: event.duration_ms,
+    })
+  }
+
   if (event.event === 'start') {
     // 保存旧的到历史
     if (traceEvents.value.length > 0) {
