@@ -269,6 +269,7 @@ class SubagentManager:
     def _build_agent_tools(
         self,
         agent_def: "AgentDefinition",
+        project_dir: str = "",
     ) -> ToolRegistry:
         """
         为指定 Agent 构建工具集。
@@ -278,13 +279,17 @@ class SubagentManager:
         """
         # 兼容性别名
         _build_role_tools = self._build_agent_tools
+        # 如果提供了 project_dir，则将工具的 workspace/working_dir 指向该目录，
+        # 以便子 Agent 能够在目标项目路径下读写文件。
+        workspace_path = Path(project_dir) if project_dir else self.workspace
+
         all_tools = {
-            "read_file": ReadFileTool(workspace=self.workspace),
-            "write_file": WriteFileTool(workspace=self.workspace),
-            "edit_file": EditFileTool(workspace=self.workspace),
-            "list_dir": ListDirTool(workspace=self.workspace),
+            "read_file": ReadFileTool(workspace=workspace_path),
+            "write_file": WriteFileTool(workspace=workspace_path),
+            "edit_file": EditFileTool(workspace=workspace_path),
+            "list_dir": ListDirTool(workspace=workspace_path),
             "exec": ExecTool(
-                working_dir=str(self.workspace),
+                working_dir=str(workspace_path),
                 timeout=self.exec_config.timeout,
                 restrict_to_workspace=self.exec_config.restrict_to_workspace,
             ),
@@ -294,8 +299,8 @@ class SubagentManager:
 
         registry = ToolRegistry()
 
-        if role_def.allowed_tools is not None:
-            for tool_name in role_def.allowed_tools:
+        if agent_def.tools is not None:
+            for tool_name in agent_def.tools:
                 if tool_name in all_tools:
                     registry.register(all_tools[tool_name])
         else:
@@ -343,15 +348,32 @@ class SubagentManager:
             f"{agent_def.emoji} Agent [{agent_def.title}] ({agent_id}) 开始执行任务"
         )
 
-        tools = self._build_agent_tools(agent_def)
+        logger.debug(
+            f"[{agent_id}] 参数: task={task[:100] if task else 'None'}..., "
+            f"project_dir={project_dir}, context_len={len(context)}"
+        )
+
+        try:
+            tools = self._build_agent_tools(agent_def, project_dir=project_dir)
+            logger.debug(f"[{agent_id}] 已构建工具集，可用工具: {tools.tool_names}")
+        except Exception as e:
+            logger.error(f"[{agent_id}] 构建工具集失败: {e}", exc_info=True)
+            raise
 
         # 使用 AgentManager 构建 Agent 专属消息
+        logger.debug(f"[{agent_id}] 开始构建消息...")
         messages = agent_manager.build_agent_messages(
             agent=agent_def,
             task=task,
             context=context,
             project_dir=project_dir,
         )
+        logger.info(f"[{agent_id}] 已构建 {len(messages)} 条消息")
+        # 打印消息摘要（调试用）
+        for i, msg in enumerate(messages[:3]):  # 只打印前 3 条
+            role = msg.get('role', 'unknown')
+            content_preview = (msg.get('content', '') or '')[:100].replace('\n', ' ')
+            logger.debug(f"[{agent_id}] 消息 {i+1}: role={role}, content={content_preview}...")
 
         max_iterations = agent_def.max_iterations
         iteration = 0
@@ -375,20 +397,29 @@ class SubagentManager:
 
         while iteration < max_iterations:
             iteration += 1
+            logger.info(f"[{agent_id}] ════════ 迭代 {iteration}/{max_iterations} ════════")
 
             # 微压缩：大型工具输出落盘
+            logger.debug(f"[{agent_id}] 执行微压缩（当前消息数: {len(messages)}）")
             messages = compactor.microcompact(messages)
+            logger.debug(f"[{agent_id}] 微压缩完成（当前消息数: {len(messages)}）")
 
             # LLM 调用（带瞬时错误重试）
+            logger.info(f"[{agent_id}] 准备调用 LLM (max_tokens=16384)")
             response = None
             for _retry in range(self._LLM_CALL_MAX_RETRIES):
                 try:
+                    logger.debug(f"[{agent_id}] 调用 LLM (重试 {_retry + 1}/{self._LLM_CALL_MAX_RETRIES})")
                     response = await self.provider.chat(
                         messages=messages,
                         tools=tools.get_definitions(),
                         model=self.model,
                         max_tokens=16384,  # 代码生成需要更多输出空间
                     )
+                    logger.info(f"[{agent_id}] ✓ LLM 调用成功 | tool_calls={len(response.tool_calls)} | has_tool_calls={response.has_tool_calls}")
+                    if response.content:
+                        content_preview = response.content[:200].replace('\n', ' ')
+                        logger.debug(f"[{agent_id}] LLM 回复内容: {content_preview}...")
                     break  # 成功，跳出重试循环
                 except Exception as llm_err:
                     retries_left = self._LLM_CALL_MAX_RETRIES - _retry - 1
@@ -396,21 +427,26 @@ class SubagentManager:
                     if retries_left > 0:
                         delay = self._LLM_CALL_RETRY_BASE_DELAY * (2 ** _retry)
                         logger.warning(
-                            f"{role_def.emoji} [{role_id}] LLM 调用失败 ({err_desc}), "
+                            f"{agent_def.emoji} [{agent_id}] LLM 调用失败 ({err_desc}), "
                             f"等待 {delay}s 后重试 (剩余 {retries_left} 次)"
                         )
                         await asyncio.sleep(delay)
                     else:
                         logger.error(
-                            f"{role_def.emoji} [{role_id}] LLM 调用重试耗尽: {err_desc}"
+                            f"{agent_def.emoji} [{agent_id}] LLM 调用重试耗尽: {err_desc}"
                         )
                         raise  # 所有重试耗尽，抛出异常
 
             if response is None:
                 # 不应到达这里，但以防万一
+                logger.error(f"[{agent_id}] LLM 调用未返回有效响应且未抛出异常")
                 raise RuntimeError("LLM 调用未返回有效响应且未抛出异常")
 
+            logger.info(f"[{agent_id}] 处理 LLM 响应...")
+            logger.debug(f"[{agent_id}] 响应状态: content_len={len(response.content) if response.content else 0}, tool_calls={len(response.tool_calls) if response.has_tool_calls else 0}")
+
             if response.has_tool_calls:
+                logger.info(f"[{agent_id}] 检测到 {len(response.tool_calls)} 个工具调用")
                 tool_call_dicts = [
                     {
                         "id": tc.id,
@@ -432,12 +468,15 @@ class SubagentManager:
                     tools_called.add(tool_call.name)
                     if tool_call.name == "write_file":
                         write_file_count += 1
-                    logger.debug(
-                        f"{agent_def.emoji} [{agent_id}] 执行工具: {tool_call.name}"
-                    )
-                    result = await tools.execute(
-                        tool_call.name, tool_call.arguments
-                    )
+                    logger.info(f"[{agent_id}] → 执行工具 [{tool_call.name}]: {json.dumps(tool_call.arguments, ensure_ascii=False)[:150]}...")
+                    try:
+                        result = await tools.execute(
+                            tool_call.name, tool_call.arguments
+                        )
+                        logger.info(f"[{agent_id}] ✓ 工具 [{tool_call.name}] 执行完成，结果长度: {len(result)}")
+                    except Exception as e:
+                        logger.error(f"[{agent_id}] ✗ 工具 [{tool_call.name}] 执行失败: {e}", exc_info=True)
+                        result = f"Error: {e}"
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call.id,
@@ -445,6 +484,7 @@ class SubagentManager:
                         "content": result,
                     })
             else:
+                logger.info(f"[{agent_id}] LLM 无工具调用，准备结束迭代")
                 # ── 工具调用强制保障 ──────────────────────────────
                 # 如果角色必须创建文件但还没有调用 write_file，
                 # 注入提醒消息要求调用工具而非只描述代码
@@ -454,6 +494,7 @@ class SubagentManager:
                     and reminder_count < self._TOOL_REMINDER_MAX
                 ):
                     reminder_count += 1
+                    logger.warning(f"[{agent_id}] ⚠️ 角色要求必须写文件但尚未调用 write_file，发送提醒 ({reminder_count}/{self._TOOL_REMINDER_MAX})")
                     # 将模型的文本回复加入上下文
                     messages.append({
                         "role": "assistant",
@@ -489,6 +530,7 @@ class SubagentManager:
                     and bool(project_dir)
                 ):
                     reminder_count += 1
+                    logger.warning(f"[{agent_id}] ⚠️ 角色要求必须使用工具但尚未使用任何工具，发送工具使用提醒 ({reminder_count}/{self._TOOL_REMINDER_MAX})")
                     messages.append({
                         "role": "assistant",
                         "content": response.content or "",
@@ -510,6 +552,7 @@ class SubagentManager:
                     continue
 
                 final_result = response.content
+                logger.info(f"[{agent_id}] 迭代完成，获得最终结果")
                 break
 
         if final_result is None:
@@ -517,9 +560,30 @@ class SubagentManager:
 
         # 日志记录工具使用统计
         logger.info(
-            f"{role_def.emoji} 角色 [{role_def.title}] ({role_id}) 完成任务 "
-            f"(迭代 {iteration}/{max_iterations}, "
-            f"write_file={write_file_count}, "
-            f"tools={tools_called or '无'})"
+            f"╔══════════════════════════════════════╗"
+        )
+        logger.info(
+            f"║ {agent_def.emoji} Agent [{agent_def.title}] 完成任务    ║"
+        )
+        logger.info(
+            f"╠──────────────────────────────────────────╢"
+        )
+        logger.info(
+            f"║ Agent ID: {agent_id}                       ║"
+        )
+        logger.info(
+            f"║ 迭代次数: {iteration}/{max_iterations}                   ║"
+        )
+        logger.info(
+            f"║ 写入文件: {write_file_count}                             ║"
+        )
+        logger.info(
+            f"║ 使用工具: {', '.join(sorted(tools_called)) if tools_called else '无'}     ║"
+        )
+        logger.info(
+            f"║ 结果长度: {len(final_result) if final_result else 0} 字符                      ║"
+        )
+        logger.info(
+            f"╚══════════════════════════════════════╝"
         )
         return final_result

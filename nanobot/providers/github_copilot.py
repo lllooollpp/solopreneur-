@@ -10,6 +10,7 @@ import httpx
 import json
 from pathlib import Path
 from loguru import logger
+import asyncio
 
 try:
     from cryptography.fernet import Fernet
@@ -112,8 +113,10 @@ class GitHubCopilotProvider(LLMProvider):
     # 池调度：429 重试次数上限
     MAX_POOL_RETRIES = 5
 
-    def __init__(self, api_key: str | None = None, api_base: str | None = None, config=None):
+    def __init__(self, api_key: str | None = None, api_base: str | None = None, config=None, default_model: str | None = None):
         super().__init__(api_key=api_key or "", api_base=api_base)
+        # 保存配置的默认模型
+        self._default_model = default_model
         # 添加 VS Code User-Agent
         self._http_client = httpx.AsyncClient(
             timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=10.0),
@@ -198,7 +201,11 @@ class GitHubCopilotProvider(LLMProvider):
 
     def get_default_model(self) -> str:
         """获取默认模型"""
-        return "claude-sonnet-4"
+        # 优先使用配置的模型，否则使用硬编码默认值
+        if self._default_model:
+            # 规范化模型名
+            return self._normalize_model_name(self._default_model)
+        return "gpt-5-mini"
 
     async def start_device_flow(self) -> DeviceFlowResponse:
         """
@@ -544,11 +551,14 @@ class GitHubCopilotProvider(LLMProvider):
         # 刷新过期 Token
         await self._refresh_expired_slots()
 
-        model = self._normalize_model_name(model or self.get_default_model())
+        original_model = model or self.get_default_model()
+        normalized_model = self._normalize_model_name(original_model)
+
+        logger.info(f"[GitHubCopilot] 原始模型: {original_model} → 规范化后: {normalized_model}")
 
         payload = {
             "messages": messages,
-            "model": model,
+            "model": normalized_model,
             "temperature": temperature,
             "max_tokens": max_tokens,
             "stream": stream,
@@ -591,6 +601,25 @@ class GitHubCopilotProvider(LLMProvider):
                         retry_after = int(response.headers.get("retry-after", 0))
                     except (ValueError, TypeError):
                         pass
+
+                    # 打印完整的错误响应以便诊断
+                    response_text = response.text or 'N/A'
+                    logger.error(
+                        f"[Pool] ══════════════════════════════════════"
+                    )
+                    logger.error(
+                        f"[Pool] Slot {slot.slot_id} 收到 429 配额限制"
+                    )
+                    logger.error(
+                        f"[Pool] Retry-After: {retry_after}s ({retry_after / 3600:.1f} 小时)" if retry_after else "Retry-After: 未知"
+                    )
+                    logger.error(
+                        f"[Pool] 完整响应: {response_text}"
+                    )
+                    logger.error(
+                        f"[Pool] ══════════════════════════════════════"
+                    )
+
                     self._pool.report_rate_limit(slot.slot_id, retry_after)
                     last_error = LLMRateLimitError(
                         f"Slot {slot.slot_id} 触发 429，正在切换...",

@@ -387,10 +387,13 @@ class TokenPool:
         slot.state = SlotState.COOLING
         slot.cooling_until = time.time() + cooldown
 
+        # ⚠️ GitHub 对同一 IP 有全局速率限制
+        # 当一个账号触发 429 时，其他账号（同 IP）也会被限制
         logger.warning(
             f"[TokenPool] Slot {slot.slot_id} 触发 429 (第{slot.consecutive_errors}次)，"
             f"冷却 {cooldown:.0f}s，"
-            f"剩余可用 slot: {self.active_count}/{self.size}"
+            f"剩余可用 slot: {self.active_count}/{self.size}。"
+            f"注意：GitHub 对同一 IP 有全局速率限制，其他账号也可能被拒绝。"
         )
 
     def report_auth_error(self, slot_id: int):

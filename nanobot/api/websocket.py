@@ -276,7 +276,33 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
             
             model = data.get("model")
             
-            logger.info(f"WebSocket chat: {content[:50]}... (session: {session_key})")
+            # 获取项目信息
+            project_info = None
+            project_id = data.get("project_id")
+            project_path = data.get("project_path")
+            if project_id and project_path:
+                from nanobot.projects import ProjectManager
+                pm = ProjectManager()
+                project = pm.get_project(project_id)
+                if project:
+                    project_info = {
+                        "id": project.id,
+                        "name": project.name,
+                        "description": project.description,
+                        "path": project.path,
+                        "source": project.source.value,
+                        "git_info": project.git_info.model_dump(mode='json') if project.git_info else None,
+                    }
+                else:
+                    # 前端传了项目信息但后端找不到，使用前端传来的基本信息
+                    project_info = {
+                        "id": project_id,
+                        "name": data.get("project_name", "未命名项目"),
+                        "path": project_path,
+                        "source": "unknown",
+                    }
+            
+            logger.info(f"WebSocket chat: {content[:50]}... (session: {session_key}, project: {project_info['name'] if project_info else 'none'})")
             
             try:
                 agent_loop = await get_agent_loop()
@@ -328,6 +354,7 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                         session_key=session_key,
                         on_chunk=send_chunk,
                         on_trace=send_trace,
+                        project_info=project_info,
                     )
                 finally:
                     agent_loop.model = original_model

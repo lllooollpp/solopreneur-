@@ -456,6 +456,7 @@ class AgentLoop:
         session_key: str = "cli:direct",
         on_chunk: Any = None,
         on_trace: Any = None,
+        project_info: dict | None = None,
     ) -> str:
         """
         流式直接处理消息，支持实时文本输出和调用链路跟踪。
@@ -465,6 +466,7 @@ class AgentLoop:
             session_key: 会话标识符。
             on_chunk: 异步回调 async def on_chunk(text: str)，收到文本片段时调用。
             on_trace: 异步回调 async def on_trace(event: dict)，跟踪事件时调用。
+            project_info: 项目信息字典，包含 id, name, path 等。
 
         Returns:
             Agent 的完整响应文本。
@@ -480,6 +482,10 @@ class AgentLoop:
             chat_id=chat_id,
             content=content,
         )
+
+        # 记录项目信息
+        if project_info:
+            logger.info(f"处理项目 '{project_info.get('name')}' 的消息 (路径: {project_info.get('path')})")
 
         logger.info(f"正在处理来自 {msg.channel}:{msg.sender_id} 的流式消息")
 
@@ -497,6 +503,7 @@ class AgentLoop:
         messages = self.context.build_messages(
             history=session.get_history(),
             current_message=msg.content,
+            project_info=project_info,
         )
 
         iteration = 0

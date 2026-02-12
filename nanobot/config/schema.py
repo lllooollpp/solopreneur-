@@ -68,6 +68,7 @@ class ProvidersConfig(BaseModel):
     zhipu: ProviderConfig = Field(default_factory=ProviderConfig)
     vllm: ProviderConfig = Field(default_factory=ProviderConfig)
     gemini: ProviderConfig = Field(default_factory=ProviderConfig)
+    copilot_priority: bool = False  # 是否优先使用 Copilot
 
 
 class GatewayConfig(BaseModel):

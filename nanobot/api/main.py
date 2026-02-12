@@ -11,7 +11,7 @@ import os
 from loguru import logger
 from datetime import datetime
 
-from nanobot.api.routes import status, wecom, auth, agent, chat, skills, agents
+from nanobot.api.routes import status, wecom, auth, agent, chat, skills, agents, projects, dashboard, providers
 from nanobot.api.websocket import router as ws_router
 from nanobot.api.middleware import RateLimitMiddleware
 
@@ -77,8 +77,11 @@ app.include_router(wecom.router, prefix="/api", tags=["wecom"])
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
+app.include_router(providers.router, prefix="/api", tags=["providers"])
 app.include_router(skills.router, prefix="/api", tags=["skills"])
 app.include_router(agents.router, prefix="/api/v1", tags=["agents"])
+app.include_router(projects.router, prefix="/api/v1", tags=["projects"])
+app.include_router(dashboard.router, prefix="/api/v1", tags=["dashboard"])
 app.include_router(ws_router, tags=["websocket"])
 
 

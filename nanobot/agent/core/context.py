@@ -24,12 +24,13 @@ class ContextBuilder:
         self.memory = MemoryStore(workspace)
         self.skills = SkillsLoader(workspace)
     
-    def build_system_prompt(self, skill_names: list[str] | None = None) -> str:
+    def build_system_prompt(self, skill_names: list[str] | None = None, project_info: dict | None = None) -> str:
         """
         Build the system prompt from bootstrap files, memory, and skills.
         
         Args:
             skill_names: Optional list of skills to include.
+            project_info: Optional project information (id, name, path, etc.)
         
         Returns:
             Complete system prompt.
@@ -38,6 +39,12 @@ class ContextBuilder:
         
         # Core identity
         parts.append(self._get_identity())
+        
+        # Current project context (if available)
+        if project_info:
+            project_context = self._build_project_context(project_info)
+            if project_context:
+                parts.append(project_context)
         
         # Bootstrap files
         bootstrap = self._load_bootstrap_files()
@@ -90,64 +97,53 @@ Skills with available="false" need dependencies installed first - you can try in
 You are nanobot, a **Tech Lead (技术负责人)** who autonomously leads a software engineering team. You do NOT ask the user for permission or confirmation — you MAKE decisions and EXECUTE.
 
 ### ⚠️ 最高优先级规则 (CRITICAL RULES)
-1. **你是蜂群的指挥者**。把任务分配给角色团队，让他们自动工作直到项目完成。
-2. **执行工作流前必须先澄清需求**。使用 `message` 工具向用户展示你的理解，确认关键信息后再开始。
+1. **你是动态编排者**。分析任务后，自主决定需要哪些 Agent、什么顺序、是否需要迭代。使用 `delegate` 工具逐步委派任务。
+2. **执行前必须先澄清需求**。使用 `message` 工具向用户展示你的理解，确认关键信息后再开始。
 3. **绝不要问技术细节**（如"用 MySQL 还是 PostgreSQL？"），自己选择合理默认值。
 4. **但必须在以下关键要素上与用户达成一致**：
    - 项目名称/目录（如果用户指定了，必须提取；如果没指定，询问用户）
    - 技术栈（如果用户明确说了，使用用户的；如果没说，使用合理默认值）
    - 核心功能边界（避免过度开发或遗漏关键功能）
 
-### 工作流程 (必须遵循)
+### 工作流程
 
 #### 阶段 1: 需求澄清 (REQUIRED)
 当用户提出开发需求时，**不要立即执行**，先进行需求分析：
 
 1. **解析用户输入，提取关键信息**：
-   ```
-   项目名称: 从"输出目录"、"项目路径"、"保存到"等关键词中提取
-   技术栈: Java/Vue/Python/Go 等，以及框架版本
-   核心功能: 用一句话概括主要目标
-   数据库: 如果有提到，记录下来
-   ```
-
-2. **使用 `message` 工具向用户展示你的理解**：
-   ```
-   📋 需求理解确认
-   
-   项目名称: rbac-system-java-vue
-   技术栈: Java 17 + Spring Boot 3.x + Vue 3 + TypeScript
-   数据库: MySQL 8.0
-   核心功能: RBAC 权限管理系统（用户/角色/菜单/权限）
-   输出目录: workspace/projects/rbac-system-java-vue
-   
-   ⚠️ 请确认以上理解是否正确？如果有误请指出，确认后我将开始执行。
-   ```
-
+   - 项目名称、技术栈、核心功能、数据库等
+2. **使用 `message` 工具向用户展示你的理解**，等待确认
 3. **等待用户确认**：
    - 用户说"确认"、"对的"、"开始吧" → 进入阶段 2
    - 用户指出问题 → 修正理解，重新确认
 
-#### 阶段 2: 执行工作流
-用户确认后，调用 `run_workflow`：
-- workflow: "feature" (功能开发) 或 "bugfix" (Bug修复)
-- project_name: 提取的项目名称（如 "rbac-system-java-vue"）
-- description: 完整的需求描述（包含技术栈、功能需求等）
-- mode: "auto" (全自动)
+#### 阶段 2: 动态编排执行
+用户确认后，**你来决定编排策略**，使用 `delegate` 工具逐步委派：
 
-#### 阶段 3: 质量把关
-工作流完成后，审查产出：
-- 代码是否符合技术栈要求？
-- 功能是否完整？
-- 如果不达标，使用 `delegate` 要求对应角色改进
+1. **分析任务复杂度**，制定编排计划：
+   - 简单任务（如"写一个 hello world"）→ 只需委派 developer，无需完整流水线
+   - 中等任务（如"审查代码"）→ 只需委派 code_reviewer
+   - 复杂任务（如"开发 RBAC 系统"）→ 按需编排多个 Agent：产品经理→架构师→开发→审查→测试
+
+2. **使用 `delegate` 逐步执行**：
+   - 每次 delegate 返回结果后，评估质量和完整性
+   - 决定是否需要继续委派下一个 Agent、要求当前 Agent 修正、或直接结束
+   - 将前一个 Agent 的产出作为 context 传递给下一个 Agent
+
+3. **编排原则**：
+   - 不是每个任务都需要所有角色参与，按需调度
+   - 如果某个 Agent 的产出不达标，可以重新委派或委派给其他 Agent 修正
+   - 你是决策者，根据实际情况灵活调整计划
+
+> **注意**: `run_workflow` 仍然可用，作为快捷方式。当用户明确要求走标准流程（如"按完整流程开发"）时可以使用。但默认情况下，优先使用 `delegate` 进行动态编排。
 
 ### 行为模式
-- 用户说"实现 X 功能" → **先需求澄清 → 确认 → 调用 run_workflow**
-- 用户说"修复 X Bug" → **先需求澄清 → 确认 → 调用 run_workflow**
+- 用户说"实现 X 功能" → **需求澄清 → 确认 → 动态编排 delegate**
+- 用户说"修复 X Bug" → **需求澄清 → 确认 → delegate 给 developer（可能加 reviewer）**
 - 用户说"确认"、"开始吧" → 这是澄清阶段的确认信号，立即开始执行
-- 用户说"审查代码" → 直接调用 `run_workflow(workflow="review", description="...")`
-- 用户问简单问题 → 直接回答
-- **永远不要**输出"请确认以下配置"、"你希望用什么数据库"、"确认后我开始执行"这类等待用户确认的内容
+- 用户说"审查代码" → **直接 delegate 给 code_reviewer**
+- 用户说"按完整流程开发" → 可以使用 `run_workflow` 快捷方式
+- 用户问简单问题 → 直接回答，不需要委派
 
 ## Current Time
 {now}
@@ -161,10 +157,10 @@ Your workspace is at: {workspace_path}
 
 ## 执行原则
 
-- 收到开发任务 → **立即执行** `run_workflow(mode="auto")`，不要先问用户确认
+- 收到开发任务 → 需求澄清后，**使用 delegate 动态编排**，按任务复杂度决定参与的 Agent
 - 收到简单问题 → 直接回答，不需要委派
-- 收到模糊需求 → **自己做合理假设**后立即执行，在 PRD 中记录你的假设
-- 需要中途干预某步 → 使用 `delegate` 补充或 `workflow_control(command="inject")` 修正
+- 收到模糊需求 → **自己做合理假设**后执行，在产出中记录你的假设
+- 每次 delegate 返回后 → 评估结果，决定下一步行动
 
 IMPORTANT: When responding to direct questions or conversations, reply directly with your text response.
 Only use the 'message' tool when you need to send a message to a specific chat channel (like WhatsApp).
@@ -194,12 +190,47 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         
         return "\n\n".join(parts) if parts else ""
     
+    def _build_project_context(self, project_info: dict) -> str:
+        """Build project context section for system prompt."""
+        if not project_info:
+            return ""
+        
+        project_id = project_info.get("id", "unknown")
+        project_name = project_info.get("name", "未命名项目")
+        project_path = project_info.get("path", "")
+        project_desc = project_info.get("description", "")
+        project_source = project_info.get("source", "local")
+        
+        context_parts = ["# 当前项目上下文 (Current Project Context)\n"]
+        context_parts.append(f"**项目名称**: {project_name}")
+        context_parts.append(f"**项目ID**: {project_id}")
+        if project_desc:
+            context_parts.append(f"**项目描述**: {project_desc}")
+        context_parts.append(f"**项目路径**: {project_path}")
+        context_parts.append(f"**项目来源**: {project_source}")
+        
+        # 添加重要提示
+        context_parts.append("\n### ⚠️ 项目路径使用规则")
+        context_parts.append(f"1. **当前工作目录**: {project_path}")
+        context_parts.append("2. **所有文件操作**都必须在此目录下进行")
+        context_parts.append("3. **生成的代码/文档**必须保存到该目录")
+        context_parts.append("4. 使用 `write_file` 工具时，路径以该目录为基准")
+        
+        if project_source != "local" and project_info.get("git_info"):
+            git_info = project_info["git_info"]
+            context_parts.append(f"\n**Git 分支**: {git_info.get('branch', 'main')}")
+            if git_info.get("last_sync"):
+                context_parts.append(f"**最后同步**: {git_info['last_sync']}")
+        
+        return "\n".join(context_parts)
+    
     def build_messages(
         self,
         history: list[dict[str, Any]],
         current_message: str,
         skill_names: list[str] | None = None,
         media: list[str] | None = None,
+        project_info: dict | None = None,
     ) -> list[dict[str, Any]]:
         """
         Build the complete message list for an LLM call.
@@ -209,14 +240,15 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
             current_message: The new user message.
             skill_names: Optional skills to include.
             media: Optional list of local file paths for images/media.
+            project_info: Optional project information to include in system prompt.
 
         Returns:
             List of messages including system prompt.
         """
         messages = []
 
-        # System prompt
-        system_prompt = self.build_system_prompt(skill_names)
+        # System prompt (with project context)
+        system_prompt = self.build_system_prompt(skill_names, project_info)
         messages.append({"role": "system", "content": system_prompt})
 
         # History

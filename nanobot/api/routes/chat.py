@@ -8,7 +8,6 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
-from nanobot.api.routes.auth import get_copilot_provider
 from nanobot.session.cache import get_session_cache
 
 router = APIRouter()
@@ -111,17 +110,23 @@ async def send_message(request: ChatRequest):
     logger.info(f"Received chat message: {request.content[:50]}... (session: {request.session_id})")
 
     try:
-        # 获取 Copilot Provider
-        provider = get_copilot_provider()
+        # 使用组件管理器获取配置的 Provider
+        from nanobot.core.dependencies import get_component_manager
+        manager = get_component_manager()
+        provider = manager.get_llm_provider()
 
-        # 检查是否已认证
-        if not provider.session:
-            logger.warning("Copilot not authenticated, returning auth prompt")
+        # 检查 Provider 是否可用
+        if provider is None:
+            logger.warning("No LLM provider configured, returning config prompt")
             return ChatResponse(
-                response="⚠️ 请先在「配置」页面完成 GitHub Copilot 认证后再使用聊天功能。\n\n"
+                response="⚠️ 请先在「配置」页面配置 LLM Provider 后再使用聊天功能。\n\n"
                          "1. 点击左侧菜单「配置」\n"
-                         "2. 在「GitHub Copilot 认证」区域点击「开始认证」\n"
-                         "3. 按提示完成 GitHub 授权",
+                         "2. 在「LLM Providers」区域选择并配置一个 Provider\n"
+                         "   - GitHub Copilot（账号池管理页面登录）\n"
+                         "   - 本地 OpenAI 标准接口（vLLM, Ollama 等）\n"
+                         "   - 火山引擎\n"
+                         "   - 其他 Provider（OpenAI, Anthropic 等）\n"
+                         "3. 点击「保存配置」",
                 session_id=request.session_id
             )
 
@@ -135,8 +140,8 @@ async def send_message(request: ChatRequest):
         # 添加用户消息
         session.add_message("user", request.content)
 
-        # 调用 Copilot Chat API
-        logger.debug(f"Calling Copilot Chat API with model: {request.model}")
+        # 调用 LLM Provider
+        logger.debug(f"Calling LLM Provider with model: {request.model}")
         logger.debug(f"Message history length: {len(session.messages)}")
         logger.debug(f"Current message: {request.content[:100]}...")
 
@@ -149,7 +154,7 @@ async def send_message(request: ChatRequest):
                 stream=False
             )
         except Exception as api_error:
-            logger.error(f"Copilot API error: {api_error}")
+            logger.error(f"LLM API error: {api_error}")
 
             # 输出可读的消息内容（用于调试编码问题）
             for i, msg in enumerate(session.to_messages()):
@@ -157,14 +162,20 @@ async def send_message(request: ChatRequest):
 
             raise
 
-        # 提取响应内容
-        if isinstance(result, dict):
-            # 非流式响应
+        # 提取响应内容（统一处理不同 Provider 的返回格式）
+        if hasattr(result, 'content'):
+            # LiteLLM 和其他使用 LLMResponse 的 Provider
+            response_text = result.content or "抱歉，我无法生成回复。"
+        elif isinstance(result, dict):
+            # 旧的 Copilot 返回格式（兼容）
             choices = result.get("choices", [])
             if choices:
                 response_text = choices[0].get("message", {}).get("content", "")
             else:
                 response_text = "抱歉，我无法生成回复。"
+        elif isinstance(result, str):
+            # 直接返回字符串
+            response_text = result
         else:
             response_text = "抱歉，响应格式异常。"
 
@@ -195,9 +206,9 @@ async def clear_chat_history(session_id: Optional[str] = "default"):
         deleted = session_cache.delete(session_id)
         if deleted:
             logger.info(f"Chat history cleared for session: {session_id}")
-            return {"status": "ok", "message": f"会话 {session_id} 的对话历史已清空"}
+            return {"status": "ok", message: f"会话 {session_id} 的对话历史已清空"}
         else:
-            return {"status": "ok", "message": f"会话 {session_id} 不存在"}
+            return {"status": "ok", message: f"会话 {session_id} 不存在"}
 
 
 @router.get("/chat/sessions")

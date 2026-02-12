@@ -56,7 +56,10 @@ class ComponentManager:
         if self._copilot_provider is None:
             from nanobot.providers.github_copilot import GitHubCopilotProvider
             config = self.get_config()
-            self._copilot_provider = GitHubCopilotProvider(config=config)
+            self._copilot_provider = GitHubCopilotProvider(
+                config=config,
+                default_model=config.agents.defaults.model
+            )
         return self._copilot_provider
 
     def get_llm_provider(self, force_copilot: bool = False):
@@ -64,25 +67,46 @@ class ComponentManager:
         获取 LLM Provider
 
         Args:
-            force_copilot: 强制使用 Copilot Provider
+            force_copilot: 强制使用 Copilot Provider（忽略其他 Provider 配置）
+
+        Returns:
+            LLM Provider 实例
         """
-        # 优先使用已认证的 Copilot
+        # 如果强制使用 Copilot，检查 Copilot 是否已认证
         if force_copilot:
             copilot = self.get_copilot_provider()
             if copilot.session:
+                logger.info("使用 GitHub Copilot Provider (强制)")
                 return copilot
 
-        # 否则使用配置的 Provider
+        # 检查配置中的 copilot_priority
+        config = self.get_config()
+        copilot_priority = getattr(config.providers, 'copilot_priority', False)
+
+        # 如果配置了 copilot_priority，优先使用 Copilot
+        if copilot_priority:
+            copilot = self.get_copilot_provider()
+            if copilot.session:
+                logger.info("使用 GitHub Copilot Provider (配置优先)")
+                return copilot
+
+        # 默认情况下：优先使用配置的 Provider（本地/火山引擎等）
         if self._llm_provider is None:
-            config = self.get_config()
-            from nanobot.providers.litellm_provider import LiteLLMProvider
-            api_key = config.get_api_key()
-            api_base = config.get_api_base()
-            self._llm_provider = LiteLLMProvider(
-                api_key=api_key,
-                api_base=api_base,
+            from nanobot.providers.factory import create_llm_provider
+            self._llm_provider = create_llm_provider(
+                config,
                 default_model=config.agents.defaults.model
             )
+
+            # 如果创建了 LiteLLM Provider，记录日志
+            if self._llm_provider:
+                logger.info("使用配置的 LLM Provider")
+            else:
+                # 如果没有配置任何 Provider，回退到 Copilot
+                copilot = self.get_copilot_provider()
+                if copilot.session:
+                    logger.info("未配置其他 Provider，回退到 GitHub Copilot")
+                    self._llm_provider = copilot
 
         return self._llm_provider
 
@@ -119,8 +143,8 @@ class ComponentManager:
 
         config = self.get_config()
 
-        # 选择 Provider
-        provider = self.get_llm_provider(force_copilot=True)
+        # 选择 Provider（不再强制使用 Copilot，使用配置的 Provider）
+        provider = self.get_llm_provider()
 
         self._agent_loop = AgentLoop(
             bus=self.get_message_bus(),

@@ -42,7 +42,12 @@
       <h3>🤖 Agents 管理</h3>
       <AgentsManager />
     </div>
-    
+
+    <!-- LLM Providers 配置区域 -->
+    <div class="config-section">
+      <ProviderConfig />
+    </div>
+
     <!-- Agent 个性配置区域 -->
     <div class="config-section">
       <h3>🎭 Agent 个性 (SOUL.md)</h3>
@@ -53,7 +58,7 @@
         <p class="hint">定义 Agent 的基本性格和价值观，将自动保存并热加载</p>
       </div>
     </div>
-    
+
     <!-- GitHub Copilot 认证区域 -->
     <div class="config-section">
       <h3>🔐 GitHub Copilot 认证</h3>
@@ -103,6 +108,7 @@ import { SkillSource } from '@/types/skill'
 import { getAuthStatus } from '@/api/auth'
 import AgentEditor from '@/components/AgentEditorNew.vue'
 import AgentsManager from '@/components/AgentsManager.vue'
+import ProviderConfig from '@/components/ProviderConfig.vue'
 
 const skillsStore = useSkillsStore()
 

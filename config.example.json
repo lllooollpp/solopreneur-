@@ -39,14 +39,44 @@
   "providers": {
     "_comment": "LLM 提供者配置",
     "_comment_note": "不同模型的 Token 价格差异很大",
+    "_comment_priority": "选择哪个 Provider 由 nanobot.core.dependencies.get_llm_provider() 决定，优先使用 Copilot",
     "anthropic": {
       "api_key": "your-api-key",
+      "api_base": null,
       "_comment_model_recommendation": "claude-3-haiku 最便宜，claude-3-5-sonnet 最平衡",
       "_comment_example": "claude-3-haiku: ~$0.25/1M tokens, claude-3-5-sonnet: ~$3/1M tokens"
     },
     "openai": {
       "api_key": "your-api-key",
+      "api_base": null,
       "_comment_model_recommendation": "gpt-4o-mini 最便宜，gpt-4o 最平衡"
+    },
+    "vllm": {
+      "_comment": "本地 OpenAI 标准接口 (vLLM, Ollama, text-generation-webui 等)",
+      "api_key": "dummy",
+      "api_base": "http://localhost:8000/v1",
+      "_comment_models": "常见本地模型: llama-3-8b, llama-3-70b, qwen-7b, yi-34b"
+    },
+    "zhipu": {
+      "_comment": "火山引擎 / 智谱 AI",
+      "api_key": "your-zhipu-api-key",
+      "api_base": "https://open.bigmodel.cn/api/paas/v4/",
+      "_comment_models": "glm-4, glm-4-plus, glm-3-turbo, glm-4-flash"
+    },
+    "openrouter": {
+      "_comment": "OpenRouter 统一访问多个 LLM",
+      "api_key": "sk-or-...",
+      "api_base": "https://openrouter.ai/api/v1"
+    },
+    "groq": {
+      "_comment": "Groq 超快推理",
+      "api_key": "your-groq-api-key",
+      "api_base": null
+    },
+    "gemini": {
+      "_comment": "Google Gemini",
+      "api_key": "your-gemini-api-key",
+      "api_base": null
     }
   },
 

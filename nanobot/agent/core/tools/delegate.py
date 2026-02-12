@@ -64,6 +64,10 @@ class DelegateTool(Tool):
                     "type": "string",
                     "description": "（可选）前序 Agent 的工作产出或额外上下文，作为该 Agent 工作的输入",
                 },
+                "project_dir": {
+                    "type": "string",
+                    "description": "（可选）项目目录路径，Agent 生成的文件将写入此目录",
+                },
             },
             "required": ["agent", "task"],
         }
@@ -73,6 +77,7 @@ class DelegateTool(Tool):
         agent: str,
         task: str,
         context: str = "",
+        project_dir: str = "",
         **kwargs: Any,
     ) -> str:
         """委派任务给指定 Agent 并同步返回结果。"""
@@ -86,6 +91,7 @@ class DelegateTool(Tool):
             agent_manager=self._agent_manager,
             task=task,
             context=context,
+            project_dir=project_dir,
         )
 
         return f"{agent_def.emoji} **{agent_def.title}** 完成任务\n\n{result}"

@@ -31,19 +31,85 @@ def get_copilot_provider() -> GitHubCopilotProvider:
 async def get_models():
     """获取可用的模型列表"""
     try:
-        provider = get_copilot_provider()
-        
-        # 如果未认证，返回默认列表
-        if not provider.session:
+        from nanobot.core.dependencies import get_component_manager
+        from nanobot.providers.factory import create_llm_provider
+
+        manager = get_component_manager()
+        config = manager.get_config()
+
+        # 检查是否使用 Copilot (有已认证的账号)
+        copilot_provider = manager.get_copilot_provider()
+        if copilot_provider.session:
+            # 使用 Copilot
+            models = await copilot_provider.get_available_models()
             return {
-                "models": ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"],
-                "authenticated": False
+                "models": models,
+                "authenticated": True,
+                "provider": "copilot"
             }
-        
-        models = await provider.get_available_models()
+
+        # 否则检查其他 Provider
+        llm_provider = create_llm_provider(config, default_model=config.agents.defaults.model)
+
+        if llm_provider:
+            # 根据不同 Provider 返回对应模型列表
+            providers_config = config.providers
+
+            # 检测当前使用的 Provider
+            if providers_config.vllm.api_base:
+                # 当配置了本地 vLLM 接口时，优先返回 local 标识和默认模型（从 config.agents.defaults.model 中读取）
+                default_model = getattr(config.agents.defaults, 'model', None)
+                return {
+                    "models": ["llama-3-8b", "llama-3-70b", "qwen-7b", "qwen-14b", "yi-34b", "your-model-name"],
+                    "default_model": default_model,
+                    "local": True,
+                    "authenticated": True,
+                    "provider": "vllm",
+                    "note": "本地 vLLM/OpenAI 兼容接口，请根据实际部署的模型填写模型名称"
+                }
+            elif providers_config.zhipu.api_key:
+                return {
+                    "models": ["glm-4", "glm-4-plus", "glm-4-flash", "glm-3-turbo"],
+                    "authenticated": True,
+                    "provider": "zhipu"
+                }
+            elif providers_config.openrouter.api_key:
+                return {
+                    "models": ["anthropic/claude-3.5-sonnet", "openai/gpt-4o", "google/gemini-pro-1.5", "meta-llama/llama-3.1-70b-instruct"],
+                    "authenticated": True,
+                    "provider": "openrouter"
+                }
+            elif providers_config.anthropic.api_key:
+                return {
+                    "models": ["claude-3-5-sonnet", "claude-3-5-haiku", "claude-3-opus"],
+                    "authenticated": True,
+                    "provider": "anthropic"
+                }
+            elif providers_config.openai.api_key:
+                return {
+                    "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
+                    "authenticated": True,
+                    "provider": "openai"
+                }
+            elif providers_config.groq.api_key:
+                return {
+                    "models": ["llama-3.1-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+                    "authenticated": True,
+                    "provider": "groq"
+                }
+            elif providers_config.gemini.api_key:
+                return {
+                    "models": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"],
+                    "authenticated": True,
+                    "provider": "gemini"
+                }
+
+        # 没有配置任何 Provider，返回默认列表
         return {
-            "models": models,
-            "authenticated": True
+            "models": ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "claude-sonnet-4"],
+            "authenticated": False,
+            "provider": "none",
+            "note": "未配置任何 LLM Provider，请在配置管理页面添加"
         }
     except Exception as e:
         logger.error(f"Failed to get models: {e}")

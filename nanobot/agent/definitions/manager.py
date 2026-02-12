@@ -62,16 +62,16 @@ class AgentManager:
     def build_agent_summary(self) -> str:
         """
         Build summary of available agents for master agent context.
-        
+
         This tells the master agent which sub-agents are available for delegation.
         """
         lines = [
             "# Available Agents",
             "",
-            "You can spawn sub-agents to help with specialized tasks:",
+            "Use `delegate` to assign tasks to specialized agents. You decide which agents to involve and in what order based on the task.",
             "",
         ]
-        
+
         domains = self.list_domains()
         for domain, agents in sorted(domains.items()):
             lines.append(f"## {domain.title()}")
@@ -82,19 +82,23 @@ class AgentManager:
                     f"{source_tag} - {agent.description}"
                 )
             lines.append("")
-        
+
         lines.extend([
             "## Usage",
             "",
-            "Use `spawn` tool to create a sub-agent:",
+            "Use `delegate` to assign a task to a specific agent and get the result synchronously:",
             '```yaml',
-            'agent: "architect"',
-            'task: "Design the database schema"',
+            'agent: "developer"',
+            'task: "Implement the login API endpoint"',
+            'context: "<output from previous agent>"  # optional',
+            'project_dir: "/path/to/project"          # optional',
             '```',
             "",
-            "Use `run_workflow` to execute multi-agent pipelines.",
+            "Chain multiple `delegate` calls to orchestrate complex tasks. Pass each agent's output as `context` to the next.",
+            "",
+            "> `run_workflow` is also available as a shortcut for standard multi-agent pipelines when the user explicitly requests it.",
         ])
-        
+
         return "\n".join(lines)
     
     def build_agent_prompt(
