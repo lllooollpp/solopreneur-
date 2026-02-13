@@ -192,7 +192,10 @@ class LiteLLMProvider(LLMProvider):
 
         try:
             response = await acompletion(**kwargs)
+            chunk_count = 0
             async for chunk in response:
+                chunk_count += 1
+
                 # 处理没有 choices 的 chunk（可能只有 usage）
                 if not chunk.choices:
                     if hasattr(chunk, "usage") and chunk.usage:
@@ -201,6 +204,7 @@ class LiteLLMProvider(LLMProvider):
                             "completion_tokens": getattr(chunk.usage, "completion_tokens", 0) or 0,
                             "total_tokens": getattr(chunk.usage, "total_tokens", 0) or 0,
                         }
+                        logger.info(f"LiteLLM stream: chunk #{chunk_count} with no choices, usage: {usage}")
                     continue
 
                 choice = chunk.choices[0]
@@ -237,6 +241,9 @@ class LiteLLMProvider(LLMProvider):
                         "completion_tokens": getattr(chunk.usage, "completion_tokens", 0) or 0,
                         "total_tokens": getattr(chunk.usage, "total_tokens", 0) or 0,
                     }
+                    logger.info(f"LiteLLM stream: chunk #{chunk_count} has usage: {usage}")
+
+            logger.info(f"LiteLLM stream completed: {chunk_count} chunks, final usage: {usage}")
         except Exception as e:
             self._handle_error(e, model)
 

@@ -590,9 +590,27 @@ class AgentLoop:
                     await _track_chunk(response.content)
 
             llm_end = time.time()
-            prompt_tokens = response.usage.get("prompt_tokens", 0)
-            completion_tokens = response.usage.get("completion_tokens", 0)
-            step_tokens = response.usage.get("total_tokens", 0)
+
+            # 获取 token 数据，如果 provider 没有返回则估算
+            if response.usage and any(response.usage.values()):
+                # Provider 返回了 usage 数据
+                prompt_tokens = response.usage.get("prompt_tokens", 0)
+                completion_tokens = response.usage.get("completion_tokens", 0)
+                step_tokens = response.usage.get("total_tokens", 0)
+            else:
+                # Provider 没有返回 usage 数据，使用简单估算
+                # 假设：中文约 1.5 token/字，英文约 0.25 token/字
+                # 这里使用粗略估算：字符数 / 2
+                total_chars = sum(len(msg.get("content", "")) for msg in messages)
+                output_chars = len("".join(all_streamed)) if all_streamed else 0
+                prompt_tokens = total_chars // 2
+                completion_tokens = output_chars // 2
+                step_tokens = prompt_tokens + completion_tokens
+                logger.warning(
+                    f"LLM provider did not return usage data, estimating tokens: "
+                    f"prompt={prompt_tokens}, completion={completion_tokens}, total={step_tokens}"
+                )
+
             total_tokens += step_tokens
             total_prompt_tokens += prompt_tokens
             total_completion_tokens += completion_tokens
