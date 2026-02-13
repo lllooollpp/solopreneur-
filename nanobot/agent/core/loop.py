@@ -16,6 +16,7 @@ from nanobot.agent.core.compaction import CompactionEngine
 from nanobot.agent.core.tools.registry import ToolRegistry
 from nanobot.agent.core.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
 from nanobot.agent.core.tools.db import DBInspectTool
+from nanobot.agent.core.tools.metrics import MetricsInspectTool
 from nanobot.agent.core.tools.repo import GitInspectTool, SearchCodeTool
 from nanobot.agent.core.tools.shell import ExecTool
 from nanobot.agent.core.tools.web import WebSearchTool, WebFetchTool
@@ -137,6 +138,7 @@ class AgentLoop:
         self.tools.register(EditFileTool(workspace=self.workspace))
         self.tools.register(ListDirTool(workspace=self.workspace))
         self.tools.register(DBInspectTool())
+        self.tools.register(MetricsInspectTool())
         self.tools.register(SearchCodeTool(workspace=self.workspace))
         self.tools.register(GitInspectTool(workspace=self.workspace))
         
