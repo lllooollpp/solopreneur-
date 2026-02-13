@@ -10,6 +10,7 @@ from typing import Any
 
 from loguru import logger
 
+from nanobot.storage import SessionPersistence
 from nanobot.utils.helpers import ensure_dir, safe_filename
 
 
@@ -113,6 +114,7 @@ class SessionManager:
     
     def __init__(self, workspace: Path):
         self.workspace = workspace
+        self.storage = SessionPersistence()
         self.sessions_dir = ensure_dir(Path.home() / ".nanobot" / "sessions")
         self._cache: dict[str, Session] = {}
         self._access_order: list[str] = []  # LRU 访问顺序
@@ -160,41 +162,62 @@ class SessionManager:
         return session
     
     def _load(self, key: str) -> Session | None:
-        """Load a session from disk."""
+        """Load a session from SQLite, fallback to legacy JSONL."""
+        # 优先从 SQLite 读取
+        try:
+            payload = self.storage.load(key)
+            if payload:
+                return Session(
+                    key=payload["key"],
+                    messages=payload.get("messages", []),
+                    created_at=datetime.fromisoformat(payload["created_at"]),
+                    updated_at=datetime.fromisoformat(payload["updated_at"]),
+                    metadata=payload.get("metadata", {}),
+                    signature=payload.get("signature", ""),
+                )
+        except Exception as e:
+            logger.warning(f"Failed to load session {key} from SQLite: {e}")
+
+        # 回退：读取旧 JSONL 并迁移到 SQLite
         path = self._get_session_path(key)
-        path = self._get_session_path(key)
-        
         if not path.exists():
             return None
-        
+
         try:
             messages = []
             metadata = {}
             created_at = None
+            updated_at = None
             signature = ""
-            
+
             with open(path, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if not line:
                         continue
-                    
+
                     data = json.loads(line)
-                    
+
                     if data.get("_type") == "metadata":
                         metadata = data.get("metadata", {})
                         created_at = datetime.fromisoformat(data["created_at"]) if data.get("created_at") else None
+                        updated_at = datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None
                         signature = data.get("signature", "")
                     else:
                         messages.append(data)
-            
-            return Session(
+
+            session = Session(
                 key=key,
                 messages=messages,
                 created_at=created_at or datetime.now(),
+                updated_at=updated_at or datetime.now(),
                 metadata=metadata,
-                signature=signature
+                signature=signature,
             )
+
+            # 懒迁移：读取成功后写入 SQLite
+            self.save(session)
+            return session
         except Exception as e:
             logger.warning(f"Failed to load session {key}: {e}")
             return None
@@ -215,24 +238,16 @@ class SessionManager:
                 logger.debug(f"Evicted session from cache: {oldest_key}")
 
     def save(self, session: Session) -> None:
-        """Save a session to disk."""
-        path = self._get_session_path(session.key)
-        
-        with open(path, "w", encoding="utf-8") as f:
-            # Write metadata first
-            metadata_line = {
-                "_type": "metadata",
-                "created_at": session.created_at.isoformat(),
-                "updated_at": session.updated_at.isoformat(),
-                "metadata": session.metadata,
-                "signature": session.signature
-            }
-            f.write(json.dumps(metadata_line) + "\n")
-            
-            # Write messages
-            for msg in session.messages:
-                f.write(json.dumps(msg) + "\n")
-        
+        """Save a session to SQLite."""
+        self.storage.save(
+            key=session.key,
+            signature=session.signature,
+            metadata=session.metadata,
+            created_at=session.created_at,
+            updated_at=session.updated_at,
+            messages=session.messages,
+        )
+
         self._cache[session.key] = session
     
     def delete(self, key: str) -> bool:
@@ -248,12 +263,16 @@ class SessionManager:
         # Remove from cache
         self._cache.pop(key, None)
         
-        # Remove file
+        # Remove from SQLite
+        deleted = self.storage.delete(key)
+
+        # Best-effort: also remove legacy file if exists
         path = self._get_session_path(key)
         if path.exists():
             path.unlink()
-            return True
-        return False
+            deleted = True
+
+        return deleted
     
     def list_sessions(self) -> list[dict[str, Any]]:
         """
@@ -262,23 +281,9 @@ class SessionManager:
         Returns:
             List of session info dicts.
         """
-        sessions = []
-        
-        for path in self.sessions_dir.glob("*.jsonl"):
-            try:
-                # Read just the metadata line
-                with open(path) as f:
-                    first_line = f.readline().strip()
-                    if first_line:
-                        data = json.loads(first_line)
-                        if data.get("_type") == "metadata":
-                            sessions.append({
-                                "key": path.stem.replace("_", ":"),
-                                "created_at": data.get("created_at"),
-                                "updated_at": data.get("updated_at"),
-                                "path": str(path)
-                            })
-            except Exception:
-                continue
-        
-        return sorted(sessions, key=lambda x: x.get("updated_at", ""), reverse=True)
+        try:
+            sessions = self.storage.list()
+            return sorted(sessions, key=lambda x: x.get("updated_at", ""), reverse=True)
+        except Exception as e:
+            logger.warning(f"Failed to list sessions from SQLite: {e}")
+            return []

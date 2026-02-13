@@ -13,6 +13,7 @@ from typing import List, Optional
 from urllib.parse import urlparse, urlunparse
 from loguru import logger
 
+from nanobot.storage import ProjectPersistence
 from .models import Project, ProjectCreate, ProjectUpdate, ProjectSource, ProjectStatus, GitInfo
 
 
@@ -36,43 +37,58 @@ class ProjectManager:
             data_dir = Path.home() / ".nanobot"
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        
+
+        self.storage = ProjectPersistence(db_path=self.data_dir / "nanobot.db")
         self.projects_file = self.data_dir / "projects.json"
         self._git_credentials_file = self.data_dir / ".git_credentials.json"
         self._projects: dict[str, Project] = {}
         self._load_projects()
     
     def _load_projects(self):
-        """从文件加载项目列表"""
-        if self.projects_file.exists():
+        """从 SQLite 加载项目列表；若为空则尝试从旧 JSON 文件迁移。"""
+        self._projects = {}
+
+        # 优先从 SQLite 加载
+        try:
+            rows = self.storage.load_all()
+            for item in rows:
+                try:
+                    project = Project.from_dict(item)
+                    self._projects[project.id] = project
+                except Exception as e:
+                    logger.warning(f"Failed to load project from SQLite: {e}")
+        except Exception as e:
+            logger.error(f"Failed to load projects from SQLite: {e}")
+
+        # 兼容旧版：SQLite 为空时，从 projects.json 迁移
+        if not self._projects and self.projects_file.exists():
             try:
                 with open(self.projects_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    for item in data.get("projects", []):
-                        try:
-                            project = Project.from_dict(item)
-                            self._projects[project.id] = project
-                        except Exception as e:
-                            logger.warning(f"Failed to load project: {e}")
-                logger.info(f"Loaded {len(self._projects)} projects")
+                for item in data.get("projects", []):
+                    try:
+                        project = Project.from_dict(item)
+                        self._projects[project.id] = project
+                        self.storage.save(project.to_dict())
+                    except Exception as e:
+                        logger.warning(f"Failed to migrate project: {e}")
+                logger.info(f"Migrated {len(self._projects)} projects from projects.json")
             except Exception as e:
-                logger.error(f"Failed to load projects file: {e}")
-                self._projects = {}
-        else:
+                logger.error(f"Failed to migrate projects file: {e}")
+
+        if not self._projects:
             # 创建默认项目
             self._create_default_project()
+        else:
+            logger.info(f"Loaded {len(self._projects)} projects")
     
     def _save_projects(self):
-        """保存项目列表到文件"""
+        """保存项目列表到 SQLite。"""
         try:
-            data = {
-                "projects": [p.to_dict() for p in self._projects.values()],
-                "updated_at": datetime.now().isoformat()
-            }
-            with open(self.projects_file, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            for project in self._projects.values():
+                self.storage.save(project.to_dict())
         except Exception as e:
-            logger.error(f"Failed to save projects file: {e}")
+            logger.error(f"Failed to save projects to SQLite: {e}")
             raise
     
     def _create_default_project(self):
@@ -358,6 +374,7 @@ class ProjectManager:
         self._save_git_credentials(project_id, None, None)
         
         del self._projects[project_id]
+        self.storage.delete(project_id)
         self._save_projects()
         
         logger.info(f"Deleted project: {project.name} ({project.id})")
@@ -560,7 +577,7 @@ class ProjectManager:
         status["has_credentials"] = bool(token)
         
         # 检查 Git 状态
-        if Path(project.path / ".git").exists():
+        if (Path(project.path) / ".git").exists():
             status["is_git_repo"] = True
             try:
                 # 获取状态

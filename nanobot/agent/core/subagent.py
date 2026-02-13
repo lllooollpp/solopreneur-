@@ -13,6 +13,7 @@ from loguru import logger
 from nanobot.bus.events import InboundMessage
 from nanobot.bus.queue import MessageBus
 from nanobot.providers.base import LLMProvider
+from nanobot.storage import SubagentTaskPersistence
 from nanobot.agent.core.tools.registry import ToolRegistry
 from nanobot.agent.core.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
 from nanobot.agent.core.tools.shell import ExecTool
@@ -47,9 +48,35 @@ class SubagentManager:
         self.model = model or provider.get_default_model()
         self.brave_api_key = brave_api_key
         self.exec_config = exec_config or ExecToolConfig()
+        self.task_store = SubagentTaskPersistence()
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
         self._max_concurrent_subagents = 5  # 最大并发子Agent数
         self._subagent_semaphore = asyncio.Semaphore(self._max_concurrent_subagents)
+
+    def _persist_task(
+        self,
+        task_id: str,
+        label: str,
+        task_text: str,
+        origin: dict[str, str],
+        status: str,
+        result_text: str | None = None,
+        error_text: str | None = None,
+    ) -> None:
+        """持久化子任务状态（失败不影响执行流程）。"""
+        try:
+            self.task_store.upsert(
+                task_id=task_id,
+                label=label,
+                task_text=task_text,
+                origin_channel=origin["channel"],
+                origin_chat_id=origin["chat_id"],
+                status=status,
+                result_text=result_text,
+                error_text=error_text,
+            )
+        except Exception as e:
+            logger.warning(f"持久化子任务状态失败 [{task_id}] ({status}): {e}")
     
     async def spawn(
         self,
@@ -82,6 +109,14 @@ class SubagentManager:
             "channel": origin_channel,
             "chat_id": origin_chat_id,
         }
+
+        self._persist_task(
+            task_id=task_id,
+            label=display_label,
+            task_text=task,
+            origin=origin,
+            status="pending",
+        )
         
         # 创建后台任务
         bg_task = asyncio.create_task(
@@ -104,6 +139,13 @@ class SubagentManager:
     ) -> None:
         """带信号量控制的子Agent执行包装器。"""
         async with self._subagent_semaphore:
+            self._persist_task(
+                task_id=task_id,
+                label=label,
+                task_text=task,
+                origin=origin,
+                status="running",
+            )
             await self._run_subagent(task_id, task, label, origin)
     
     async def _run_subagent(
@@ -190,11 +232,27 @@ class SubagentManager:
                 final_result = "任务已完成，但未生成最终回复。"
             
             logger.info(f"子 Agent [{task_id}] 执行成功")
+            self._persist_task(
+                task_id=task_id,
+                label=label,
+                task_text=task,
+                origin=origin,
+                status="success",
+                result_text=final_result,
+            )
             await self._announce_result(task_id, label, task, final_result, origin, "ok")
             
         except Exception as e:
             error_msg = f"错误: {str(e)}"
             logger.error(f"子 Agent [{task_id}] 失败: {e}")
+            self._persist_task(
+                task_id=task_id,
+                label=label,
+                task_text=task,
+                origin=origin,
+                status="failed",
+                error_text=error_msg,
+            )
             await self._announce_result(task_id, label, task, error_msg, origin, "error")
     
     async def _announce_result(

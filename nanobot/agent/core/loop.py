@@ -20,6 +20,7 @@ from nanobot.agent.core.tools.web import WebSearchTool, WebFetchTool
 from nanobot.agent.core.tools.message import MessageTool
 from nanobot.agent.core.tools.spawn import SpawnTool
 from nanobot.agent.core.subagent import SubagentManager
+from nanobot.storage import UsagePersistence
 from nanobot.session.manager import SessionManager
 
 # 安全限制常量（默认值，可通过 config 覆盖）
@@ -65,6 +66,7 @@ class AgentLoop:
         self.max_total_time = max_total_time or DEFAULT_MAX_TOTAL_TIME
         
         self.context = ContextBuilder(workspace)
+        self.usage_store = UsagePersistence()
         self.sessions = SessionManager(workspace)
         self.tools = ToolRegistry()
         self.subagents = SubagentManager(
@@ -101,6 +103,30 @@ class AgentLoop:
         
         self._running = False
         self._register_default_tools()
+
+    def _record_usage(
+        self,
+        session_key: str,
+        model: str,
+        usage: dict[str, int] | None,
+        duration_ms: int,
+        is_stream: bool,
+    ) -> None:
+        """记录一次 LLM 调用 usage（失败不影响主流程）。"""
+        if not usage:
+            return
+        try:
+            self.usage_store.record(
+                session_key=session_key,
+                model=model,
+                prompt_tokens=usage.get("prompt_tokens", 0),
+                completion_tokens=usage.get("completion_tokens", 0),
+                total_tokens=usage.get("total_tokens", 0),
+                duration_ms=duration_ms,
+                is_stream=is_stream,
+            )
+        except Exception as e:
+            logger.warning(f"记录 LLM usage 失败: {e}")
     
     def _register_default_tools(self) -> None:
         """注册默认工具集。"""
@@ -263,10 +289,19 @@ class AgentLoop:
                     total_tokens = 0
 
             # 调用 LLM
+            llm_start = time.time()
             response = await self.provider.chat(
                 messages=messages,
                 tools=self.tools.get_definitions(),
                 model=self.model
+            )
+            llm_duration_ms = int((time.time() - llm_start) * 1000)
+            self._record_usage(
+                session_key=msg.session_key,
+                model=self.model,
+                usage=response.usage,
+                duration_ms=llm_duration_ms,
+                is_stream=False,
             )
             
             # Token 消耗检查：超限时压缩上下文而非停止
@@ -377,10 +412,19 @@ class AgentLoop:
         while iteration < self.max_iterations:
             iteration += 1
             
+            llm_start = time.time()
             response = await self.provider.chat(
                 messages=messages,
                 tools=self.tools.get_definitions(),
                 model=self.model
+            )
+            llm_duration_ms = int((time.time() - llm_start) * 1000)
+            self._record_usage(
+                session_key=session_key,
+                model=self.model,
+                usage=response.usage,
+                duration_ms=llm_duration_ms,
+                is_stream=False,
             )
             
             if response.has_tool_calls:
@@ -572,18 +616,36 @@ class AgentLoop:
 
             # 优先使用流式调用
             if hasattr(self.provider, "chat_stream"):
+                llm_start = time.time()
                 response = await self.provider.chat_stream(
                     messages=messages,
                     tools=self.tools.get_definitions(),
                     model=self.model,
                     on_chunk=_track_chunk,
                 )
+                llm_duration_ms = int((time.time() - llm_start) * 1000)
+                self._record_usage(
+                    session_key=msg.session_key,
+                    model=self.model,
+                    usage=response.usage,
+                    duration_ms=llm_duration_ms,
+                    is_stream=True,
+                )
             else:
                 # 回退到非流式
+                llm_start = time.time()
                 response = await self.provider.chat(
                     messages=messages,
                     tools=self.tools.get_definitions(),
                     model=self.model,
+                )
+                llm_duration_ms = int((time.time() - llm_start) * 1000)
+                self._record_usage(
+                    session_key=msg.session_key,
+                    model=self.model,
+                    usage=response.usage,
+                    duration_ms=llm_duration_ms,
+                    is_stream=False,
                 )
                 # 非流式时手动发送文本
                 if response.content and not response.has_tool_calls and on_chunk:
