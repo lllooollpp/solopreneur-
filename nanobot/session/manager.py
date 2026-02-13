@@ -1,6 +1,5 @@
 """Session management for conversation history."""
 
-import json
 import hashlib
 import secrets
 from pathlib import Path
@@ -10,26 +9,25 @@ from typing import Any
 
 from loguru import logger
 
-from nanobot.storage import SessionPersistence
-from nanobot.utils.helpers import ensure_dir, safe_filename
+from nanobot.storage import AppKVPersistence, SessionPersistence
 
 
 # 用于session签名的密钥（应该从环境变量或配置文件加载）
 _SESSION_SECRET = None
+_KV_KEY_SESSION_SECRET = "session_secret"
 
 
 def _get_session_secret() -> str:
-    """获取或生成session密钥。"""
+    """获取或生成 session 密钥（存储于 SQLite KV）。"""
     global _SESSION_SECRET
     if _SESSION_SECRET is None:
-        secret_file = Path.home() / ".nanobot" / ".session_secret"
-        if secret_file.exists():
-            _SESSION_SECRET = secret_file.read_text().strip()
+        kv_store = AppKVPersistence()
+        saved = kv_store.get(_KV_KEY_SESSION_SECRET)
+        if saved:
+            _SESSION_SECRET = saved
         else:
             _SESSION_SECRET = secrets.token_hex(32)
-            secret_file.parent.mkdir(parents=True, exist_ok=True)
-            secret_file.write_text(_SESSION_SECRET)
-            secret_file.chmod(0o600)  # 仅所有者可读写
+            kv_store.set(_KV_KEY_SESSION_SECRET, _SESSION_SECRET)
     return _SESSION_SECRET
 
 
@@ -51,7 +49,7 @@ class Session:
     """
     A conversation session.
     
-    Stores messages in JSONL format for easy reading and persistence.
+    Stores messages in SQLite-backed persistence.
     """
     
     key: str  # channel:chat_id
@@ -109,21 +107,15 @@ class SessionManager:
     """
     Manages conversation sessions.
     
-    Sessions are stored as JSONL files in the sessions directory.
+    Sessions are stored in SQLite.
     """
     
     def __init__(self, workspace: Path):
         self.workspace = workspace
         self.storage = SessionPersistence()
-        self.sessions_dir = ensure_dir(Path.home() / ".nanobot" / "sessions")
         self._cache: dict[str, Session] = {}
         self._access_order: list[str] = []  # LRU 访问顺序
         self._max_cache_size: int = 1000  # 最大缓存数量
-    
-    def _get_session_path(self, key: str) -> Path:
-        """Get the file path for a session."""
-        safe_key = safe_filename(key.replace(":", "_"))
-        return self.sessions_dir / f"{safe_key}.jsonl"
     
     def get_or_create(self, key: str) -> Session:
         """
@@ -146,7 +138,7 @@ class SessionManager:
                 self._cache[key] = session
             return session
         
-        # Try to load from disk
+        # Try to load from persistence
         session = self._load(key)
         if session is None:
             session = Session(key=key)
@@ -162,8 +154,7 @@ class SessionManager:
         return session
     
     def _load(self, key: str) -> Session | None:
-        """Load a session from SQLite, fallback to legacy JSONL."""
-        # 优先从 SQLite 读取
+        """Load a session from SQLite."""
         try:
             payload = self.storage.load(key)
             if payload:
@@ -177,49 +168,6 @@ class SessionManager:
                 )
         except Exception as e:
             logger.warning(f"Failed to load session {key} from SQLite: {e}")
-
-        # 回退：读取旧 JSONL 并迁移到 SQLite
-        path = self._get_session_path(key)
-        if not path.exists():
-            return None
-
-        try:
-            messages = []
-            metadata = {}
-            created_at = None
-            updated_at = None
-            signature = ""
-
-            with open(path, encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    data = json.loads(line)
-
-                    if data.get("_type") == "metadata":
-                        metadata = data.get("metadata", {})
-                        created_at = datetime.fromisoformat(data["created_at"]) if data.get("created_at") else None
-                        updated_at = datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None
-                        signature = data.get("signature", "")
-                    else:
-                        messages.append(data)
-
-            session = Session(
-                key=key,
-                messages=messages,
-                created_at=created_at or datetime.now(),
-                updated_at=updated_at or datetime.now(),
-                metadata=metadata,
-                signature=signature,
-            )
-
-            # 懒迁移：读取成功后写入 SQLite
-            self.save(session)
-            return session
-        except Exception as e:
-            logger.warning(f"Failed to load session {key}: {e}")
             return None
 
     def _update_access_order(self, key: str) -> None:
@@ -265,13 +213,6 @@ class SessionManager:
         
         # Remove from SQLite
         deleted = self.storage.delete(key)
-
-        # Best-effort: also remove legacy file if exists
-        path = self._get_session_path(key)
-        if path.exists():
-            path.unlink()
-            deleted = True
-
         return deleted
     
     def list_sessions(self) -> list[dict[str, Any]]:

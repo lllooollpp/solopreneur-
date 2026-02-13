@@ -113,3 +113,35 @@ class SubagentTaskPersistence:
             result_text=result_text,
             error_text=error_text,
         )
+
+
+class AppKVPersistence:
+    """Persistence service for application key-value settings."""
+
+    def __init__(self, store: SQLiteStore | None = None):
+        self._store = store or SQLiteStore()
+
+    def get(self, key: str) -> str | None:
+        return self._store.get_kv(key)
+
+    def set(self, key: str, value: str) -> None:
+        self._store.set_kv(key, value)
+
+    def delete(self, key: str) -> bool:
+        return self._store.delete_kv(key)
+
+
+class GitCredentialPersistence:
+    """Persistence service for git credentials."""
+
+    def __init__(self, store: SQLiteStore | None = None, db_path: Path | None = None):
+        self._store = store or SQLiteStore(db_path)
+
+    def get(self, project_id: str) -> tuple[str | None, str | None]:
+        return self._store.get_git_credentials(project_id)
+
+    def set(self, project_id: str, username: str | None, token: str | None) -> None:
+        self._store.set_git_credentials(project_id, username, token)
+
+    def delete(self, project_id: str) -> bool:
+        return self._store.delete_git_credentials(project_id)

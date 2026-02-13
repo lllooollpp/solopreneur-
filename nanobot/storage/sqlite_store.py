@@ -106,6 +106,19 @@ class SQLiteStore:
 
                 CREATE INDEX IF NOT EXISTS idx_subagent_tasks_status_updated
                 ON subagent_tasks(status, updated_at);
+
+                CREATE TABLE IF NOT EXISTS app_kv (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS git_credentials (
+                    project_id TEXT PRIMARY KEY,
+                    username TEXT,
+                    token TEXT,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
 
@@ -401,3 +414,70 @@ class SQLiteStore:
                     now,
                 ),
             )
+
+    # ---------- Generic KV persistence ----------
+
+    def get_kv(self, key: str) -> str | None:
+        with self._lock, self._connect() as conn:
+            row = conn.execute(
+                "SELECT value FROM app_kv WHERE key = ?",
+                (key,),
+            ).fetchone()
+            return row["value"] if row else None
+
+    def set_kv(self, key: str, value: str) -> None:
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO app_kv(key, value, updated_at)
+                VALUES(?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    value = excluded.value,
+                    updated_at = excluded.updated_at
+                """,
+                (key, value, datetime.now().isoformat()),
+            )
+
+    def delete_kv(self, key: str) -> bool:
+        with self._lock, self._connect() as conn:
+            result = conn.execute("DELETE FROM app_kv WHERE key = ?", (key,))
+            return result.rowcount > 0
+
+    # ---------- Git credential persistence ----------
+
+    def get_git_credentials(self, project_id: str) -> tuple[str | None, str | None]:
+        with self._lock, self._connect() as conn:
+            row = conn.execute(
+                "SELECT username, token FROM git_credentials WHERE project_id = ?",
+                (project_id,),
+            ).fetchone()
+            if not row:
+                return None, None
+            return row["username"] or None, row["token"] or None
+
+    def set_git_credentials(
+        self,
+        project_id: str,
+        username: str | None,
+        token: str | None,
+    ) -> None:
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO git_credentials(project_id, username, token, updated_at)
+                VALUES(?, ?, ?, ?)
+                ON CONFLICT(project_id) DO UPDATE SET
+                    username = excluded.username,
+                    token = excluded.token,
+                    updated_at = excluded.updated_at
+                """,
+                (project_id, username, token, datetime.now().isoformat()),
+            )
+
+    def delete_git_credentials(self, project_id: str) -> bool:
+        with self._lock, self._connect() as conn:
+            result = conn.execute(
+                "DELETE FROM git_credentials WHERE project_id = ?",
+                (project_id,),
+            )
+            return result.rowcount > 0

@@ -1,9 +1,5 @@
-"""
-项目管理器
-处理项目的 CRUD 操作和 Git 操作
-"""
+"""项目管理器：项目与凭证均使用 SQLite 持久化。"""
 
-import json
 import shutil
 import subprocess
 import uuid
@@ -13,7 +9,7 @@ from typing import List, Optional
 from urllib.parse import urlparse, urlunparse
 from loguru import logger
 
-from nanobot.storage import ProjectPersistence
+from nanobot.storage import GitCredentialPersistence, ProjectPersistence
 from .models import Project, ProjectCreate, ProjectUpdate, ProjectSource, ProjectStatus, GitInfo
 
 
@@ -21,9 +17,9 @@ class ProjectManager:
     """
     项目管理器
     
-    管理项目配置存储在 ~/.nanobot/projects.json
+    管理项目配置存储在 SQLite
     项目代码存储在各自指定的 path 中
-    Git 凭证存储在 ~/.nanobot/.git_credentials.json（设置文件权限保护）
+    Git 凭证存储在 SQLite git_credentials 表
     """
     
     def __init__(self, data_dir: Optional[Path] = None):
@@ -39,13 +35,12 @@ class ProjectManager:
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
         self.storage = ProjectPersistence(db_path=self.data_dir / "nanobot.db")
-        self.projects_file = self.data_dir / "projects.json"
-        self._git_credentials_file = self.data_dir / ".git_credentials.json"
+        self.credential_store = GitCredentialPersistence(db_path=self.data_dir / "nanobot.db")
         self._projects: dict[str, Project] = {}
         self._load_projects()
     
     def _load_projects(self):
-        """从 SQLite 加载项目列表；若为空则尝试从旧 JSON 文件迁移。"""
+        """从 SQLite 加载项目列表。"""
         self._projects = {}
 
         # 优先从 SQLite 加载
@@ -59,22 +54,6 @@ class ProjectManager:
                     logger.warning(f"Failed to load project from SQLite: {e}")
         except Exception as e:
             logger.error(f"Failed to load projects from SQLite: {e}")
-
-        # 兼容旧版：SQLite 为空时，从 projects.json 迁移
-        if not self._projects and self.projects_file.exists():
-            try:
-                with open(self.projects_file, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                for item in data.get("projects", []):
-                    try:
-                        project = Project.from_dict(item)
-                        self._projects[project.id] = project
-                        self.storage.save(project.to_dict())
-                    except Exception as e:
-                        logger.warning(f"Failed to migrate project: {e}")
-                logger.info(f"Migrated {len(self._projects)} projects from projects.json")
-            except Exception as e:
-                logger.error(f"Failed to migrate projects file: {e}")
 
         if not self._projects:
             # 创建默认项目
@@ -121,29 +100,12 @@ class ProjectManager:
     # ==================== Git 凭证管理 ====================
     
     def _save_git_credentials(self, project_id: str, username: Optional[str], token: Optional[str]):
-        """
-        保存 Git 凭证
-        
-        凭证存储在独立的 JSON 文件中，与其他配置分开
-        """
+        """保存 Git 凭证到 SQLite。"""
         try:
-            credentials = {}
-            if self._git_credentials_file.exists():
-                with open(self._git_credentials_file, "r", encoding="utf-8") as f:
-                    credentials = json.load(f)
-            
             if username or token:
-                credentials[project_id] = {
-                    "username": username or "",
-                    "token": token or "",
-                    "updated_at": datetime.now().isoformat()
-                }
-            elif project_id in credentials:
-                del credentials[project_id]
-            
-            with open(self._git_credentials_file, "w", encoding="utf-8") as f:
-                json.dump(credentials, f, ensure_ascii=False, indent=2)
-                
+                self.credential_store.set(project_id, username, token)
+            else:
+                self.credential_store.delete(project_id)
         except Exception as e:
             logger.error(f"Failed to save git credentials: {e}")
     
@@ -155,15 +117,7 @@ class ProjectManager:
             (username, token) 元组
         """
         try:
-            if not self._git_credentials_file.exists():
-                return None, None
-            
-            with open(self._git_credentials_file, "r", encoding="utf-8") as f:
-                credentials = json.load(f)
-            
-            cred = credentials.get(project_id, {})
-            return cred.get("username") or None, cred.get("token") or None
-            
+            return self.credential_store.get(project_id)
         except Exception as e:
             logger.error(f"Failed to get git credentials: {e}")
             return None, None
