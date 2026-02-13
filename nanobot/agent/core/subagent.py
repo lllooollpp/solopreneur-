@@ -17,6 +17,7 @@ from nanobot.providers.base import LLMProvider
 from nanobot.storage import SubagentTaskPersistence, UsagePersistence
 from nanobot.agent.core.tools.registry import ToolRegistry
 from nanobot.agent.core.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
+from nanobot.agent.core.tools.repo import GitInspectTool, SearchCodeTool
 from nanobot.agent.core.tools.shell import ExecTool
 from nanobot.agent.core.tools.web import WebSearchTool, WebFetchTool
 
@@ -188,6 +189,8 @@ class SubagentManager:
             tools.register(WriteFileTool(workspace=self.workspace))
             tools.register(EditFileTool(workspace=self.workspace))
             tools.register(ListDirTool(workspace=self.workspace))
+            tools.register(SearchCodeTool(workspace=self.workspace))
+            tools.register(GitInspectTool(workspace=self.workspace))
             tools.register(ExecTool(
                 working_dir=str(self.workspace),
                 timeout=self.exec_config.timeout,
@@ -376,6 +379,8 @@ class SubagentManager:
             "write_file": WriteFileTool(workspace=workspace_path),
             "edit_file": EditFileTool(workspace=workspace_path),
             "list_dir": ListDirTool(workspace=workspace_path),
+            "search_code": SearchCodeTool(workspace=workspace_path),
+            "git_inspect": GitInspectTool(workspace=workspace_path),
             "exec": ExecTool(
                 working_dir=str(workspace_path),
                 timeout=self.exec_config.timeout,

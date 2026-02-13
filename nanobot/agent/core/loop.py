@@ -15,6 +15,7 @@ from nanobot.agent.core.context import ContextBuilder
 from nanobot.agent.core.compaction import CompactionEngine
 from nanobot.agent.core.tools.registry import ToolRegistry
 from nanobot.agent.core.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
+from nanobot.agent.core.tools.repo import GitInspectTool, SearchCodeTool
 from nanobot.agent.core.tools.shell import ExecTool
 from nanobot.agent.core.tools.web import WebSearchTool, WebFetchTool
 from nanobot.agent.core.tools.message import MessageTool
@@ -134,6 +135,8 @@ class AgentLoop:
         self.tools.register(WriteFileTool(workspace=self.workspace))
         self.tools.register(EditFileTool(workspace=self.workspace))
         self.tools.register(ListDirTool(workspace=self.workspace))
+        self.tools.register(SearchCodeTool(workspace=self.workspace))
+        self.tools.register(GitInspectTool(workspace=self.workspace))
         
         # Shell 工具
         self.tools.register(ExecTool(
