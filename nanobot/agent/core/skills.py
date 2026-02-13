@@ -7,7 +7,9 @@ import shutil
 from pathlib import Path
 
 # 默认内置技能目录（相对于此文件）
-BUILTIN_SKILLS_DIR = Path(__file__).parent.parent / "skills"
+# 当前文件: nanobot/agent/core/skills.py
+# 内置技能: nanobot/skills/
+BUILTIN_SKILLS_DIR = Path(__file__).parent.parent.parent / "skills"
 
 
 class SkillsLoader:

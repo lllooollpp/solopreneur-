@@ -161,6 +161,18 @@ FEATURE_WORKFLOW = Workflow(
             save_as="docs/review.md",
         ),
         WorkflowStep(
+            agent="security_engineer",
+            label="安全审查",
+            task_template=(
+                "基于当前实现进行应用安全审查并给出可执行修复建议。\n"
+                "项目目录: `{project_dir}`\n"
+                "请使用 `list_dir` / `read_file` 进行证据化审查。\n\n"
+                "# 功能描述\n{description}\n\n"
+                "# 代码审查结果\n{prev_output}"
+            ),
+            save_as="docs/security-review.md",
+        ),
+        WorkflowStep(
             agent="tester",
             label="测试",
             task_template=(
@@ -169,7 +181,7 @@ FEATURE_WORKFLOW = Workflow(
                 "请使用 `write_file` 在项目目录下创建测试文件，"
                 "并使用 `exec` 运行测试。\n\n"
                 "# 功能描述\n{description}\n\n"
-                "# 代码审查反馈\n{prev_output}"
+                "# 安全审查与代码审查反馈\n{prev_output}"
             ),
         ),
     ],
@@ -255,15 +267,38 @@ DEPLOY_WORKFLOW = Workflow(
             ),
         ),
         WorkflowStep(
+            agent="release_manager",
+            label="发布准备",
+            task_template=(
+                "准备发布清单与上线回滚方案。\n"
+                "项目目录: `{project_dir}`\n\n"
+                "# 发布目标\n{description}\n\n"
+                "# 测试结果\n{prev_output}"
+            ),
+            save_as="docs/release-plan.md",
+        ),
+        WorkflowStep(
             agent="devops",
             label="部署配置与执行",
             task_template=(
                 "配置并执行部署。\n"
                 "项目目录: `{project_dir}`\n\n"
                 "# 部署需求\n{description}\n\n"
-                "# 测试结果\n{prev_output}"
+                "# 发布准备\n{prev_output}"
             ),
             save_as="docs/deployment.md",
+        ),
+        WorkflowStep(
+            agent="sre_engineer",
+            label="发布后验证",
+            task_template=(
+                "执行发布后稳定性验证与可观测性检查。\n"
+                "项目目录: `{project_dir}`\n"
+                "请输出告警、SLO 与回归风险结论。\n\n"
+                "# 发布信息\n{description}\n\n"
+                "# 部署结果\n{prev_output}"
+            ),
+            save_as="docs/post-deploy-validation.md",
         ),
     ],
 )
@@ -376,7 +411,7 @@ class WorkflowEngine:
             await on_progress(step_idx + 1, session.total_steps, step.agent, step.label, "running")
 
         logger.info(f"会话 {session_id} 步骤 {step_idx + 1}/{session.total_steps}: "
-                    f"{role_def.emoji} {role_def.title} - {step.label}")
+                f"{agent_def.emoji} {agent_def.title} - {step.label}")
 
         # 计算项目目录
         project_dir = ""

@@ -22,3 +22,6 @@ The skill format and metadata structure follow OpenClaw's conventions to maintai
 | `summarize` | Summarize URLs, files, and YouTube videos |
 | `tmux` | Remote-control tmux sessions |
 | `skill-creator` | Create new skills |
+| `security` | Application security review and hardening |
+| `release` | Release plan, rollout checklist, and rollback strategy |
+| `observability` | SLI/SLO, alerting, and post-deploy reliability validation |
