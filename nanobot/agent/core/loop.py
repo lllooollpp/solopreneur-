@@ -113,8 +113,7 @@ class AgentLoop:
         is_stream: bool,
     ) -> None:
         """记录一次 LLM 调用 usage（失败不影响主流程）。"""
-        if not usage:
-            return
+        usage = usage or {}
         try:
             self.usage_store.record(
                 session_key=session_key,

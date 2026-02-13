@@ -75,8 +75,10 @@ class LiteLLMProvider(LLMProvider):
 
         # Disable LiteLLM logging noise
         litellm.suppress_debug_info = True
-        # 自动丢弃模型不支持的参数（如gpt-5不支持temperature）
+        # 自动丢弃模型不支持的参数
         litellm.drop_params = True
+        # 设置默认超时时间为 3 分钟 (180秒)
+        litellm.request_timeout = 180
     
     def _prepare_model_name(self, model: str) -> str:
         """准备模型名称，添加必要的 provider 前缀。"""

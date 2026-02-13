@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import uuid
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
@@ -13,7 +14,7 @@ from loguru import logger
 from nanobot.bus.events import InboundMessage
 from nanobot.bus.queue import MessageBus
 from nanobot.providers.base import LLMProvider
-from nanobot.storage import SubagentTaskPersistence
+from nanobot.storage import SubagentTaskPersistence, UsagePersistence
 from nanobot.agent.core.tools.registry import ToolRegistry
 from nanobot.agent.core.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
 from nanobot.agent.core.tools.shell import ExecTool
@@ -49,9 +50,31 @@ class SubagentManager:
         self.brave_api_key = brave_api_key
         self.exec_config = exec_config or ExecToolConfig()
         self.task_store = SubagentTaskPersistence()
+        self.usage_store = UsagePersistence()
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
         self._max_concurrent_subagents = 5  # 最大并发子Agent数
         self._subagent_semaphore = asyncio.Semaphore(self._max_concurrent_subagents)
+
+    def _record_usage(
+        self,
+        session_key: str,
+        usage: dict[str, int] | None,
+        duration_ms: int,
+    ) -> None:
+        """记录一次子 Agent LLM 调用 usage（失败不影响主流程）。"""
+        usage = usage or {}
+        try:
+            self.usage_store.record(
+                session_key=session_key,
+                model=self.model,
+                prompt_tokens=usage.get("prompt_tokens", 0),
+                completion_tokens=usage.get("completion_tokens", 0),
+                total_tokens=usage.get("total_tokens", 0),
+                duration_ms=duration_ms,
+                is_stream=False,
+            )
+        except Exception as e:
+            logger.warning(f"记录子 Agent LLM usage 失败: {e}")
 
     def _persist_task(
         self,
@@ -187,12 +210,19 @@ class SubagentManager:
             
             while iteration < max_iterations:
                 iteration += 1
-                
+
+                llm_start = time.time()
                 response = await self.provider.chat(
                     messages=messages,
                     tools=tools.get_definitions(),
                     model=self.model,
                     max_tokens=16384,
+                )
+                llm_duration_ms = int((time.time() - llm_start) * 1000)
+                self._record_usage(
+                    session_key=f"{origin['channel']}:{origin['chat_id']}",
+                    usage=response.usage,
+                    duration_ms=llm_duration_ms,
                 )
                 
                 if response.has_tool_calls:
@@ -468,11 +498,18 @@ class SubagentManager:
             for _retry in range(self._LLM_CALL_MAX_RETRIES):
                 try:
                     logger.debug(f"[{agent_id}] 调用 LLM (重试 {_retry + 1}/{self._LLM_CALL_MAX_RETRIES})")
+                    llm_start = time.time()
                     response = await self.provider.chat(
                         messages=messages,
                         tools=tools.get_definitions(),
                         model=self.model,
                         max_tokens=16384,  # 代码生成需要更多输出空间
+                    )
+                    llm_duration_ms = int((time.time() - llm_start) * 1000)
+                    self._record_usage(
+                        session_key=f"subagent:{agent_id}",
+                        usage=response.usage,
+                        duration_ms=llm_duration_ms,
                     )
                     logger.info(f"[{agent_id}] ✓ LLM 调用成功 | tool_calls={len(response.tool_calls)} | has_tool_calls={response.has_tool_calls}")
                     if response.content:

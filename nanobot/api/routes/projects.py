@@ -2,15 +2,17 @@
 项目管理 API 端点
 """
 
+import asyncio
+import uuid
 from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel
-import asyncio
-import uuid
 
 from nanobot.projects import ProjectManager, ProjectCreate, ProjectUpdate
 from nanobot.core.dependencies import get_component_manager
+from nanobot.storage import SubagentTaskPersistence
 
 router = APIRouter()
 
@@ -301,9 +303,29 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
 
         # 运行在后台，立即返回任务 id
         task_id = str(uuid.uuid4())[:8]
+        task_store = SubagentTaskPersistence()
+
+        # 先落一条 pending，便于前端/诊断查询到任务
+        task_store.upsert(
+            task_id=task_id,
+            label=f"Wiki生成: {project.name}",
+            task_text=task_desc,
+            origin_channel="api",
+            origin_chat_id=project_id,
+            status="pending",
+        )
 
         async def _bg_run():
             try:
+                task_store.upsert(
+                    task_id=task_id,
+                    label=f"Wiki生成: {project.name}",
+                    task_text=task_desc,
+                    origin_channel="api",
+                    origin_chat_id=project_id,
+                    status="running",
+                )
+
                 logger.info("=" * 60)
                 logger.info(f"[{task_id}] 🚀 开始后台 Wiki 生成任务")
                 logger.info(f"[{task_id}] 项目: {project.name}")
@@ -324,6 +346,17 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
                 logger.info(f"[{task_id}] ✅ Wiki 生成完成")
                 logger.info(f"[{task_id}] 结果长度: {len(result)} 字符")
                 logger.info("=" * 60)
+
+                task_store.upsert(
+                    task_id=task_id,
+                    label=f"Wiki生成: {project.name}",
+                    task_text=task_desc,
+                    origin_channel="api",
+                    origin_chat_id=project_id,
+                    status="success",
+                    result_text=result,
+                )
+
                 # 发布结果回主 Agent（使用子 Agent 的公告格式）
                 await agent_loop.subagents._announce_result(
                     task_id=task_id,
@@ -339,6 +372,17 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
                 logger.error(f"[{task_id}] 错误类型: {type(e).__name__}")
                 logger.error(f"[{task_id}] 错误信息: {e}")
                 logger.error("=" * 60, exc_info=True)
+
+                task_store.upsert(
+                    task_id=task_id,
+                    label=f"Wiki生成: {project.name}",
+                    task_text=task_desc,
+                    origin_channel="api",
+                    origin_chat_id=project_id,
+                    status="failed",
+                    error_text=str(e),
+                )
+
                 await agent_loop.subagents._announce_result(
                     task_id=task_id,
                     label=f"Wiki生成: {project.name}",
