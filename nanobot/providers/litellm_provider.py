@@ -3,6 +3,7 @@
 import json
 import os
 from typing import Any
+from loguru import logger
 
 import litellm
 from litellm import acompletion
@@ -64,7 +65,14 @@ class LiteLLMProvider(LLMProvider):
         
         if api_base:
             litellm.api_base = api_base
-        
+
+        # Disable proxy for local vllm endpoints
+        if self.is_vllm and ("localhost" in api_base or "127.0.0.1" in api_base):
+            os.environ.pop("HTTP_PROXY", None)
+            os.environ.pop("HTTPS_PROXY", None)
+            os.environ.pop("http_proxy", None)
+            os.environ.pop("https_proxy", None)
+
         # Disable LiteLLM logging noise
         litellm.suppress_debug_info = True
         # 自动丢弃模型不支持的参数（如gpt-5不支持temperature）

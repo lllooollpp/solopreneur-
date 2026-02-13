@@ -17,7 +17,9 @@
 
 - **完全可配置的 Agent 系统**：通过 YAML/JSON 定义 Agent，支持任意领域
 - **Agent 循环**：支持工具调用（最多 20 次迭代）、上下文三层压缩、Token 限制和超时控制（30 分钟）
-- **多 LLM 支持**：通过 LiteLLM 支持 OpenRouter、Anthropic、OpenAI、Gemini、Groq、vLLM/本地模型，以及 GitHub Copilot（多账号 Token 池）
+- **多 LLM 支持**：通过 LiteLLM 支持 OpenRouter、Anthropic、OpenAI、Gemini、Groq、火山引擎（智谱）、vLLM/本地模型，以及 GitHub Copilot（多账号 Token 池）
+- **Provider 优先级控制**：可配置 Copilot 优先或使用其他 Provider
+- **Web UI 界面**：支持项目管理、实时对话、调用链路监控、Wiki 文档生成
 - **工具系统**：文件操作、Shell 执行、Web 搜索/获取、消息发送、子 Agent 衍生、Agent 委派、工作流执行
 - **多领域预设 Agent**：软件工程、医疗、法律、通用等领域预设 Agent
 - **工作流引擎**：预定义流水线（功能开发、Bug 修复等），支持自动和分步交互模式
@@ -25,6 +27,7 @@
 - **记忆系统**：每日笔记（YYYY-MM-DD.md）+ 长期记忆（MEMORY.md）
 - **定时任务**：支持 interval、cron 表达式、一次性任务，可交付到聊天渠道
 - **心跳服务**：定期自动执行预设 Prompt
+- **Token 统计与监控**：实时显示输入/输出 tokens、工具调用次数、调用链路时间线
 
 ## 架构
 
@@ -104,15 +107,23 @@ nanobot onboard
 ```json
 {
   "providers": {
+    "copilot_priority": false,
     "openrouter": { "apiKey": "sk-or-xxx" },
     "anthropic": { "apiKey": "sk-ant-xxx" },
-    "openai": { "apiKey": "sk-xxx" }
+    "openai": { "apiKey": "sk-xxx" },
+    "zhipu": { "apiKey": "xxx" },
+    "vllm": { "apiKey": "xxx", "api_base": "http://localhost:8000/v1" }
   },
   "agents": {
     "defaults": { "model": "anthropic/claude-sonnet-4" }
   }
 }
 ```
+
+**Provider 说明**：
+- `copilot_priority`: 设置为 `true` 优先使用 GitHub Copilot
+- `zhipu`: 火山引擎（智谱 AI），支持 glm-4 系列
+- `vllm`: 本地 OpenAI 兼容接口（如 vLLM、Ollama）
 
 3. 命令行聊天：
 ```bash
@@ -145,11 +156,13 @@ nanobot gateway
     }
   },
   "providers": {
+    "copilot_priority": false,
     "openrouter": { "apiKey": "", "apiBase": "" },
     "anthropic": { "apiKey": "", "apiBase": "" },
     "openai": { "apiKey": "", "apiBase": "" },
     "gemini": { "apiKey": "", "apiBase": "" },
     "groq": { "apiKey": "", "apiBase": "" },
+    "zhipu": { "apiKey": "", "apiBase": "" },
     "vllm": { "apiKey": "", "apiBase": "" }
   },
   "channels": {
@@ -349,8 +362,14 @@ Agent 可用的工具：
 - **OpenAI**: `gpt-4o`, `gpt-4o-mini`
 - **Gemini**: `gemini-1.5-flash`
 - **Groq**: 通过环境变量 `GROQ_API_KEY`
-- **vLLM/本地**: 自定义 `api_base`
-- **GitHub Copilot**: OAuth 设备流登录
+- **火山引擎（智谱）**: `glm-4`, `glm-4-plus`, `glm-4-flash`
+- **vLLM/本地**: 自定义 `api_base`（如 `http://localhost:8000/v1`）
+- **GitHub Copilot**: OAuth 设备流登录，支持多账号轮询和 429 熔断
+
+**本地模型优化**：
+- 从配置文件读取模型名称，避免后端 API 调用
+- 锁定模型选择，防止用户误修改
+- Token 估算：当本地模型不返回 usage 数据时，自动基于字符数估算 tokens
 
 ## API
 
@@ -364,14 +383,61 @@ Agent 可用的工具：
 - `DELETE /api/v1/agents/{name}` - 删除自定义 Agent
 - `POST /api/v1/agents/reload` - 重载所有 Agents
 
+### 项目管理
+- `GET /api/projects` - 列出所有项目
+- `POST /api/projects` - 创建项目
+- `PUT /api/projects/{id}` - 更新项目
+- `DELETE /api/projects/{id}` - 删除项目
+- `GET /api/projects/{id}/docs` - 获取项目 Wiki 文档
+
+### 配置管理
+- `GET /api/providers/config` - 获取 Provider 配置
+- `PUT /api/providers/config` - 更新 Provider 配置
+- `GET /api/auth/models` - 获取可用模型列表
+
 ### 其他
 - `GET /api/v1/status` - 服务状态
 - `POST /api/v1/chat` - 发送消息
-- `WebSocket /ws` - 实时聊天
+- `WebSocket /ws/chat` - 实时聊天（支持流式输出和调用链路追踪）
+- `WebSocket /ws/events` - 实时事件广播
+- `WebSocket /ws/flow` - 工作流状态
+
+### WebSocket 事件
+
+**聊天事件**：
+- `type: "chunk"` - 流式文本片段
+- `type: "activity"` - 工具调用/LLM 调用活动
+- `type: "trace"` - 调用链路追踪事件（start, llm_start, llm_end, tool_start, tool_end, end）
+- `type: "done"` - 处理完成
+- `type: "error"` - 错误信息
 
 ## 贡献
 
 欢迎 PR！项目保持小巧，易于贡献。
+
+## 最近更新
+
+### v0.2.x - Web UI 与本地模型支持
+
+**新增功能**：
+- 🎨 **Web UI 界面**：项目管理、实时对话、调用链路监控
+- 📊 **实时监控面板**：显示 tokens 统计、工具调用、调用链路时间线
+- 📚 **Wiki 文档生成**：自动生成 README、安装指南、架构设计等文档
+- 🔧 **本地模型支持**：vLLM、Ollama 等 OpenAI 兼容接口
+- 🌋 **火山引擎集成**：支持智谱 AI GLM-4 系列
+- 🎯 **Provider 优先级**：可配置 Copilot 优先或其他 Provider
+- 🔒 **本地模型锁定**：从配置读取模型，防止误修改
+
+**优化改进**：
+- ⚡ Token 统计：支持本地模型的 token 估算
+- 🔄 WebSocket 流式输出：实时文本推送和活动追踪
+- 📦 配置持久化：localStorage 缓存 Provider 配置
+- 🧰 统一 Provider 工厂：自动选择最优 Provider
+
+**Bug 修复**：
+- ✅ 修复聊天界面 trace 事件未传递到监控面板的问题
+- ✅ 修复本地模型配置读取问题
+- ✅ 修复 Provider 切换后系统未更新的问题
 
 ---
 

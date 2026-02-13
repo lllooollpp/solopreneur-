@@ -57,7 +57,9 @@ app = FastAPI(
 
 # CORS 中间件配置
 # 从环境变量读取允许的来源（生产环境应配置）
-allowed_origins = os.getenv("NANOBOT_CORS_ORIGINS", "http://localhost:5173").split(",")
+# 默认允许所有来源 (开发环境)，生产环境应配置具体域名
+default_origins = os.getenv("NANOBOT_CORS_ORIGINS", "*")
+allowed_origins = ["*"] if default_origins == "*" else default_origins.split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,

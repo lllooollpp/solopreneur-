@@ -31,8 +31,8 @@ if sys.platform == "win32":
 # 配置
 BACKEND_PORT = 8000
 FRONTEND_PORT = 5173
-BACKEND_HOST = "127.0.0.1"
-FRONTEND_HOST = "localhost"
+BACKEND_HOST = "0.0.0.0"  # 允许所有 IP 访问 (局域网/公网)
+FRONTEND_HOST = "0.0.0.0"  # 允许所有 IP 访问 (局域网/公网)
 
 # 颜色输出
 class Colors:
@@ -268,9 +268,20 @@ def main():
         print(f"\n{Colors.BOLD}{Colors.GREEN}{'='*60}{Colors.END}")
         print(f"{Colors.BOLD}{Colors.GREEN}[OK] All services started!{Colors.END}")
         print(f"{Colors.BOLD}{Colors.GREEN}{'='*60}{Colors.END}\n")
-        print(f"  Backend API:  {Colors.CYAN}http://{BACKEND_HOST}:{BACKEND_PORT}{Colors.END}")
-        print(f"  API Docs:     {Colors.CYAN}http://{BACKEND_HOST}:{BACKEND_PORT}/docs{Colors.END}")
-        print(f"  Frontend UI:  {Colors.CYAN}http://{FRONTEND_HOST}:{FRONTEND_PORT}{Colors.END}")
+        print(f"  Backend API:  {Colors.CYAN}http://localhost:{BACKEND_PORT}{Colors.END}")
+        print(f"  API Docs:     {Colors.CYAN}http://localhost:{BACKEND_PORT}/docs{Colors.END}")
+        print(f"  Frontend UI:  {Colors.CYAN}http://localhost:{FRONTEND_PORT}{Colors.END}")
+        print(f"\n{Colors.YELLOW}局域网访问:{Colors.END}")
+        # 获取本机 IP
+        import socket
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            print(f"  Backend API:  {Colors.CYAN}http://{local_ip}:{BACKEND_PORT}{Colors.END}")
+            print(f"  API Docs:     {Colors.CYAN}http://{local_ip}:{BACKEND_PORT}/docs{Colors.END}")
+            print(f"  Frontend UI:  {Colors.CYAN}http://{local_ip}:{FRONTEND_PORT}{Colors.END}")
+        except Exception:
+            pass
         print(f"\n  Press {Colors.YELLOW}Ctrl+C{Colors.END} to stop\n")
         print(f"{Colors.BOLD}{Colors.GREEN}{'='*60}{Colors.END}\n")
         

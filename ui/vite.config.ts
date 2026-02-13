@@ -11,6 +11,7 @@ export default defineConfig({
     }
   },
   server: {
+    host: '0.0.0.0',  // 允许所有 IP 访问 (局域网/公网)
     port: 5173,
     proxy: {
       '/api': {
