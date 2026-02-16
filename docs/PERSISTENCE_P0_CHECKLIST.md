@@ -1,4 +1,4 @@
-# Persistence P0-5 回归检查清单
+﻿# Persistence P0-5 回归检查清单
 
 目标：在“核心功能优先”的前提下，验证 SQLite 持久化改造不破坏主链路。
 
@@ -97,9 +97,9 @@
 
 ## 本轮实现映射（代码位置）
 
-- 会话：nanobot/session/manager.py
-- 项目：nanobot/projects/manager.py
-- 存储服务层：nanobot/storage/services.py
-- SQLite 引擎：nanobot/storage/sqlite_store.py
-- Usage 记录：nanobot/agent/core/loop.py
-- 子任务记录：nanobot/agent/core/subagent.py
+- 会话：solopreneur/session/manager.py
+- 项目：solopreneur/projects/manager.py
+- 存储服务层：solopreneur/storage/services.py
+- SQLite 引擎：solopreneur/storage/sqlite_store.py
+- Usage 记录：solopreneur/agent/core/loop.py
+- 子任务记录：solopreneur/agent/core/subagent.py

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="agents-manager">
     <div class="agents-header">
       <div class="agents-actions">

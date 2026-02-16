@@ -1,4 +1,4 @@
-# 中等风险问题修复总结
+﻿# 中等风险问题修复总结
 
 ## 修复概览
 
@@ -16,7 +16,7 @@
 ### 解决方案
 
 #### 1.1 创建自定义异常类
-**文件**: `nanobot/providers/exceptions.py` (新建)
+**文件**: `solopreneur/providers/exceptions.py` (新建)
 
 ```python
 class LLMProviderError(Exception)
@@ -39,7 +39,7 @@ class LLMInvalidResponseError(LLMProviderError)
 ```
 
 #### 1.2 修改 LiteLLMProvider
-**文件**: `nanobot/providers/litellm_provider.py`
+**文件**: `solopreneur/providers/litellm_provider.py`
 
 **变更前**:
 ```python
@@ -66,7 +66,7 @@ except Exception as e:
 ```
 
 #### 1.3 修改 GitHubCopilotProvider
-**文件**: `nanobot/providers/github_copilot.py`
+**文件**: `solopreneur/providers/github_copilot.py`
 
 **变更前**:
 ```python
@@ -100,7 +100,7 @@ if "choices" not in data or not data["choices"]:
 ### 解决方案
 
 #### 2.1 聊天API验证
-**文件**: `nanobot/api/routes/chat.py`
+**文件**: `solopreneur/api/routes/chat.py`
 
 **增强内容**:
 ```python
@@ -143,7 +143,7 @@ class ChatRequest(BaseModel):
 ```
 
 #### 2.2 Agent定义API验证
-**文件**: `nanobot/api/routes/agent.py`
+**文件**: `solopreneur/api/routes/agent.py`
 
 **增强内容**:
 ```python
@@ -170,7 +170,7 @@ class AgentDefinitionUpdate(BaseModel):
 ```
 
 #### 2.3 技能API验证
-**文件**: `nanobot/api/routes/skills.py`
+**文件**: `solopreneur/api/routes/skills.py`
 
 **增强内容**:
 ```python
@@ -208,7 +208,7 @@ async def update_skill(
 ```
 
 #### 2.4 企业微信API验证
-**文件**: `nanobot/api/routes/wecom.py`
+**文件**: `solopreneur/api/routes/wecom.py`
 
 **增强内容**:
 ```python
@@ -234,7 +234,7 @@ async def wecom_verify(
 ```
 
 #### 2.5 速率限制中间件
-**文件**: `nanobot/api/middleware/rate_limit.py` (新建)
+**文件**: `solopreneur/api/middleware/rate_limit.py` (新建)
 
 **功能**:
 - 基于IP地址的速率限制
@@ -268,18 +268,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 ```
 
 #### 2.6 集成到主应用
-**文件**: `nanobot/api/main.py`
+**文件**: `solopreneur/api/main.py`
 
 **变更**:
 ```python
-from nanobot.api.middleware import RateLimitMiddleware
+from solopreneur.api.middleware import RateLimitMiddleware
 
 # CORS配置（从环境变量）
-allowed_origins = os.getenv("NANOBOT_CORS_ORIGINS", "http://localhost:5173").split(",")
+allowed_origins = os.getenv("solopreneur_CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, ...)
 
 # 速率限制
-rate_limit = int(os.getenv("NANOBOT_RATE_LIMIT", "60"))
+rate_limit = int(os.getenv("solopreneur_RATE_LIMIT", "60"))
 app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
 ```
 
@@ -297,15 +297,15 @@ app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
-| `NANOBOT_CORS_ORIGINS` | `http://localhost:5173` | CORS允许的来源（逗号分隔） |
-| `NANOBOT_RATE_LIMIT` | `60` | 每分钟最大请求数 |
+| `solopreneur_CORS_ORIGINS` | `http://localhost:5173` | CORS允许的来源（逗号分隔） |
+| `solopreneur_RATE_LIMIT` | `60` | 每分钟最大请求数 |
 
 ### 已有环境变量
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
-| `NANOBOT_LOG_LEVEL` | `INFO` | 日志级别 |
-| `NANOBOT_WS_TOKEN` | 无 | WebSocket认证令牌 |
+| `solopreneur_LOG_LEVEL` | `INFO` | 日志级别 |
+| `solopreneur_WS_TOKEN` | 无 | WebSocket认证令牌 |
 
 ---
 
@@ -370,9 +370,9 @@ app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
 5. 国际化：多语言支持
 
 ### 运维建议
-1. 部署前设置 `NANOBOT_WS_TOKEN` 环境变量
-2. 生产环境配置 `NANOBOT_CORS_ORIGINS`
-3. 根据实际负载调整 `NANOBOT_RATE_LIMIT`
+1. 部署前设置 `solopreneur_WS_TOKEN` 环境变量
+2. 生产环境配置 `solopreneur_CORS_ORIGINS`
+3. 根据实际负载调整 `solopreneur_RATE_LIMIT`
 4. 监控速率限制触发日志
 5. 定期检查异常日志分类是否准确
 
@@ -381,19 +381,19 @@ app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
 ## 附录：修改文件清单
 
 ### 新建文件
-- `nanobot/providers/exceptions.py`
-- `nanobot/api/middleware/rate_limit.py`
-- `nanobot/api/middleware/__init__.py`
+- `solopreneur/providers/exceptions.py`
+- `solopreneur/api/middleware/rate_limit.py`
+- `solopreneur/api/middleware/__init__.py`
 - `MEDIUM_RISK_FIXES.md` (本文档)
 
 ### 修改文件
-- `nanobot/providers/litellm_provider.py`
-- `nanobot/providers/github_copilot.py`
-- `nanobot/api/routes/chat.py`
-- `nanobot/api/routes/agent.py`
-- `nanobot/api/routes/skills.py`
-- `nanobot/api/routes/wecom.py`
-- `nanobot/api/main.py`
+- `solopreneur/providers/litellm_provider.py`
+- `solopreneur/providers/github_copilot.py`
+- `solopreneur/api/routes/chat.py`
+- `solopreneur/api/routes/agent.py`
+- `solopreneur/api/routes/skills.py`
+- `solopreneur/api/routes/wecom.py`
+- `solopreneur/api/main.py`
 
 ### 总计
 - 新增：4 个文件

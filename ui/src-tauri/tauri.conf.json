@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://tauri.app/schemas/config/1",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -7,7 +7,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "Nanobot",
+    "productName": "solopreneur",
     "version": "0.1.0"
   },
   "tauri": {
@@ -18,7 +18,7 @@
         "sidecar": true,
         "scope": [
           {
-            "name": "nanobot-sidecar",
+            "name": "solopreneur-sidecar",
             "sidecar": true,
             "args": ["gateway", "--api"]
           }
@@ -33,7 +33,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
-      "identifier": "com.nanobot.app",
+      "identifier": "com.solopreneur.app",
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -42,7 +42,7 @@
         "icons/icon.ico"
       ],
       "resources": [],
-      "externalBin": ["binaries/nanobot-sidecar"],
+      "externalBin": ["binaries/solopreneur-sidecar"],
       "copyright": "",
       "category": "DeveloperTool",
       "shortDescription": "",
@@ -55,7 +55,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "Nanobot 控制台",
+        "title": "solopreneur 控制台",
         "width": 1280,
         "height": 800
       }

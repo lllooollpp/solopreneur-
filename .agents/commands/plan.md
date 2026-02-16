@@ -1,4 +1,4 @@
----
+﻿---
 description: 按计划模板推进设计产出，生成设计文档。
 scripts:
   sh: scripts/bash/setup-plan.sh --json

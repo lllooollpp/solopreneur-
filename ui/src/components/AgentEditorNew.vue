@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="agent-editor-modal" @click.self="close">
     <div class="modal-content">
       <div class="modal-header">

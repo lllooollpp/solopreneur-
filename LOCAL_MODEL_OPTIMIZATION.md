@@ -1,4 +1,4 @@
-# 本地模型配置优化方案
+﻿# 本地模型配置优化方案
 
 ## 🎯 问题
 
@@ -378,7 +378,7 @@ console.log('Loaded from localStorage:', {
 
 2. **后端仍然需要配置**
    - localStorage 只用于前端显示
-   - 后端仍需要从 `~/.nanobot/config.json` 读取
+   - 后端仍需要从 `~/.solopreneur/config.json` 读取
    - 重启服务使后端配置生效
 
 3. **localStorage 与后端配置可能不同步**

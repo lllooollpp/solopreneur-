@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Markdown 渲染工具
  * 使用 marked + highlight.js + DOMPurify
  */

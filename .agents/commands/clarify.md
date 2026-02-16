@@ -1,4 +1,4 @@
----
+﻿---
 description: 通过提出最多 5 个高度针对性的澄清问题，识别当前功能规范中规范不足的领域，并将答案编码回规范中。
 scripts:
    sh: scripts/bash/check-prerequisites.sh --json --paths-only

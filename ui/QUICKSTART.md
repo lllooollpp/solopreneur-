@@ -1,4 +1,4 @@
-# 🚀 nanobot UI 快速启动指南
+﻿# 🚀 solopreneur UI 快速启动指南
 
 ## 前置要求
 
@@ -12,10 +12,10 @@
 
 ```bash
 # 在项目根目录
-nanobot gateway --api
+solopreneur gateway --api
 
 # 或者直接用 Python 启动
-python -m uvicorn nanobot.api.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn solopreneur.api.main:app --host 127.0.0.1 --port 8000
 ```
 
 API 将运行在 `http://localhost:8000`
@@ -115,7 +115,7 @@ npm run tauri:build
 
 1. 确认后端运行在 `http://localhost:8000`
 2. 检查浏览器控制台是否有 CORS 错误
-3. 确认 `nanobot/api/main.py` 中 CORS 配置正确
+3. 确认 `solopreneur/api/main.py` 中 CORS 配置正确
 
 ### Tauri 构建失败
 
@@ -125,7 +125,7 @@ npm run tauri:build
 
 ### GitHub Copilot 认证失败
 
-1. 使用 CLI 先测试: `nanobot login --provider github-copilot`
+1. 使用 CLI 先测试: `solopreneur login --provider github-copilot`
 2. 检查是否有有效的 GitHub 账号
 3. 确认设备代码未过期 (15 分钟有效期)
 
@@ -136,7 +136,7 @@ npm run tauri:build
 - **前端**: Vite 自动热重载 (保存文件即生效)
 - **后端**: 使用 `--reload` 标志启动 uvicorn
   ```bash
-  uvicorn nanobot.api.main:app --reload --host 127.0.0.1 --port 8000
+  uvicorn solopreneur.api.main:app --reload --host 127.0.0.1 --port 8000
   ```
 
 ### 调试
@@ -157,8 +157,8 @@ npm run lint
 npm run format
 
 # 后端
-ruff check nanobot/
-ruff format nanobot/
+ruff check solopreneur/
+ruff format solopreneur/
 ```
 
 ## 下一步

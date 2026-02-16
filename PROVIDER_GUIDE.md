@@ -1,6 +1,6 @@
-# LLM Provider 配置指南
+﻿# LLM Provider 配置指南
 
-Nanobot 现在支持多种 LLM Provider，包括 GitHub Copilot、OpenAI、火山引擎（智谱 AI）、本地 OpenAI 标准接口等。
+solopreneur 现在支持多种 LLM Provider，包括 GitHub Copilot、OpenAI、火山引擎（智谱 AI）、本地 OpenAI 标准接口等。
 
 ## 支持的 Provider
 
@@ -19,7 +19,7 @@ Nanobot 现在支持多种 LLM Provider，包括 GitHub Copilot、OpenAI、火�
 
 ### 方式 1: 通过 Web UI 配置
 
-1. 启动 Nanobot 服务: `python start.py`
+1. 启动 solopreneur 服务: `python start.py`
 2. 打开浏览器访问: `http://localhost:18790`
 3. 进入 **配置管理** → **LLM Providers**
 4. 选择要配置的 Provider
@@ -30,7 +30,7 @@ Nanobot 现在支持多种 LLM Provider，包括 GitHub Copilot、OpenAI、火�
 
 ### 方式 2: 手动编辑配置文件
 
-配置文件位置: `~/.nanobot/config.json`
+配置文件位置: `~/.solopreneur/config.json`
 
 ```json
 {

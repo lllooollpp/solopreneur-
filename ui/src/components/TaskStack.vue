@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="task-stack-panel">
     <div class="panel-header">
       <h4>📋 任务栈</h4>

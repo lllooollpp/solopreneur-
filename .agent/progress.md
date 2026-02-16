@@ -1,4 +1,4 @@
-# Nanobot 开发进度
+﻿# solopreneur 开发进度
 
 ## 最新会话 (2026-02-13)
 
@@ -76,8 +76,8 @@ GET  /api/v1/status-governance         # 状态治理规则
 
 ```
 修改:
-├── nanobot/agent/core/harness.py     # 硬门禁 + 状态治理
-├── nanobot/api/routes/harness.py     # 新增 API 端点
+├── solopreneur/agent/core/harness.py     # 硬门禁 + 状态治理
+├── solopreneur/api/routes/harness.py     # 新增 API 端点
 └── .agent/feature_list.json          # 添加 test_config + status_governance
 ```
 

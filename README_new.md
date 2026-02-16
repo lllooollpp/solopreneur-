@@ -1,9 +1,9 @@
-<div align="center">
-  <img src="nanobot_logo.png" alt="nanobot" width="420">
-  <h1>nanobot：轻量级 AI 代理框架</h1>
+﻿<div align="center">
+  <img src="solopreneur_logo.png" alt="solopreneur" width="420">
+  <h1>solopreneur：轻量级 AI 代理框架</h1>
   <p>
-    <a href="https://pypi.org/project/nanobot-ai/"><img src="https://img.shields.io/pypi/v/nanobot-ai" alt="PyPI"></a>
-    <a href="https://pepy.tech/project/nanobot-ai"><img src="https://static.pepy.tech/badge/nanobot-ai" alt="Downloads"></a>
+    <a href="https://pypi.org/project/solopreneur-ai/"><img src="https://img.shields.io/pypi/v/solopreneur-ai" alt="PyPI"></a>
+    <a href="https://pepy.tech/project/solopreneur-ai"><img src="https://static.pepy.tech/badge/solopreneur-ai" alt="Downloads"></a>
     <img src="https://img.shields.io/badge/python-≥3.11-blue" alt="Python">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
     <a href="./COMMUNICATION.md"><img src="https://img.shields.io/badge/Feishu-Group-E9DBFC?style=flat&logo=feishu&logoColor=white" alt="Feishu"></a>
@@ -11,7 +11,7 @@
   </p>
 </div>
 
-🐈 **nanobot** 是一个轻量级的 AI 代理框架，基于 Python 构建，支持多种 LLM 提供者、聊天渠道和技能扩展。核心代码约 4,000 行，易于理解、修改和部署。
+🐈 **solopreneur** 是一个轻量级的 AI 代理框架，基于 Python 构建，支持多种 LLM 提供者、聊天渠道和技能扩展。核心代码约 4,000 行，易于理解、修改和部署。
 
 ## 核心特性
 
@@ -25,12 +25,12 @@
 ## 架构
 
 <p align="center">
-  <img src="nanobot_arch.png" alt="nanobot architecture" width="800">
+  <img src="solopreneur_arch.png" alt="solopreneur architecture" width="800">
 </p>
 
 项目结构：
 ```
-nanobot/
+solopreneur/
 ├── agent/          # 代理核心（loop, context, memory, subagent）
 ├── providers/      # LLM 提供者（github_copilot, litellm_provider）
 ├── api/            # FastAPI 后端（REST + WebSocket）
@@ -45,13 +45,13 @@ nanobot/
 ## 安装
 
 ```bash
-pip install nanobot-ai
+pip install solopreneur-ai
 ```
 
 或从源码安装：
 ```bash
 git clone https://github.com/lllooollpp/solopreneur-.git
-cd nanobot
+cd solopreneur
 pip install -e .
 ```
 
@@ -59,10 +59,10 @@ pip install -e .
 
 1. 初始化配置：
 ```bash
-nanobot onboard
+solopreneur onboard
 ```
 
-2. 配置 `~/.nanobot/config.json`：
+2. 配置 `~/.solopreneur/config.json`：
 ```json
 {
   "providers": {
@@ -80,12 +80,12 @@ nanobot onboard
 
 3. 启动聊天：
 ```bash
-nanobot agent -m "Hello!"
+solopreneur agent -m "Hello!"
 ```
 
 ## 配置
 
-配置文件：`~/.nanobot/config.json`
+配置文件：`~/.solopreneur/config.json`
 
 - `providers`：LLM 提供者配置，如 GitHub Copilot（OAuth 设备流）、LiteLLM。
 - `agents`：代理默认设置，包括模型选择。
@@ -96,11 +96,11 @@ nanobot agent -m "Hello!"
 
 | 命令 | 说明 |
 |------|------|
-| `nanobot onboard` | 初始化配置 |
-| `nanobot agent` | 启动代理聊天 |
-| `nanobot gateway` | 启动网关服务器 |
-| `nanobot status` | 查看状态 |
-| `nanobot channels login` | 绑定渠道 |
+| `solopreneur onboard` | 初始化配置 |
+| `solopreneur agent` | 启动代理聊天 |
+| `solopreneur gateway` | 启动网关服务器 |
+| `solopreneur status` | 查看状态 |
+| `solopreneur channels login` | 绑定渠道 |
 
 ## Web UI
 
@@ -119,7 +119,7 @@ npm run dev
 
 ## 技能扩展
 
-技能位于 `nanobot/skills/`，支持：
+技能位于 `solopreneur/skills/`，支持：
 - GitHub 操作
 - 天气查询
 - TMUX 会话管理
@@ -137,4 +137,4 @@ npm run dev
 
 ---
 
-<p align="center">🐈 nanobot - 轻量级 AI 代理框架</p>
+<p align="center">🐈 solopreneur - 轻量级 AI 代理框架</p>

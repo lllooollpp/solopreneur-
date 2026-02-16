@@ -1,4 +1,4 @@
----
+﻿---
 name: dependency-analysis
 description: 自动识别任务依赖并选择串行/并行编排策略
 always: true

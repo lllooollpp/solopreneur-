@@ -1,4 +1,4 @@
-# 任务清单：前端管理界面、Copilot 模型与企业微信集成
+﻿# 任务清单：前端管理界面、Copilot 模型与企业微信集成
 
 **功能分支**：`001-frontend-copilot-wecom`  
 **生成时间**：2026-02-05  
@@ -41,16 +41,16 @@
 
 **目标**：实现后端 API 框架和遗留代码清理，所有用户故事依赖此阶段
 
-- [X] T006 在 `nanobot/api/` 目录创建 FastAPI 应用入口 (`main.py`, `routes/`)
-- [X] T007 [P] 在 `nanobot/api/routes/status.py` 实现 `GET /api/status` 端点
-- [X] T008 [P] 在 `nanobot/api/websocket.py` 实现 WebSocket `/ws/events` 推送服务
-- [X] T009 删除 `nanobot/channels/telegram.py` 文件
-- [X] T010 [P] 删除 `nanobot/channels/whatsapp.py` 文件
+- [X] T006 在 `solopreneur/api/` 目录创建 FastAPI 应用入口 (`main.py`, `routes/`)
+- [X] T007 [P] 在 `solopreneur/api/routes/status.py` 实现 `GET /api/status` 端点
+- [X] T008 [P] 在 `solopreneur/api/websocket.py` 实现 WebSocket `/ws/events` 推送服务
+- [X] T009 删除 `solopreneur/channels/telegram.py` 文件
+- [X] T010 [P] 删除 `solopreneur/channels/whatsapp.py` 文件
 - [X] T011 [P] 删除整个 `bridge/` 目录及其所有内容
 
 ---
 
-## 阶段3：用户故事1 - 通过 Web 界面管理 Nanobot [P1]
+## 阶段3：用户故事1 - 通过 Web 界面管理 solopreneur [P1]
 
 **故事目标**：用户可以通过美观的 Web 前端配置 Agent、查看状态并进行对话  
 **独立测试标准**：启动 `npm run dev`，访问 `http://localhost:5173`，可导航至 Dashboard、Config、Chat、Flow 页面
@@ -87,43 +87,43 @@
 **独立测试标准**：使用 ngrok 暴露本地端口，在企业微信后台配置回调，发送消息后观察控制台日志
 
 ### 模型层
-- [X] T026 [P] [US3] 在 `nanobot/channels/wecom.py` 定义 `WeComConfig` 和 `WeComMessage` 数据类
+- [X] T026 [P] [US3] 在 `solopreneur/channels/wecom.py` 定义 `WeComConfig` 和 `WeComMessage` 数据类
 
 ### 服务层
-- [X] T027 [US3] 在 `nanobot/channels/wecom.py` 实现消息解密逻辑 (`decrypt_message`)
-- [X] T028 [US3] 在 `nanobot/channels/wecom.py` 实现消息加密响应逻辑 (`encrypt_response`)
-- [X] T029 [US3] 在 `nanobot/channels/wecom.py` 实现 `WeComCrypto` 类（加密/解密/签名）
+- [X] T027 [US3] 在 `solopreneur/channels/wecom.py` 实现消息解密逻辑 (`decrypt_message`)
+- [X] T028 [US3] 在 `solopreneur/channels/wecom.py` 实现消息加密响应逻辑 (`encrypt_response`)
+- [X] T029 [US3] 在 `solopreneur/channels/wecom.py` 实现 `WeComCrypto` 类（加密/解密/签名）
 
 ### 端点层
-- [X] T030 [US3] 在 `nanobot/api/routes/wecom.py` 实现 `GET /api/wecom/callback` 验证端点
-- [X] T031 [US3] 在 `nanobot/api/routes/wecom.py` 实现 `POST /api/wecom/callback` 消息接收端点
+- [X] T030 [US3] 在 `solopreneur/api/routes/wecom.py` 实现 `GET /api/wecom/callback` 验证端点
+- [X] T031 [US3] 在 `solopreneur/api/routes/wecom.py` 实现 `POST /api/wecom/callback` 消息接收端点
 
 ### 集成
-- [X] T032 [US3] 在 `nanobot/channels/manager.py` 注册企业微信配置初始化
-- [X] T033 [US3] 在 `nanobot/config/schema.py` 添加企业微信配置项 (`wecom` section)
+- [X] T032 [US3] 在 `solopreneur/channels/manager.py` 注册企业微信配置初始化
+- [X] T033 [US3] 在 `solopreneur/config/schema.py` 添加企业微信配置项 (`wecom` section)
 
 ---
 
 ## 阶段5：用户故事2 - 使用 GitHub Copilot 模型进行对话 [P2]
 
-**故事目标**：用户可以使用 GitHub Copilot 订阅驱动 Nanobot 进行高质量对话  
-**独立测试标准**：运行 `nanobot login --provider github-copilot` 完成认证，在配置中切换模型后发送消息
+**故事目标**：用户可以使用 GitHub Copilot 订阅驱动 solopreneur 进行高质量对话  
+**独立测试标准**：运行 `solopreneur login --provider github-copilot` 完成认证，在配置中切换模型后发送消息
 
 ### 模型层
-- [X] T034 [P] [US2] 在 `nanobot/providers/github_copilot.py` 定义 `CopilotSession` 数据类
+- [X] T034 [P] [US2] 在 `solopreneur/providers/github_copilot.py` 定义 `CopilotSession` 数据类
 
 ### 服务层
-- [X] T035 [US2] 在 `nanobot/providers/github_copilot.py` 实现设备流认证启动 (`start_device_flow`)
-- [X] T036 [US2] 在 `nanobot/providers/github_copilot.py` 实现令牌轮询与交换 (`poll_for_token`)
-- [X] T037 [US2] 在 `nanobot/providers/github_copilot.py` 实现 Copilot Token 获取 (`get_copilot_token`)
-- [X] T038 [US2] 在 `nanobot/providers/github_copilot.py` 实现 `GitHubCopilotProvider` 类继承 `BaseProvider`
+- [X] T035 [US2] 在 `solopreneur/providers/github_copilot.py` 实现设备流认证启动 (`start_device_flow`)
+- [X] T036 [US2] 在 `solopreneur/providers/github_copilot.py` 实现令牌轮询与交换 (`poll_for_token`)
+- [X] T037 [US2] 在 `solopreneur/providers/github_copilot.py` 实现 Copilot Token 获取 (`get_copilot_token`)
+- [X] T038 [US2] 在 `solopreneur/providers/github_copilot.py` 实现 `GitHubCopilotProvider` 类继承 `BaseProvider`
 
 ### 端点层
-- [X] T039 [US2] 在 `nanobot/api/routes/auth.py` 实现 `POST /api/auth/github/device` 端点
-- [X] T040 [US2] 在 `nanobot/api/routes/auth.py` 实现 `GET /api/auth/github/token` 端点
+- [X] T039 [US2] 在 `solopreneur/api/routes/auth.py` 实现 `POST /api/auth/github/device` 端点
+- [X] T040 [US2] 在 `solopreneur/api/routes/auth.py` 实现 `GET /api/auth/github/token` 端点
 
 ### CLI 集成
-- [X] T041 [US2] 在 `nanobot/cli/commands.py` 添加 `login` 子命令支持 `--provider github-copilot`
+- [X] T041 [US2] 在 `solopreneur/cli/commands.py` 添加 `login` 子命令支持 `--provider github-copilot`
 
 ### 前端集成
 - [X] T042 [US2] 在 `ui/src/views/ConfigView.vue` 添加 GitHub Copilot 认证按钮和状态显示
@@ -136,7 +136,7 @@
 **目标**：优化性能、完善文档、确保代码质量
 
 - [X] T044 在 `ui/src-tauri/tauri.conf.json` 配置 Python sidecar 启动脚本
-- [X] T045 [P] 在 `nanobot/api/middleware/` 目录添加 CORS 中间件配置
+- [X] T045 [P] 在 `solopreneur/api/middleware/` 目录添加 CORS 中间件配置
 - [X] T046 [P] 更新 `README.md` 添加前端开发和 Tauri 打包说明
 - [X] T047 [P] 更新 `pyproject.toml` 添加 FastAPI、uvicorn、cryptography 依赖
 - [X] T048 在 `ui/` 目录添加 `.gitignore` 忽略 `node_modules/` 和 `dist/`

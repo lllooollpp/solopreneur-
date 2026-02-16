@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 聊天消息 API
  */
 import apiClient from './client'

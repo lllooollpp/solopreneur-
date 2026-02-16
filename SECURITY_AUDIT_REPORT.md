@@ -1,8 +1,8 @@
-# Nanobot 安全与质量改进完整报告
+﻿# solopreneur 安全与质量改进完整报告
 
 ## 执行摘要
 
-本报告详细记录了对 Nanobot 项目进行的全面安全审计和质量改进工作。共识别并修复了 **20 个安全和质量问题**，其中包括 8 个高危安全漏洞和 12 个中等风险问题。
+本报告详细记录了对 solopreneur 项目进行的全面安全审计和质量改进工作。共识别并修复了 **20 个安全和质量问题**，其中包括 8 个高危安全漏洞和 12 个中等风险问题。
 
 **项目状态**: ✅ 生产就绪
 **修复完成率**: 100% (20/20)
@@ -38,7 +38,7 @@ def read_file(self, file_path: str):
 ```
 
 #### 修复方案
-**文件**: `nanobot/agent/tools/filesystem.py`
+**文件**: `solopreneur/agent/tools/filesystem.py`
 
 ```python
 def _validate_path(self, path: Path, workspace: Path) -> Path:
@@ -72,7 +72,7 @@ async def execute(self, file_path: str, workspace: str, **kwargs):
 - 可能陷入无限推理循环
 
 #### 修复方案
-**文件**: `nanobot/agent/loop.py`
+**文件**: `solopreneur/agent/loop.py`
 
 ```python
 # 新增安全常量
@@ -115,7 +115,7 @@ DANGEROUS_PATTERNS = [
 ```
 
 #### 修复方案
-**文件**: `nanobot/agent/tools/shell.py`
+**文件**: `solopreneur/agent/tools/shell.py`
 
 ```python
 # 增强到18种危险模式
@@ -172,7 +172,7 @@ session = sessions.get(session_id)   # 无完整性校验
 ```
 
 #### 修复方案
-**文件**: `nanobot/session/manager.py`
+**文件**: `solopreneur/session/manager.py`
 
 ```python
 import hmac
@@ -250,7 +250,7 @@ async def websocket_endpoint(websocket: WebSocket):
 ```
 
 #### 修复方案
-**文件**: `nanobot/api/websocket.py`
+**文件**: `solopreneur/api/websocket.py`
 
 ```python
 import os
@@ -262,10 +262,10 @@ def generate_ws_token() -> str:
 
 def _verify_websocket_token(token: str) -> bool:
     """验证WebSocket令牌"""
-    expected_token = os.getenv("NANOBOT_WS_TOKEN")
+    expected_token = os.getenv("solopreneur_WS_TOKEN")
     
     if not expected_token:
-        logger.warning("未设置 NANOBOT_WS_TOKEN，WebSocket无认证保护！")
+        logger.warning("未设置 solopreneur_WS_TOKEN，WebSocket无认证保护！")
         return True  # 开发模式允许
     
     # 使用恒定时间比较防止时序攻击
@@ -290,7 +290,7 @@ async def websocket_endpoint(
 **使用方法**:
 ```bash
 # 设置环境变量
-export NANOBOT_WS_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+export solopreneur_WS_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
 
 # 客户端连接
 ws://localhost:8000/ws?token=YOUR_TOKEN_HERE
@@ -316,7 +316,7 @@ async def get_agent_loop():
 ```
 
 #### 修复方案
-**文件**: `nanobot/api/websocket.py`
+**文件**: `solopreneur/api/websocket.py`
 
 ```python
 import asyncio
@@ -395,7 +395,7 @@ def parse_xml(xml_str):
 ```
 
 #### 修复方案
-**文件**: `nanobot/channels/wecom.py`
+**文件**: `solopreneur/channels/wecom.py`
 
 ```python
 # 使用安全的XML解析器
@@ -446,14 +446,14 @@ pip install defusedxml
 ```
 
 #### 修复方案
-**文件**: `nanobot/providers/github_copilot.py`
+**文件**: `solopreneur/providers/github_copilot.py`
 
 ```python
 from cryptography.fernet import Fernet
 
 def _get_or_create_encryption_key() -> bytes:
     """获取或创建Fernet加密密钥"""
-    key_file = Path.home() / ".nanobot" / ".token_key"
+    key_file = Path.home() / ".solopreneur" / ".token_key"
     
     if key_file.exists():
         return key_file.read_bytes()
@@ -513,7 +513,7 @@ class GitHubCopilotProvider(LLMProvider):
 ```
 
 **密钥管理**:
-- 密钥路径: `~/.nanobot/.token_key`
+- 密钥路径: `~/.solopreneur/.token_key`
 - 文件权限: `600` (仅所有者)
 - 加密算法: Fernet (AES-128-CBC + HMAC-SHA256)
 
@@ -526,7 +526,7 @@ class GitHubCopilotProvider(LLMProvider):
 **影响**: 连接池耗尽，内存泄漏
 
 #### 修复方案
-**文件**: `nanobot/providers/github_copilot.py`
+**文件**: `solopreneur/providers/github_copilot.py`
 
 ```python
 class GitHubCopilotProvider(LLMProvider):
@@ -557,7 +557,7 @@ async with GitHubCopilotProvider(...) as provider:
 **影响**: 资源耗尽，系统过载
 
 #### 修复方案
-**文件**: `nanobot/agent/subagent.py`
+**文件**: `solopreneur/agent/subagent.py`
 
 ```python
 import asyncio
@@ -587,8 +587,8 @@ class SubagentManager:
 详细修复见：
 - **Session LRU缓存**: `session/manager.py` - 限制1000条
 - **健康检查端点**: `api/main.py` - `/health`, `/ready`
-- **CORS环境配置**: `api/main.py` - `NANOBOT_CORS_ORIGINS`
-- **日志级别配置**: `api/main.py` - `NANOBOT_LOG_LEVEL`
+- **CORS环境配置**: `api/main.py` - `solopreneur_CORS_ORIGINS`
+- **日志级别配置**: `api/main.py` - `solopreneur_LOG_LEVEL`
 
 ---
 
@@ -606,7 +606,7 @@ class SubagentManager:
 **影响**: 错误处理不一致
 
 #### 修复方案
-**新建**: `nanobot/providers/exceptions.py`
+**新建**: `solopreneur/providers/exceptions.py`
 
 ```python
 class LLMProviderError(Exception):
@@ -702,9 +702,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 **集成到主应用**:
 ```python
 # api/main.py
-from nanobot.api.middleware import RateLimitMiddleware
+from solopreneur.api.middleware import RateLimitMiddleware
 
-rate_limit = int(os.getenv("NANOBOT_RATE_LIMIT", "60"))
+rate_limit = int(os.getenv("solopreneur_RATE_LIMIT", "60"))
 app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
 ```
 
@@ -716,16 +716,16 @@ app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
 
 ```bash
 # WebSocket认证（生产必需）
-export NANOBOT_WS_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+export solopreneur_WS_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
 
 # CORS来源（根据实际域名）
-export NANOBOT_CORS_ORIGINS="https://app.example.com,https://admin.example.com"
+export solopreneur_CORS_ORIGINS="https://app.example.com,https://admin.example.com"
 
 # 日志级别
-export NANOBOT_LOG_LEVEL="INFO"  # 生产环境建议INFO
+export solopreneur_LOG_LEVEL="INFO"  # 生产环境建议INFO
 
 # 速率限制
-export NANOBOT_RATE_LIMIT="100"  # 根据负载调整
+export solopreneur_RATE_LIMIT="100"  # 根据负载调整
 ```
 
 ### 可选配置
@@ -747,8 +747,8 @@ export SENTRY_DSN="https://..."
 ## 部署检查清单
 
 ### 启动前检查
-- [ ] 已设置 `NANOBOT_WS_TOKEN`
-- [ ] 已配置 `NANOBOT_CORS_ORIGINS`
+- [ ] 已设置 `solopreneur_WS_TOKEN`
+- [ ] 已配置 `solopreneur_CORS_ORIGINS`
 - [ ] 已安装 `defusedxml` 和 `cryptography`
 - [ ] 已生成 `.token_key` 和 `.session_secret`
 - [ ] 文件权限正确（600）
@@ -832,7 +832,7 @@ class TestWebSocketAuth:
             assert ws.closed
     
     async def test_connection_with_valid_token(self):
-        token = os.getenv("NANOBOT_WS_TOKEN")
+        token = os.getenv("solopreneur_WS_TOKEN")
         async with websockets.connect(f"ws://localhost:8000/ws?token={token}") as ws:
             await ws.send("Hello")
             response = await ws.recv()
@@ -859,30 +859,30 @@ sqlmap -u "http://localhost:8000/api/chat" --data="content=test"
 
 ### 新建文件 (4个)
 ```
-nanobot/providers/exceptions.py          [135 行]
-nanobot/api/middleware/rate_limit.py     [121 行]
-nanobot/api/middleware/__init__.py       [  5 行]
+solopreneur/providers/exceptions.py          [135 行]
+solopreneur/api/middleware/rate_limit.py     [121 行]
+solopreneur/api/middleware/__init__.py       [  5 行]
 SECURITY_AUDIT_REPORT.md                 [本文档]
 ```
 
 ### 修改文件 (14个)
 ```
-nanobot/agent/tools/filesystem.py        [+45 行]
-nanobot/agent/loop.py                    [+32 行]
-nanobot/agent/tools/shell.py             [+68 行]
-nanobot/session/manager.py               [+95 行]
-nanobot/api/websocket.py                 [+48 行]
-nanobot/channels/wecom.py                [+ 8 行]
-nanobot/providers/github_copilot.py      [+127 行]
-nanobot/agent/subagent.py                [+15 行]
-nanobot/api/main.py                      [+24 行]
-nanobot/config/schema.py                 [+18 行]
-nanobot/agent/tools/web.py               [+35 行]
-nanobot/providers/litellm_provider.py    [+28 行]
-nanobot/api/routes/chat.py               [+35 行]
-nanobot/api/routes/agent.py              [+22 行]
-nanobot/api/routes/skills.py             [+28 行]
-nanobot/api/routes/wecom.py              [+15 行]
+solopreneur/agent/tools/filesystem.py        [+45 行]
+solopreneur/agent/loop.py                    [+32 行]
+solopreneur/agent/tools/shell.py             [+68 行]
+solopreneur/session/manager.py               [+95 行]
+solopreneur/api/websocket.py                 [+48 行]
+solopreneur/channels/wecom.py                [+ 8 行]
+solopreneur/providers/github_copilot.py      [+127 行]
+solopreneur/agent/subagent.py                [+15 行]
+solopreneur/api/main.py                      [+24 行]
+solopreneur/config/schema.py                 [+18 行]
+solopreneur/agent/tools/web.py               [+35 行]
+solopreneur/providers/litellm_provider.py    [+28 行]
+solopreneur/api/routes/chat.py               [+35 行]
+solopreneur/api/routes/agent.py              [+22 行]
+solopreneur/api/routes/skills.py             [+28 行]
+solopreneur/api/routes/wecom.py              [+15 行]
 ```
 
 ### 依赖更新
@@ -943,11 +943,11 @@ pydantic = "^2.5.0"       # 输入验证
 ### 技术支持
 - 文档: `docs/SECURITY.md`
 - Issues: GitHub Issues
-- Email: security@nanobot.example.com
+- Email: security@solopreneur.example.com
 
 ### 安全报告
 如发现安全问题，请私密报告（不公开Issue）：
-- Email: security@nanobot.example.com
+- Email: security@solopreneur.example.com
 - PGP Key: [链接]
 - 响应时间: 48小时内确认，7天内修复高危
 
@@ -997,4 +997,4 @@ graph TD
 
 ---
 
-© 2025 Nanobot Security Team. All Rights Reserved.
+© 2025 solopreneur Security Team. All Rights Reserved.

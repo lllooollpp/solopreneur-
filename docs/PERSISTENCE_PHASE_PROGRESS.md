@@ -1,4 +1,4 @@
-# Persistence 改造阶段进度（核心回归）
+﻿# Persistence 改造阶段进度（核心回归）
 
 ## 阶段 1：持久化分层与核心落库（已完成）
 
@@ -6,17 +6,17 @@
 
 修改内容：
 - 新增存储引擎与服务层
-  - nanobot/storage/sqlite_store.py
-  - nanobot/storage/services.py
-  - nanobot/storage/__init__.py
-  - nanobot/storage/README.md
+  - solopreneur/storage/sqlite_store.py
+  - solopreneur/storage/services.py
+  - solopreneur/storage/__init__.py
+  - solopreneur/storage/README.md
 - 会话改造
-  - nanobot/session/manager.py（SQLite 主读写 + JSONL 懒迁移）
+  - solopreneur/session/manager.py（SQLite 主读写 + JSONL 懒迁移）
 - 项目改造
-  - nanobot/projects/manager.py（SQLite 主读写 + projects.json 迁移）
+  - solopreneur/projects/manager.py（SQLite 主读写 + projects.json 迁移）
 - 可观测性接入
-  - nanobot/agent/core/loop.py（llm_usage 记录）
-  - nanobot/agent/core/subagent.py（subagent_tasks 状态记录）
+  - solopreneur/agent/core/loop.py（llm_usage 记录）
+  - solopreneur/agent/core/subagent.py（subagent_tasks 状态记录）
 
 提交：
 - c1ea286 feat: add sqlite persistence services, usage telemetry and subagent task tracking

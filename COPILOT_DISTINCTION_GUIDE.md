@@ -1,4 +1,4 @@
-# GitHub Copilot 与其他 Provider 的区分方案
+﻿# GitHub Copilot 与其他 Provider 的区分方案
 
 ## 🎯 设计目标
 
@@ -58,7 +58,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │ 💬 聊天                                                    │
 ├─────────────────────────────────────────────────────────────┤
-│ ChatView - 项目: nanobot                                    │
+│ ChatView - 项目: solopreneur                                    │
 │   [🏠 本地接口] [🟢 已连接]     [模型: llama-3-8b ▼]       │
 │                                                             │
 │ ┌─────────────────────────────────────────────────────┐    │
@@ -68,7 +68,7 @@
 │ └─────────────────────────────────────────────────────┘    │
 │                                                             │
 │ ┌─────────────────────────────────────────────────────┐    │
-│ │  你好！我是 NanoBot，很高兴为您服务。                   │    │
+│ │  你好！我是 solopreneur，很高兴为您服务。                   │    │
 │ └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -89,7 +89,7 @@
 ### 后端 Provider 工厂
 
 ```python
-# nanobot/core/dependencies.py
+# solopreneur/core/dependencies.py
 
 def get_llm_provider(self, force_copilot: bool = False):
     """
@@ -117,7 +117,7 @@ def get_llm_provider(self, force_copilot: bool = False):
 
     # 3. 使用其他 Provider
     if self._llm_provider is None:
-        from nanobot.providers.factory import create_llm_provider
+        from solopreneur.providers.factory import create_llm_provider
         self._llm_provider = create_llm_provider(config)
 
         # 如果没有配置其他 Provider，回退到 Copilot
@@ -132,7 +132,7 @@ def get_llm_provider(self, force_copilot: bool = False):
 ### Provider 工厂优先级
 
 ```python
-# nanobot/providers/factory.py
+# solopreneur/providers/factory.py
 
 def create_llm_provider(config, default_model=None):
     """
@@ -333,7 +333,7 @@ async function loadModels() {
 ### 配置 Schema
 
 ```python
-# nanobot/config/schema.py
+# solopreneur/config/schema.py
 
 class ProvidersConfig(BaseModel):
     """Configuration for LLM providers."""
@@ -350,7 +350,7 @@ class ProvidersConfig(BaseModel):
 ### /api/auth/models - 返回 Provider 信息
 
 ```python
-# nanobot/api/routes/auth.py
+# solopreneur/api/routes/auth.py
 
 @router.get("/auth/models")
 async def get_models():

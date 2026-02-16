@@ -1,11 +1,11 @@
-# Nanobot 调用流程优化总结
+﻿# solopreneur 调用流程优化总结
 
 ## 优化日期
 2026-02-10
 
 ## 优化内容
 
-### 1. 配置缓存机制 (`nanobot/config/loader.py`)
+### 1. 配置缓存机制 (`solopreneur/config/loader.py`)
 **问题**: 每次调用 `load_config()` 都会重新读取文件
 **优化**:
 - 添加全局配置缓存 (`_config_cache`)
@@ -19,7 +19,7 @@
 
 ---
 
-### 2. 统一会话管理 (`nanobot/session/cache.py`)
+### 2. 统一会话管理 (`solopreneur/session/cache.py`)
 **问题**: 会话管理分散，使用全局变量存储
 **优化**:
 - 创建 `SessionCache` 类（LRU 缓存策略）
@@ -44,7 +44,7 @@ session = session_cache.get_or_create(session_id)
 
 ---
 
-### 3. 依赖注入系统 (`nanobot/core/dependencies.py`)
+### 3. 依赖注入系统 (`solopreneur/core/dependencies.py`)
 **问题**: 全局单例管理混乱，重复创建实例
 **优化**:
 - 创建 `ComponentManager` 单例类
@@ -63,7 +63,7 @@ session = session_cache.get_or_create(session_id)
 
 ---
 
-### 4. ChannelManager 完善 (`nanobot/channels/manager.py`)
+### 4. ChannelManager 完善 (`solopreneur/channels/manager.py`)
 **问题**: 只有 wecom 通道初始化，`channels` 字典为空
 **优化**:
 - 添加 Telegram 通道初始化
@@ -78,7 +78,7 @@ session = session_cache.get_or_create(session_id)
 
 ### 5. API Routes 更新
 
-#### 5.1 Chat API (`nanobot/api/routes/chat.py`)
+#### 5.1 Chat API (`solopreneur/api/routes/chat.py`)
 **优化**:
 - 使用统一会话管理
 - 支持 `session_id` 参数
@@ -97,27 +97,27 @@ GET /chat/sessions → 列出所有会话
 DELETE /chat/history → 支持单个或全部清理
 ```
 
-#### 5.2 Auth API (`nanobot/api/routes/auth.py`)
+#### 5.2 Auth API (`solopreneur/api/routes/auth.py`)
 **优化**:
 - 使用组件管理器管理 CopilotProvider
 
-#### 5.3 Agents API (`nanobot/api/routes/agents.py`)
+#### 5.3 Agents API (`solopreneur/api/routes/agents.py`)
 **优化**:
 - 使用组件管理器获取 AgentManager
 
-#### 5.4 Agent API (`nanobot/api/routes/agent.py`)
+#### 5.4 Agent API (`solopreneur/api/routes/agent.py`)
 **优化**:
 - 使用组件管理器获取配置
 - 更新 Agent 定义后清除配置缓存
 
-#### 5.5 WebSocket (`nanobot/api/websocket.py`)
+#### 5.5 WebSocket (`solopreneur/api/websocket.py`)
 **优化**:
 - 使用组件管理器获取 AgentLoop
 - 简化 AgentLoop 创建逻辑
 
 ---
 
-### 6. FastAPI Lifespan (`nanobot/api/main.py`)
+### 6. FastAPI Lifespan (`solopreneur/api/main.py`)
 **优化**:
 - 使用组件管理器统一关闭资源
 - 确保所有组件正确清理
@@ -126,19 +126,19 @@ DELETE /chat/history → 支持单个或全部清理
 
 ### 7. 新增文件
 
-#### 7.1 `nanobot/session/cache.py`
+#### 7.1 `solopreneur/session/cache.py`
 统一的会话缓存系统
 - `Session`: 会话数据类
 - `SessionCache`: LRU 缓存管理器
 - `get_session_cache()`: 获取全局实例
 - `reset_session_cache()`: 重置缓存
 
-#### 7.2 `nanobot/core/dependencies.py`
+#### 7.2 `solopreneur/core/dependencies.py`
 依赖注入和组件管理
 - `ComponentManager`: 全局组件管理器
 - `get_component_manager()`: 获取管理器实例
 
-#### 7.3 `nanobot/channels/wecom_channel.py`
+#### 7.3 `solopreneur/channels/wecom_channel.py`
 企业微信通道实现
 - `WeComConfig`: 企业微信配置
 - `WeComChannel`: 通道实现

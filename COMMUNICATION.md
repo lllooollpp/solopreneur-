@@ -1,4 +1,4 @@
-We provide QR codes for joining the HKUDS discussion groups on **WeChat** and **Feishu**.
+﻿We provide QR codes for joining the HKUDS discussion groups on **WeChat** and **Feishu**.
 
 You can join by scanning the QR codes below:
 

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="chat-layout">
     <!-- 左侧项目列表 -->
     <div class="chat-left-pane">
@@ -316,8 +316,8 @@ import { renderMarkdown } from '@/utils/markdown'
 import { generateWiki as generateWikiApi, getProjectDocs } from '@/services/projectApi'
 
 // localStorage keys
-const CHAT_STORAGE_PREFIX = 'nanobot_chat_messages_'
-const CURRENT_PROJECT_KEY = 'nanobot_current_project'
+const CHAT_STORAGE_PREFIX = 'solopreneur_chat_messages_'
+const CURRENT_PROJECT_KEY = 'solopreneur_current_project'
 
 // Refs
 const messages = ref<ChatMessage[]>([])

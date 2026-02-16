@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from nanobot.storage.sqlite_store import SQLiteStore
+from solopreneur.storage.sqlite_store import SQLiteStore
 
 
 def migrate_sessions(data_dir: Path, store: SQLiteStore) -> int:

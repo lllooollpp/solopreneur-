@@ -1,4 +1,4 @@
-# LLM Provider 连接测试指南
+﻿# LLM Provider 连接测试指南
 
 ## 🚀 快速开始
 
@@ -338,7 +338,7 @@ asyncio.run(test_api())
 
 📝 模型响应:
 ──────────────────────────────────────────
-你好！我是 NanoBot，一个 AI 助手。
+你好！我是 solopreneur，一个 AI 助手。
 ──────────────────────────────────────────
 ```
 
@@ -361,5 +361,5 @@ asyncio.run(test_api())
 4. 确认服务器状态
 
 常见日志位置：
-- 服务日志: `logs/nanobot.log`
+- 服务日志: `logs/solopreneur.log`
 - 控制台输出: 启动服务的终端

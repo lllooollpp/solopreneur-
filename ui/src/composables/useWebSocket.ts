@@ -1,4 +1,4 @@
-/**
+﻿/**
  * WebSocket 连接管理 Composable
  */
 import { ref, onMounted, onUnmounted } from 'vue'

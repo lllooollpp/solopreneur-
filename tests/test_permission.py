@@ -9,7 +9,7 @@ client = TestClient(app)
     ("admin", 200),
 ])
 def test_admin_route_access(role, expected_status):
-    # 模拟不同角色访问管理员接口
+    # 模拟不同角色访问管理员接�?
     response = client.get(
         "/api/admin/dashboard",
         headers={"Authorization": f"Bearer {role}_token"}
@@ -17,7 +17,7 @@ def test_admin_route_access(role, expected_status):
     assert response.status_code == expected_status
 
 def test_user_cannot_delete_others_data():
-    # 普通用户尝试删除其他用户数据
+    # 普通用户尝试删除其他用户数�?
     response = client.delete(
         "/api/users/123",
         headers={"Authorization": "Bearer user_token"}

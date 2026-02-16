@@ -1,4 +1,4 @@
-# 技术调研报告：TauriSidecar、GitHub Copilot OAuth 与企业微信
+﻿# 技术调研报告：TauriSidecar、GitHub Copilot OAuth 与企业微信
 
 **日期**：2026-02-05  
 **状态**：完成  
@@ -18,7 +18,7 @@
 ## 2. GitHub Copilot API 认证
 
 ### 决策：GitHub Device OAuth 流
-- **选择了什么**：通过 `nanobot login` 触发 GitHub 设备码流。
+- **选择了什么**：通过 `solopreneur login` 触发 GitHub 设备码流。
     1. 请求 `github.com/login/device/code`。
     2. 用户在浏览器输入验证码。
     3. 轮询 `github.com/login/oauth/access_token` 获取 Access Token。

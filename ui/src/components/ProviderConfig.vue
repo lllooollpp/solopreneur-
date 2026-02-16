@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="provider-config">
     <h3>🌐 LLM Providers 配置</h3>
     <p class="section-desc">配置使用哪个 LLM 提供商，支持 GitHub Copilot 和其他第三方服务</p>

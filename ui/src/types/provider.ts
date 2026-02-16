@@ -1,4 +1,4 @@
-export interface ProviderConfig {
+﻿export interface ProviderConfig {
   api_key: string
   api_base?: string | null
   enabled?: boolean

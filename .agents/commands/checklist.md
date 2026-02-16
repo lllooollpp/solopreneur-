@@ -1,4 +1,4 @@
----
+﻿---
 description: 基于用户需求为当前功能生成自定义检查清单。
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json

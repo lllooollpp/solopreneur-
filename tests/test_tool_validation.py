@@ -1,7 +1,7 @@
 from typing import Any
 
-from nanobot.agent.core.tools.base import Tool
-from nanobot.agent.core.tools.registry import ToolRegistry
+from solopreneur.agent.core.tools.base import Tool
+from solopreneur.agent.core.tools.registry import ToolRegistry
 
 
 class SampleTool(Tool):

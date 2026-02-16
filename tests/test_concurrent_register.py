@@ -13,7 +13,7 @@ def test_concurrent_registrations_same_email():
         futures = [executor.submit(register_user) for _ in range(5)]
         results = [f.result() for f in futures]
     
-    # 第一个注册应该成功，其余应失败
+    # 第一个注册应该成功，其余应失�?
     success_count = sum(1 for r in results if r.status_code == 201)
     error_count = sum(1 for r in results if r.status_code == 400)
     assert success_count == 1

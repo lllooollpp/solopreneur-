@@ -1,5 +1,5 @@
-{
-  "project": "nanobot",
+﻿{
+  "project": "solopreneur",
   "version": "0.2.2",
   "last_updated": "2026-02-13T18:00:00Z",
   "constraints": {
@@ -139,7 +139,7 @@
       "test_cases": [
         {
           "name": "Proxy bypass for localhost",
-          "command": "grep -q '127.0.0.1' nanobot/providers/litellm_provider.py && echo 'FOUND'",
+          "command": "grep -q '127.0.0.1' solopreneur/providers/litellm_provider.py && echo 'FOUND'",
           "expected": "FOUND"
         }
       ],
@@ -199,12 +199,12 @@
       "test_cases": [
         {
           "name": "WeCom callback exists",
-          "command": "grep -q '/api/wecom/callback' nanobot/api/routes/wecom.py && echo 'FOUND'",
+          "command": "grep -q '/api/wecom/callback' solopreneur/api/routes/wecom.py && echo 'FOUND'",
           "expected": "FOUND"
         },
         {
           "name": "WeCom channel imports",
-          "command": "python -c \"from nanobot.channels.wecom import WeComChannel; print('OK')\"",
+          "command": "python -c \"from solopreneur.channels.wecom import WeComChannel; print('OK')\"",
           "expected": "OK"
         }
       ],
@@ -231,7 +231,7 @@
       "test_cases": [
         {
           "name": "Copilot provider exists",
-          "command": "python -c \"from nanobot.providers.copilot import CopilotProvider; print('OK')\"",
+          "command": "python -c \"from solopreneur.providers.copilot import CopilotProvider; print('OK')\"",
           "expected": "OK"
         }
       ],
@@ -259,7 +259,7 @@
       "test_cases": [
         {
           "name": "Harness imports",
-          "command": "python -c \"from nanobot.agent.core.harness import LongRunningHarness; print('OK')\"",
+          "command": "python -c \"from solopreneur.agent.core.harness import LongRunningHarness; print('OK')\"",
           "expected": "OK"
         },
         {
@@ -269,7 +269,7 @@
         },
         {
           "name": "Working tree check",
-          "command": "python -c \"from nanobot.agent.core.harness import LongRunningHarness; h = LongRunningHarness('.'); r = h.verify_working_tree_clean(); print('PASS' if r['clean'] else 'FAIL')\"",
+          "command": "python -c \"from solopreneur.agent.core.harness import LongRunningHarness; h = LongRunningHarness('.'); r = h.verify_working_tree_clean(); print('PASS' if r['clean'] else 'FAIL')\"",
           "expected": "PASS"
         }
       ],
@@ -297,7 +297,7 @@
       "test_cases": [
         {
           "name": "Projects API exists",
-          "command": "grep -q 'projects' nanobot/api/main.py && echo 'FOUND'",
+          "command": "grep -q 'projects' solopreneur/api/main.py && echo 'FOUND'",
           "expected": "FOUND"
         }
       ],
@@ -323,7 +323,7 @@
       "test_cases": [
         {
           "name": "Skills API exists",
-          "command": "grep -q 'skills' nanobot/api/main.py && echo 'FOUND'",
+          "command": "grep -q 'skills' solopreneur/api/main.py && echo 'FOUND'",
           "expected": "FOUND"
         }
       ],
@@ -349,7 +349,7 @@
       "test_cases": [
         {
           "name": "GLM provider imports",
-          "command": "python -c \"from nanobot.providers.zhipu import ZhipuProvider; print('OK')\" 2>/dev/null || echo 'SKIPPED'",
+          "command": "python -c \"from solopreneur.providers.zhipu import ZhipuProvider; print('OK')\" 2>/dev/null || echo 'SKIPPED'",
           "expected": ""
         }
       ],

@@ -1,4 +1,4 @@
----
+﻿---
 description: 基于设计文档生成可执行 tasks.md，任务分阶段、分用户故事组织。
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json

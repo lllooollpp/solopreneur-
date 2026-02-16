@@ -1,4 +1,4 @@
----
+﻿---
 description: 按 tasks.md 执行实现计划，分阶段推进。
 scripts:
   sh: scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks

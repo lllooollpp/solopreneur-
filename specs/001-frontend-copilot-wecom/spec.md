@@ -1,4 +1,4 @@
-# 功能规范：前端管理界面、Copilot 模型与企业微信集成
+﻿# 功能规范：前端管理界面、Copilot 模型与企业微信集成
 
 **分支**：001-frontend-copilot-wecom  
 **创建时间**：2026-02-05  
@@ -7,7 +7,7 @@
 
 ## 用户场景与测试（必填）
 
-### 用户故事1 - 通过 Web 界面管理 Nanobot（优先级：P1）
+### 用户故事1 - 通过 Web 界面管理 solopreneur（优先级：P1）
 作为一个用户，我希望通过一个美观的 Web 前端来配置我的 Agent，查看运行状态并与之聊天，而不是仅依赖命令行。
 **优先级说明**：前端界面是提升用户体验的核心，涵盖了配置和交互的关键功能。
 **独立测试**：启动前端开发服务器，确保可以访问各个导航页（配置、对话等）。
@@ -17,7 +17,7 @@
 ---
 
 ### 用户故事2 - 使用 GitHub Copilot 模型进行对话（优先级：P2）
-作为一个开发者，我希望利用我的 GitHub Copilot 订阅来驱动 Nanobot，以获得高质量的 AI 响应。
+作为一个开发者，我希望利用我的 GitHub Copilot 订阅来驱动 solopreneur，以获得高质量的 AI 响应。
 **优先级说明**：模型支持是 Agent 的大脑，Copilot 是目前广泛使用的优质资源。
 **独立测试**：在配置文件中设置 Copilot 凭据，发送测试消息并接收响应。
 **验收场景**：
@@ -45,7 +45,7 @@
 - **FR-002**：前端界面必须包含四个核心模块：配置管理、聊天机器人交互、仪表盘统计、工作流展示。
 - **FR-003**：实现一个新的 LLM Provider 以支持 GitHub Copilot 模型。
 - **FR-004**：实现新的企业微信（WeCom）渠道支持。
-- **FR-005**：完全物理删除现有的 Telegram (`nanobot/channels/telegram.py`) 和 WhatsApp (`nanobot/channels/whatsapp.py` 及 `bridge/` 目录) 渠道代码，仅保留基础基类逻辑。
+- **FR-005**：完全物理删除现有的 Telegram (`solopreneur/channels/telegram.py`) 和 WhatsApp (`solopreneur/channels/whatsapp.py` 及 `bridge/` 目录) 渠道代码，仅保留基础基类逻辑。
 
 ### 关键实体（如涉及数据）
 - **FrontendConfig**：存储前端构建和后端 API 连接的配置。
@@ -66,7 +66,7 @@
 ## 澄清
 
 ### 会话 2026-02-05
-- Q：GitHub Copilot 认证方式 → A：OAuth 设备流 + 本地缓存 (`nanobot login --provider github-copilot`)
+- Q：GitHub Copilot 认证方式 → A：OAuth 设备流 + 本地缓存 (`solopreneur login --provider github-copilot`)
 - Q：企业微信集成类型 → A：企业微信群机器人（webhook 模式，无需企业认证）
 - Q：前端-后端通信协议 → A：混合方案（REST API 管理配置 + WebSocket 推送实时状态）
 - Q：代码删除范围 → A：完全删除 Telegram/WhatsApp 代码及相关依赖（包括 `bridge/` 目录）

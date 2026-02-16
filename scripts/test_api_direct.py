@@ -1,7 +1,7 @@
 import httpx
 import json
 import asyncio
-from nanobot.api.main import app
+from solopreneur.api.main import app
 
 async def test_endpoints_direct():
     endpoints = [
@@ -22,7 +22,7 @@ async def test_endpoints_direct():
                 
                 # Check for "TODO" or placeholder info
                 content_str = json.dumps(content, ensure_ascii=False)
-                has_placeholder = "TODO" in content_str or "未实现" in content_str
+                has_placeholder = "TODO" in content_str or "未实�? in content_str
                 
                 results.append({
                     "url": url,

@@ -1,4 +1,4 @@
-# 前端与 Copilot 集成开发快速上手
+﻿# 前端与 Copilot 集成开发快速上手
 
 ## 1. 环境准备
 
@@ -12,7 +12,7 @@
 在根目录下运行后端 API 服务：
 ```bash
 # 激活环境并运行 API 模式
-nanobot gateway --dev --port 8080
+solopreneur gateway --dev --port 8080
 ```
 
 ## 3. 前端开发调试 (Vue3)
@@ -33,9 +33,9 @@ npm run tauri dev
 
 ## 5. GitHub Copilot 认证流程测试
 
-1. 运行 `nanobot login --provider github-copilot`。
+1. 运行 `solopreneur login --provider github-copilot`。
 2. 按照 CLI 指示在浏览器完成授权。
-3. 检查 `~/.nanobot/credentials.json` 是否生成了正确的 Token。
+3. 检查 `~/.solopreneur/credentials.json` 是否生成了正确的 Token。
 
 ## 6. 企业微信测试建议
 

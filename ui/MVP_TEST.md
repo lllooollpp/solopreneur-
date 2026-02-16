@@ -1,4 +1,4 @@
-# MVP 前端测试指南
+﻿# MVP 前端测试指南
 
 ## ✅ 已完成的功能
 
@@ -34,7 +34,7 @@ npm run dev
 
 ```bash
 # 在项目根目录
-python -m nanobot.api.main
+python -m solopreneur.api.main
 ```
 
 后端 API: http://localhost:8000
@@ -79,4 +79,4 @@ python -m nanobot.api.main
 
 ### CORS 错误
 - 确保后端 CORS 配置包含 `http://localhost:5173`
-- 检查 `nanobot/api/main.py` 中的 CORS 设置
+- 检查 `solopreneur/api/main.py` 中的 CORS 设置

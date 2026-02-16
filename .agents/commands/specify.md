@@ -1,4 +1,4 @@
----
+﻿---
 description: 根据自然语言描述生成 feature 规范。
 scripts:
   sh: scripts/bash/create-new-feature.sh --json "{ARGS}"

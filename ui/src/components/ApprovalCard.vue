@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="show" class="approval-overlay" @click.self="deny">
     <div class="approval-card">
       <div class="card-header">

@@ -1,4 +1,4 @@
-"""P0 核心回归检查脚本（聚焦持久化主链路）。"""
+"""P0 核心回归检查脚本（聚焦持久化主链路）�?""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from nanobot.projects.manager import ProjectManager
-from nanobot.session.manager import SessionManager
-from nanobot.storage.sqlite_store import SQLiteStore
+from solopreneur.projects.manager import ProjectManager
+from solopreneur.session.manager import SessionManager
+from solopreneur.storage.sqlite_store import SQLiteStore
 
 
 def check_session_flow() -> tuple[bool, str]:

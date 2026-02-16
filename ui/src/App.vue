@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <div id="app">
     <nav class="navbar">
       <div class="nav-brand">
-        <h1>🤖 Nanobot</h1>
+        <h1>🤖 solopreneur</h1>
       </div>
       <div class="nav-links">
         <router-link to="/dashboard">仪表盘</router-link>

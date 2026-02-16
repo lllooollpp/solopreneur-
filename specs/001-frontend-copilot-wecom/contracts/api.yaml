@@ -1,6 +1,6 @@
-openapi: 3.0.0
+﻿openapi: 3.0.0
 info:
-  title: Nanobot Sidecar API
+  title: solopreneur Sidecar API
   version: 1.0.0
   description: 后端 Python Agent 与 前端 Vue UI 之间的接口契约
 

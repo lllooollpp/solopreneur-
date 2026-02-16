@@ -1,4 +1,4 @@
-
+﻿
 ---
 description: 规范分析：在生成 tasks.md 后，对 spec.md、plan.md、tasks.md 进行一致性与质量分析（只读，不修改文件）。
 scripts:

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="skill-card">
     <div class="card-header">
       <div class="title-area">

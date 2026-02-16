@@ -1,11 +1,11 @@
-"""快速测试 LLM 连接"""
+"""快速测�?LLM 连接"""
 import asyncio
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from nanobot.providers.litellm_provider import LiteLLMProvider
+from solopreneur.providers.litellm_provider import LiteLLMProvider
 
 
 async def test_connection(api_base: str, api_key: str, model: str):
@@ -29,27 +29,25 @@ async def test_connection(api_base: str, api_key: str, model: str):
             max_tokens=10
         )
 
-        print("✅ 连接成功！")
+        print("�?连接成功�?)
         print(f"响应: {response.content[:100]}...")
         return True
 
     except Exception as e:
-        print(f"❌ 连接失败: {e}")
+        print(f"�?连接失败: {e}")
         return False
 
 
 if __name__ == "__main__":
-    # 使用命令行参数或默认值
-    if len(sys.argv) >= 4:
+    # 使用命令行参数或默认�?    if len(sys.argv) >= 4:
         api_base = sys.argv[1]
         api_key = sys.argv[2]
         model = sys.argv[3]
     else:
-        # 从错误信息中提取的配置
-        api_base = "http://10.104.6.197:38099/v1"
+        # 从错误信息中提取的配�?        api_base = "http://10.104.6.197:38099/v1"
         api_key = "dummy"
         model = "llama-3-8b"
-        print("使用默认配置（从错误日志推断）:")
+        print("使用默认配置（从错误日志推断�?")
         print("  API Base: http://10.104.6.197:38099/v1")
         print("  API Key: dummy")
         print("  Model: llama-3-8b")

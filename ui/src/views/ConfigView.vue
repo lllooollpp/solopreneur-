@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="config">
     <h2>⚙️ 配置管理</h2>
     

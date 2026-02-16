@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="trace-panel" :class="{ collapsed: isCollapsed }">
     <div class="panel-header" @click="isCollapsed = !isCollapsed">
       <span class="panel-title">📊 调用链路</span>

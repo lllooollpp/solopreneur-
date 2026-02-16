@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """
 冒烟测试脚本
-每次会话启动时运行，验证核心功能可用性
-
-基于 Anthropic "Effective harnesses for long-running agents" 文章：
-- 强制端到端冒烟测试
-- 验证核心路径可复现运行
-"""
+每次会话启动时运行，验证核心功能可用�?
+基于 Anthropic "Effective harnesses for long-running agents" 文章�?- 强制端到端冒烟测�?- 验证核心路径可复现运�?"""
 import sys
 import subprocess
 from pathlib import Path
@@ -38,7 +34,7 @@ def run_test(name: str, command: str, expected: str = "") -> tuple[bool, str]:
 
 
 def main():
-    """运行所有冒烟测试"""
+    """运行所有冒烟测�?""
     workspace = Path(__file__).parent.parent
     
     print("=" * 60)
@@ -49,19 +45,19 @@ def main():
     tests = [
         # 1. 核心导入测试
         ("Backend API imports", 
-         "python -c \"from nanobot.api.main import app; print('OK')\"",
+         "python -c \"from solopreneur.api.main import app; print('OK')\"",
          "OK"),
         
         ("Agent core imports",
-         "python -c \"from nanobot.agent.core.loop import AgentLoop; print('OK')\"",
+         "python -c \"from solopreneur.agent.core.loop import AgentLoop; print('OK')\"",
          "OK"),
         
         ("Provider imports",
-         "python -c \"from nanobot.providers.litellm_provider import LiteLLMProvider; print('OK')\"",
+         "python -c \"from solopreneur.providers.litellm_provider import LiteLLMProvider; print('OK')\"",
          "OK"),
         
         ("Harness imports",
-         "python -c \"from nanobot.agent.core.harness import LongRunningHarness; print('OK')\"",
+         "python -c \"from solopreneur.agent.core.harness import LongRunningHarness; print('OK')\"",
          "OK"),
         
         # 2. 配置文件测试
@@ -78,13 +74,11 @@ def main():
          f"python -c \"from pathlib import Path; p = Path('{workspace / \".agent\" / \"progress.md\"}'); print('EXISTS' if p.exists() else 'NOT_FOUND')\"",
          "EXISTS"),
         
-        # 4. 单任务约束验证
-        ("Single in_progress constraint",
+        # 4. 单任务约束验�?        ("Single in_progress constraint",
          f"python -c \"import json; d = json.load(open('{workspace / \".agent\" / \"feature_list.json\"}')); ip = [f for f in d['features'] if f['status'] == 'in_progress']; print('PASS' if len(ip) <= 1 else 'FAIL: ' + str(len(ip)) + ' in_progress')\"",
          "PASS"),
         
-        # 5. Git 状态检查
-        ("Git repository valid",
+        # 5. Git 状态检�?        ("Git repository valid",
          "git rev-parse --is-inside-work-tree",
          "true"),
         
@@ -114,11 +108,11 @@ def main():
     print("=" * 60)
     
     if failed == 0:
-        print(f"{GREEN}✅ All smoke tests passed ({passed}/{len(tests)}){NC}")
+        print(f"{GREEN}�?All smoke tests passed ({passed}/{len(tests)}){NC}")
         print("=" * 60)
         return 0
     else:
-        print(f"{RED}❌ Smoke tests failed: {passed}/{len(tests)} passed{NC}")
+        print(f"{RED}�?Smoke tests failed: {passed}/{len(tests)} passed{NC}")
         print("=" * 60)
         return 1
 

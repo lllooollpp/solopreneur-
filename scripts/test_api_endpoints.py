@@ -24,7 +24,7 @@ def test_endpoints():
                 
                 # Check for "TODO" or placeholder info
                 content_str = json.dumps(content, ensure_ascii=False)
-                has_placeholder = "TODO" in content_str or "未实现" in content_str
+                has_placeholder = "TODO" in content_str or "未实�? in content_str
                 
                 results.append({
                     "url": url,

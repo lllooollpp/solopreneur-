@@ -1,4 +1,4 @@
-# Provider 配置系统集成指南
+﻿# Provider 配置系统集成指南
 
 本文档说明如何配置和使用不同的 LLM Provider，以及它们如何与系统各部分集成。
 
@@ -84,7 +84,7 @@
 
 **方式 B: 手动编辑配置文件**
 ```json
-// ~/.nanobot/config.json
+// ~/.solopreneur/config.json
 {
   "providers": {
     "vllm": {
@@ -104,9 +104,9 @@
 
 启动服务时：
 ```python
-# nanobot/core/dependencies.py
+# solopreneur/core/dependencies.py
 manager = get_component_manager()
-config = manager.get_config()  # 加载 ~/.nanobot/config.json
+config = manager.get_config()  # 加载 ~/.solopreneur/config.json
 ```
 
 ### 3. 创建 Provider
@@ -119,7 +119,7 @@ if self._llm_provider is None:
     config = self.get_config()
 
     # 3. 调用工厂创建
-    from nanobot.providers.factory import create_llm_provider
+    from solopreneur.providers.factory import create_llm_provider
     self._llm_provider = create_llm_provider(
         config,
         default_model=config.agents.defaults.model
@@ -128,7 +128,7 @@ if self._llm_provider is None:
 
 工厂检查配置优先级：
 ```python
-# nanobot/providers/factory.py
+# solopreneur/providers/factory.py
 providers_config = config.providers
 
 # 优先级 1: 本地 vLLM
@@ -150,7 +150,7 @@ if providers_config.zhipu.api_key:
 
 **聊天 API** (`/api/chat`):
 ```python
-# nanobot/api/routes/chat.py
+# solopreneur/api/routes/chat.py
 provider = manager.get_llm_provider()
 result = await provider.chat(
     messages=messages,
@@ -161,7 +161,7 @@ result = await provider.chat(
 
 **Agent Loop** (WebSocket 聊天):
 ```python
-# nanobot/core/dependencies.py
+# solopreneur/core/dependencies.py
 async def get_agent_loop(self):
     provider = self.get_llm_provider()
     self._agent_loop = AgentLoop(
@@ -175,7 +175,7 @@ async def get_agent_loop(self):
 
 **子 Agent 调用**:
 ```python
-# nanobot/agent/core/subagent.py
+# solopreneur/agent/core/subagent.py
 # SubagentManager 使用相同的 Provider
 self.subagents = SubagentManager(
     provider=provider,
@@ -281,7 +281,7 @@ def get_llm_provider(self, force_copilot: bool = False):
 
 ```python
 # 测试脚本
-from nanobot.core.dependencies import get_component_manager
+from solopreneur.core.dependencies import get_component_manager
 
 manager = get_component_manager()
 provider = manager.get_llm_provider()
@@ -340,14 +340,14 @@ python -m vllm.entrypoints.openai.api_server \
   --model meta-llama/Meta-Llama-3-8B-Instruct \
   --port 8000
 
-# 2. 配置 NanoBot
+# 2. 配置 solopreneur
 # 访问 http://localhost:18790
 # 进入「配置管理」→「LLM Providers」
 # 选择「本地 OpenAI 标准接口」
 # 填写 API Base: http://localhost:8000/v1
 # 点击「保存配置」
 
-# 3. 重启 NanoBot
+# 3. 重启 solopreneur
 python start.py
 
 # 4. 开始聊天

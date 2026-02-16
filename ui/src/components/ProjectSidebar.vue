@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="project-sidebar">
     <div class="sidebar-header">
       <h3>📁 项目列表</h3>

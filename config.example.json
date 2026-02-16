@@ -1,10 +1,10 @@
-{
-  "_comment": "Nanobot 配置示例文件 - Token 控制相关配置",
-  "_usage": "复制此文件到 ~/.nanobot/config.json 并根据需要修改",
+﻿{
+  "_comment": "solopreneur 配置示例文件 - Token 控制相关配置",
+  "_usage": "复制此文件到 ~/.solopreneur/config.json 并根据需要修改",
 
   "agents": {
     "defaults": {
-      "workspace": "~/.nanobot/workspace",
+      "workspace": "~/.solopreneur/workspace",
 
       "_comment_max_tokens": "单次 LLM 调用的最大输出 Token 数",
       "_comment_max_tokens_note": "越小越节省，但响应可能被截断",
@@ -42,7 +42,7 @@
   "providers": {
     "_comment": "LLM 提供者配置",
     "_comment_note": "不同模型的 Token 价格差异很大",
-    "_comment_priority": "选择哪个 Provider 由 nanobot.core.dependencies.get_llm_provider() 决定，优先使用 Copilot",
+    "_comment_priority": "选择哪个 Provider 由 solopreneur.core.dependencies.get_llm_provider() 决定，优先使用 Copilot",
     "anthropic": {
       "api_key": "your-api-key",
       "api_base": null,
@@ -124,7 +124,7 @@
 
   "tokenPool": {
     "_comment": "账号池全局配置（可通过环境变量覆盖）",
-    "_comment_env": "支持的环境变量: NANOBOT_TOKEN_POOL__MAX_TOKENS_PER_DAY",
+    "_comment_env": "支持的环境变量: solopreneur_TOKEN_POOL__MAX_TOKENS_PER_DAY",
     "maxTokensPerDay": 0,
     "_comment_maxTokensPerDay": "每个账号每日最大Token限制（0=无限制）",
 

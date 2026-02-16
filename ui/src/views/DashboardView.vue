@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="dashboard">
     <!-- 页面标题 -->
     <div class="dashboard-header">

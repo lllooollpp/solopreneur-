@@ -1,9 +1,9 @@
-<div align="center">
-  <img src="nanobot_logo.png" alt="nanobot" width="420">
-  <h1>nanobot：可配置的多领域 AI Agent 框架</h1>
+﻿<div align="center">
+  <img src="solopreneur_logo.png" alt="solopreneur" width="420">
+  <h1>solopreneur：可配置的多领域 AI Agent 框架</h1>
   <p>
-    <a href="https://pypi.org/project/nanobot-ai/"><img src="https://img.shields.io/pypi/v/nanobot-ai" alt="PyPI"></a>
-    <a href="https://pepy.tech/project/nanobot-ai"><img src="https://static.pepy.tech/badge/nanobot-ai" alt="Downloads"></a>
+    <a href="https://pypi.org/project/solopreneur-ai/"><img src="https://img.shields.io/pypi/v/solopreneur-ai" alt="PyPI"></a>
+    <a href="https://pepy.tech/project/solopreneur-ai"><img src="https://static.pepy.tech/badge/solopreneur-ai" alt="Downloads"></a>
     <img src="https://img.shields.io/badge/python-≥3.11-blue" alt="Python">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
     <a href="./COMMUNICATION.md"><img src="https://img.shields.io/badge/Feishu-Group-E9DBFC?style=flat&logo=feishu&logoColor=white" alt="Feishu"></a>
@@ -11,7 +11,7 @@
   </p>
 </div>
 
-🐈 **nanobot** 是一个轻量级、可配置的多领域 AI Agent 框架。通过 YAML/JSON 配置即可定义任意领域的 Agent（软件工程、医疗、法律、教育等），支持多 LLM 提供商、多聊天渠道、工具调用和 Agent 协作。核心代码约 4,000 行，易于理解、修改和部署。
+🐈 **solopreneur** 是一个轻量级、可配置的多领域 AI Agent 框架。通过 YAML/JSON 配置即可定义任意领域的 Agent（软件工程、医疗、法律、教育等），支持多 LLM 提供商、多聊天渠道、工具调用和 Agent 协作。核心代码约 4,000 行，易于理解、修改和部署。
 
 ## 核心特性
 
@@ -33,11 +33,11 @@
 ## 架构
 
 <p align="center">
-  <img src="nanobot_arch.png" alt="nanobot architecture" width="800">
+  <img src="solopreneur_arch.png" alt="solopreneur architecture" width="800">
 </p>
 
 ```
-nanobot/
+solopreneur/
 ├── agent/          # Agent 核心
 │   ├── loop.py     # Agent 循环（工具调用、上下文压缩、超时控制）
 │   ├── memory.py   # 记忆系统（每日笔记 + 长期记忆）
@@ -91,13 +91,13 @@ nanobot/
 ## 安装
 
 ```bash
-pip install nanobot-ai
+pip install solopreneur-ai
 ```
 
 或从源码安装：
 ```bash
-git clone https://github.com/HKUDS/nanobot.git
-cd nanobot
+git clone https://github.com/HKUDS/solopreneur.git
+cd solopreneur
 pip install -e .
 ```
 
@@ -107,10 +107,10 @@ pip install -e .
 
 1. 初始化配置和工作区：
 ```bash
-nanobot onboard
+solopreneur onboard
 ```
 
-2. 配置 LLM（`~/.nanobot/config.json`）：
+2. 配置 LLM（`~/.solopreneur/config.json`）：
 ```json
 {
   "providers": {
@@ -134,25 +134,25 @@ nanobot onboard
 
 3. 命令行聊天：
 ```bash
-nanobot agent -m "你好"
+solopreneur agent -m "你好"
 ```
 
 4. 启动网关（支持聊天渠道）：
 ```bash
-nanobot gateway
+solopreneur gateway
 ```
 
 ## 配置
 
 ### 全局配置
 
-配置文件：`~/.nanobot/config.json`
+配置文件：`~/.solopreneur/config.json`
 
 ```json
 {
   "agents": {
     "defaults": {
-      "workspace": "~/.nanobot/workspace",
+      "workspace": "~/.solopreneur/workspace",
       "model": "claude-sonnet-4",
       "max_tokens": 8192,
       "temperature": 0.7,
@@ -184,11 +184,11 @@ nanobot gateway
 }
 ```
 
-支持环境变量：`NANOBOT_PROVIDERS__OPENROUTER__API_KEY`
+支持环境变量：`solopreneur_PROVIDERS__OPENROUTER__API_KEY`
 
 ### 自定义 Agent
 
-在工作区 `~/.nanobot/workspace/agents/` 创建 YAML 文件：
+在工作区 `~/.solopreneur/workspace/agents/` 创建 YAML 文件：
 
 ```yaml
 # pediatrician.yaml
@@ -228,34 +228,34 @@ metadata:
 
 | 命令 | 说明 |
 |------|------|
-| `nanobot onboard` | 初始化配置和工作区 |
-| `nanobot status` | 查看配置状态和 API 密钥 |
-| `nanobot --version` | 显示版本 |
+| `solopreneur onboard` | 初始化配置和工作区 |
+| `solopreneur status` | 查看配置状态和 API 密钥 |
+| `solopreneur --version` | 显示版本 |
 
 ### Agent 命令
 
 | 命令 | 说明 |
 |------|------|
-| `nanobot agent -m "消息"` | 发送单条消息 |
-| `nanobot agent` | 交互模式 |
-| `nanobot agent -s session_id` | 指定会话 ID |
+| `solopreneur agent -m "消息"` | 发送单条消息 |
+| `solopreneur agent` | 交互模式 |
+| `solopreneur agent -s session_id` | 指定会话 ID |
 
 ### 网关命令
 
 | 命令 | 说明 |
 |------|------|
-| `nanobot gateway` | 启动网关（默认端口 18790） |
-| `nanobot gateway -p 8080 -v` | 指定端口和详细日志 |
+| `solopreneur gateway` | 启动网关（默认端口 18790） |
+| `solopreneur gateway -p 8080 -v` | 指定端口和详细日志 |
 
 ### GitHub Copilot 登录（多账号）
 
 | 命令 | 说明 |
 |------|------|
-| `nanobot login --slot 1` | 登录第 1 个账号 |
-| `nanobot login --slot 2 --label "工作号"` | 登录并打标签 |
-| `nanobot pool status` | 查看 Token 池状态 |
-| `nanobot pool remove 2` | 移除指定槽位 |
-| `nanobot pool refresh` | 刷新过期 Token |
+| `solopreneur login --slot 1` | 登录第 1 个账号 |
+| `solopreneur login --slot 2 --label "工作号"` | 登录并打标签 |
+| `solopreneur pool status` | 查看 Token 池状态 |
+| `solopreneur pool remove 2` | 移除指定槽位 |
+| `solopreneur pool refresh` | 刷新过期 Token |
 
 Token 池特性：
 - 最多 10 个 slot
@@ -267,23 +267,23 @@ Token 池特性：
 
 | 命令 | 说明 |
 |------|------|
-| `nanobot cron list` | 列出任务 |
-| `nanobot cron add -n "早安" -m "早上好" --every 3600` | 每隔 N 秒执行 |
-| `nanobot cron add -n "日报" -m "日报" --cron "0 9 * * *"` | Cron 表达式 |
-| `nanobot cron remove <id>` | 移除任务 |
-| `nanobot cron enable/disable <id>` | 启用/禁用 |
-| `nanobot cron run <id>` | 手动执行 |
+| `solopreneur cron list` | 列出任务 |
+| `solopreneur cron add -n "早安" -m "早上好" --every 3600` | 每隔 N 秒执行 |
+| `solopreneur cron add -n "日报" -m "日报" --cron "0 9 * * *"` | Cron 表达式 |
+| `solopreneur cron remove <id>` | 移除任务 |
+| `solopreneur cron enable/disable <id>` | 启用/禁用 |
+| `solopreneur cron run <id>` | 手动执行 |
 
 ### 通道命令
 
 | 命令 | 说明 |
 |------|------|
-| `nanobot channels status` | 查看通道状态 |
-| `nanobot channels login` | 扫码登录 WhatsApp |
+| `solopreneur channels status` | 查看通道状态 |
+| `solopreneur channels login` | 扫码登录 WhatsApp |
 
 ## 工作区
 
-初始化后创建以下文件（`~/.nanobot/workspace/`）：
+初始化后创建以下文件（`~/.solopreneur/workspace/`）：
 
 | 文件 | 说明 |
 |------|------|
@@ -349,7 +349,7 @@ Agent 可用的工具：
 
 ## Skills 技能
 
-除内置工具外，nanobot 还支持 Skills（技能）扩展：
+除内置工具外，solopreneur 还支持 Skills（技能）扩展：
 
 | 技能 | 说明 |
 |------|------|
@@ -519,4 +519,4 @@ Agent 可用的工具：
 
 ---
 
-<p align="center">🐈 nanobot - 轻量级 AI Agent 框架</p>
+<p align="center">🐈 solopreneur - 轻量级 AI Agent 框架</p>
