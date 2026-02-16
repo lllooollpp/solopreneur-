@@ -1,4 +1,4 @@
-﻿"""Storage backends for solopreneur."""
+"""Storage backends for solopreneur."""
 
 from solopreneur.storage.sqlite_store import SQLiteStore
 from solopreneur.storage.services import (

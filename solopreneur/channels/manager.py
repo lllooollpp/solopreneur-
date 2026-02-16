@@ -1,4 +1,4 @@
-"""管理并协调聊天通道�?""
+"""管理并协调聊天通道。"""
 
 import asyncio
 from typing import Any
@@ -13,9 +13,9 @@ from solopreneur.config.schema import Config
 
 class ChannelManager:
     """
-    管理聊天通道并协调消息路由�?
+    管理聊天通道并协调消息路由。
     
-    职责�?
+    职责：
     - 初始化启用的通道（Telegram、WhatsApp 等）
     - 启动/停止通道
     - 路由传出消息
@@ -30,7 +30,7 @@ class ChannelManager:
         self._init_channels()
     
     def _init_channels(self) -> None:
-        """根据配置初始化通道�?""
+        """根据配置初始化通道。"""
 
         # 企业微信通道
         if hasattr(self.config.channels, 'wecom') and self.config.channels.wecom.enabled:
@@ -46,9 +46,9 @@ class ChannelManager:
                 )
                 channel = WeComChannel(config=wecom_config, bus=self.bus)
                 self.channels['wecom'] = channel
-                logger.info("企业微信通道已启�?)
+                logger.info("企业微信通道已启用")
             except (ImportError, AttributeError) as e:
-                logger.warning(f"企业微信通道不可�? {e}")
+                logger.warning(f"企业微信通道不可用: {e}")
 
         # Telegram 通道
         if hasattr(self.config.channels, 'telegram') and self.config.channels.telegram.enabled:
@@ -60,9 +60,9 @@ class ChannelManager:
                     bus=self.bus
                 )
                 self.channels['telegram'] = channel
-                logger.info("Telegram 通道已启�?)
+                logger.info("Telegram 通道已启用")
             except (ImportError, AttributeError) as e:
-                logger.warning(f"Telegram 通道不可�? {e}")
+                logger.warning(f"Telegram 通道不可用: {e}")
 
         # WhatsApp 通道
         if hasattr(self.config.channels, 'whatsapp') and self.config.channels.whatsapp.enabled:
@@ -74,17 +74,17 @@ class ChannelManager:
                     bus=self.bus
                 )
                 self.channels['whatsapp'] = channel
-                logger.info("WhatsApp 通道已启�?)
+                logger.info("WhatsApp 通道已启用")
             except (ImportError, AttributeError) as e:
-                logger.warning(f"WhatsApp 通道不可�? {e}")
+                logger.warning(f"WhatsApp 通道不可用: {e}")
     
     async def start_all(self) -> None:
-        """启动所有通道和传出调度器�?""
+        """启动所有通道和传出调度器。"""
         if not self.channels:
             logger.warning("未启用任何通道")
             return
         
-        # 启动传出调度�?
+        # 启动传出调度器
         self._dispatch_task = asyncio.create_task(self._dispatch_outbound())
         
         # 启动所有通道
@@ -97,10 +97,10 @@ class ChannelManager:
         await asyncio.gather(*tasks, return_exceptions=True)
     
     async def stop_all(self) -> None:
-        """停止所有通道和调度器�?""
+        """停止所有通道和调度器。"""
         logger.info("正在停止所有通道...")
         
-        # 停止调度�?
+        # 停止调度器
         if self._dispatch_task:
             self._dispatch_task.cancel()
             try:
@@ -112,12 +112,12 @@ class ChannelManager:
         for name, channel in self.channels.items():
             try:
                 await channel.stop()
-                logger.info(f"已停�?{name} 通道")
+                logger.info(f"已停止 {name} 通道")
             except Exception as e:
-                logger.error(f"停止 {name} 时出�? {e}")
+                logger.error(f"停止 {name} 时出错: {e}")
     
     async def _dispatch_outbound(self) -> None:
-        """将传出消息调度到相应的通道�?""
+        """将传出消息调度到相应的通道。"""
         logger.info("传出调度器已启动")
         
         while True:
@@ -132,7 +132,7 @@ class ChannelManager:
                     try:
                         await channel.send(msg)
                     except Exception as e:
-                        logger.error(f"�?{msg.channel} 发送消息时出错: {e}")
+                        logger.error(f"向 {msg.channel} 发送消息时出错: {e}")
                 else:
                     logger.warning(f"未知通道: {msg.channel}")
                     
@@ -142,11 +142,11 @@ class ChannelManager:
                 break
     
     def get_channel(self, name: str) -> BaseChannel | None:
-        """通过名称获取通道�?""
+        """通过名称获取通道。"""
         return self.channels.get(name)
     
     def get_status(self) -> dict[str, Any]:
-        """获取所有通道的状态�?""
+        """获取所有通道的状态。"""
         return {
             name: {
                 "enabled": True,
@@ -157,5 +157,5 @@ class ChannelManager:
     
     @property
     def enabled_channels(self) -> list[str]:
-        """获取启用的通道名称列表�?""
+        """获取启用的通道名称列表。"""
         return list(self.channels.keys())

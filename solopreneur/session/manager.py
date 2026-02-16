@@ -12,13 +12,13 @@ from loguru import logger
 from solopreneur.storage import AppKVPersistence, SessionPersistence
 
 
-# 用于session签名的密钥（应该从环境变量或配置文件加载�?
+# 用于session签名的密钥（应该从环境变量或配置文件加载）
 _SESSION_SECRET = None
 _KV_KEY_SESSION_SECRET = "session_secret"
 
 
 def _get_session_secret() -> str:
-    """获取或生�?session 密钥（存储于 SQLite KV）�?""
+    """获取或生成 session 密钥（存储于 SQLite KV）。"""
     global _SESSION_SECRET
     if _SESSION_SECRET is None:
         kv_store = AppKVPersistence()
@@ -32,14 +32,14 @@ def _get_session_secret() -> str:
 
 
 def _generate_session_signature(key: str, created_at: str) -> str:
-    """生成会话签名�?""
+    """生成会话签名。"""
     secret = _get_session_secret()
     data = f"{key}:{created_at}:{secret}"
     return hashlib.sha256(data.encode()).hexdigest()
 
 
 def _verify_session_signature(key: str, created_at: str, signature: str) -> bool:
-    """验证会话签名�?""
+    """验证会话签名。"""
     expected = _generate_session_signature(key, created_at)
     return secrets.compare_digest(expected, signature)
 
@@ -57,16 +57,16 @@ class Session:
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
-    signature: str = ""  # 会话签名，防止伪�?
+    signature: str = ""  # 会话签名，防止伪造
     
     def __post_init__(self):
-        """初始化后生成签名（如果未提供）�?""
+        """初始化后生成签名（如果未提供）。"""
         if not self.signature:
             created_at_str = self.created_at.isoformat()
             self.signature = _generate_session_signature(self.key, created_at_str)
     
     def verify_signature(self) -> bool:
-        """验证会话签名是否有效�?""
+        """验证会话签名是否有效。"""
         created_at_str = self.created_at.isoformat()
         return _verify_session_signature(self.key, created_at_str, self.signature)
     
@@ -115,7 +115,7 @@ class SessionManager:
         self.storage = SessionPersistence()
         self._cache: dict[str, Session] = {}
         self._access_order: list[str] = []  # LRU 访问顺序
-        self._max_cache_size: int = 1000  # 最大缓存数�?
+        self._max_cache_size: int = 1000  # 最大缓存数量
     
     def get_or_create(self, key: str) -> Session:
         """
@@ -130,7 +130,7 @@ class SessionManager:
         # Check cache
         if key in self._cache:
             session = self._cache[key]
-            # 验证缓存的会话签�?
+            # 验证缓存的会话签名
             if not session.verify_signature():
                 logger.warning(f"Invalid session signature for {key}, creating new session")
                 del self._cache[key]
@@ -143,7 +143,7 @@ class SessionManager:
         if session is None:
             session = Session(key=key)
         else:
-            # 验证加载的会话签�?
+            # 验证加载的会话签名
             if not session.verify_signature():
                 logger.warning(f"Invalid session signature for {key}, creating new session")
                 session = Session(key=key)
@@ -171,13 +171,13 @@ class SessionManager:
             return None
 
     def _update_access_order(self, key: str) -> None:
-        """更新LRU访问顺序，将key移到最前面�?""
+        """更新LRU访问顺序，将key移到最前面。"""
         if key in self._access_order:
             self._access_order.remove(key)
         self._access_order.append(key)
 
     def _evict_if_needed(self) -> None:
-        """如果缓存超过最大容量，淘汰最久未使用的会话�?""
+        """如果缓存超过最大容量，淘汰最久未使用的会话。"""
         while len(self._cache) > self._max_cache_size and self._access_order:
             oldest_key = self._access_order.pop(0)
             session = self._cache.pop(oldest_key, None)

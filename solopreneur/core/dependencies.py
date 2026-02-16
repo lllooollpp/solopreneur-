@@ -10,7 +10,8 @@ from loguru import logger
 
 class ComponentManager:
     """
-    全局组件管理器（单例模式�?    管理所有核心组件的生命周期
+    全局组件管理器（单例模式）
+    管理所有核心组件的生命周期
     """
 
     _instance: Optional['ComponentManager'] = None
@@ -48,7 +49,8 @@ class ComponentManager:
         if self._config is None or force_reload:
             self._config = load_config()
 
-            # 统一工作区到当前项目根目录（避免使用 ~ / Home 路径�?            project_root = get_project_root()
+            # 统一工作区到当前项目根目录（避免使用 ~ / Home 路径）
+            project_root = get_project_root()
             self._config.agents.defaults.workspace = str(project_root)
         return self._config
 
@@ -70,28 +72,30 @@ class ComponentManager:
         获取 LLM Provider
 
         Args:
-            force_copilot: 强制使用 Copilot Provider（忽略其�?Provider 配置�?
+            force_copilot: 强制使用 Copilot Provider（忽略其他 Provider 配置）
+
         Returns:
             LLM Provider 实例
         """
-        # 如果强制使用 Copilot，检�?Copilot 是否已认�?        if force_copilot:
+        # 如果强制使用 Copilot，检查 Copilot 是否已认证
+        if force_copilot:
             copilot = self.get_copilot_provider()
             if copilot.session:
                 logger.info("使用 GitHub Copilot Provider (强制)")
                 return copilot
 
-        # 检查配置中�?copilot_priority
+        # 检查配置中的 copilot_priority
         config = self.get_config()
         copilot_priority = getattr(config.providers, 'copilot_priority', False)
 
-        # 如果配置�?copilot_priority，优先使�?Copilot
+        # 如果配置了 copilot_priority，优先使用 Copilot
         if copilot_priority:
             copilot = self.get_copilot_provider()
             if copilot.session:
                 logger.info("使用 GitHub Copilot Provider (配置优先)")
                 return copilot
 
-        # 默认情况下：优先使用配置�?Provider（本�?火山引擎等）
+        # 默认情况下：优先使用配置的 Provider（本地/火山引擎等）
         if self._llm_provider is None:
             from solopreneur.providers.factory import create_llm_provider
             self._llm_provider = create_llm_provider(
@@ -99,13 +103,14 @@ class ComponentManager:
                 default_model=config.agents.defaults.model
             )
 
-            # 如果创建�?LiteLLM Provider，记录日�?            if self._llm_provider:
-                logger.info("使用配置�?LLM Provider")
+            # 如果创建了 LiteLLM Provider，记录日志
+            if self._llm_provider:
+                logger.info("使用配置的 LLM Provider")
             else:
-                # 如果没有配置任何 Provider，回退�?Copilot
+                # 如果没有配置任何 Provider，回退到 Copilot
                 copilot = self.get_copilot_provider()
                 if copilot.session:
-                    logger.info("未配置其�?Provider，回退�?GitHub Copilot")
+                    logger.info("未配置其他 Provider，回退到 GitHub Copilot")
                     self._llm_provider = copilot
 
         return self._llm_provider
@@ -130,14 +135,14 @@ class ComponentManager:
             workspace.mkdir(parents=True, exist_ok=True)
             (workspace / "agents").mkdir(parents=True, exist_ok=True)
             (workspace / "skills").mkdir(parents=True, exist_ok=True)
-            logger.info(f"统一工作区路�? {workspace}")
+            logger.info(f"统一工作区路径: {workspace}")
             self._agent_manager = AgentManager(workspace=workspace)
         return self._agent_manager
 
     # ==================== Agent Loop ====================
 
     async def get_agent_loop(self):
-        """获取或创�?AgentLoop（异步）"""
+        """获取或创建 AgentLoop（异步）"""
         if self._agent_loop is not None:
             return self._agent_loop
 
@@ -149,9 +154,11 @@ class ComponentManager:
 
         config = self.get_config()
 
-        # 选择 Provider（不再强制使�?Copilot，使用配置的 Provider�?        provider = self.get_llm_provider()
+        # 选择 Provider（不再强制使用 Copilot，使用配置的 Provider）
+        provider = self.get_llm_provider()
 
-        # 构建验证器配�?        validator_cfg = config.agents.defaults.task_validator
+        # 构建验证器配置
+        validator_cfg = config.agents.defaults.task_validator
         validator_config = ValidatorConfig(
             enabled=validator_cfg.enabled,
             min_iterations=validator_cfg.min_iterations,
@@ -181,7 +188,7 @@ class ComponentManager:
     # ==================== Lifecycle ====================
 
     async def shutdown(self):
-        """关闭所有组�?""
+        """关闭所有组件"""
         logger.info("Shutting down ComponentManager...")
 
         if self._copilot_provider:
@@ -205,7 +212,8 @@ class ComponentManager:
         self._llm_provider = None
         self._message_bus = None
         self._agent_manager = None
-        # 不重�?_copilot_provider，保持认证状�?        logger.debug("ComponentManager reset complete")
+        # 不重置 _copilot_provider，保持认证状态
+        logger.debug("ComponentManager reset complete")
 
 
 # 全局实例
@@ -214,7 +222,7 @@ _manager_lock = threading.Lock()
 
 
 def get_component_manager() -> ComponentManager:
-    """获取全局组件管理�?""
+    """获取全局组件管理器"""
     global _component_manager
     if _component_manager is None:
         with _manager_lock:
@@ -224,7 +232,7 @@ def get_component_manager() -> ComponentManager:
 
 
 def reset_component_manager():
-    """重置组件管理�?""
+    """重置组件管理器"""
     global _component_manager
     with _manager_lock:
         _component_manager = None

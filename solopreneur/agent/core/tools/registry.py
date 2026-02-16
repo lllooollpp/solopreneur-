@@ -69,14 +69,14 @@ class ToolRegistry:
         Normalize tool params for malformed tool-call arguments.
 
         某些模型在函数调用参数里会返回：{"raw": "{...json...}"}
-        这里尝试自动解包，减少因为参数格式轻微异常导致的工具失败�?
+        这里尝试自动解包，减少因为参数格式轻微异常导致的工具失败。
         """
         if not isinstance(params, dict):
             return params
 
-        # 先移除显�?null 参数：模型常把可选字段输出为 null�?
-        # 这会�?schema 校验阶段触发类型错误（如 string vs null）�?
-        # 移除后可由工具内部默认上下文接管（例�?message �?channel/chat_id）�?
+        # 先移除显式 null 参数：模型常把可选字段输出为 null，
+        # 这会在 schema 校验阶段触发类型错误（如 string vs null）。
+        # 移除后可由工具内部默认上下文接管（例如 message 的 channel/chat_id）。
         params = {k: v for k, v in params.items() if v is not None}
 
         raw = params.get("raw")
@@ -89,7 +89,7 @@ class ToolRegistry:
 
         text = raw.strip()
 
-        # 去掉可能�?markdown 代码块包�?
+        # 去掉可能的 markdown 代码块包裹
         text = re.sub(r"^```(?:json)?\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
 
@@ -98,7 +98,7 @@ class ToolRegistry:
         if isinstance(parsed, dict):
             return parsed
 
-        # 回退：提取第一�?{ ... } 再解�?
+        # 回退：提取第一个 { ... } 再解析
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1 and end > start:
@@ -107,7 +107,7 @@ class ToolRegistry:
             if isinstance(parsed, dict):
                 return parsed
 
-        # 兜底：从破损 JSON 文本中提�?content 字段（常见于 message 工具�?
+        # 兜底：从破损 JSON 文本中提取 content 字段（常见于 message 工具）
         recovered = self._extract_content_field(text)
         if recovered is not None:
             return {"content": recovered}
@@ -124,7 +124,7 @@ class ToolRegistry:
 
     @staticmethod
     def _extract_content_field(text: str) -> str | None:
-        """从破损参数字符串中提�?content 字段并反转义�?""
+        """从破损参数字符串中提取 content 字段并反转义。"""
         m = re.search(r'"content"\s*:\s*"((?:\\.|[^"\\])*)"', text, re.DOTALL)
         if not m:
             return None
@@ -134,7 +134,7 @@ class ToolRegistry:
             # 利用 JSON 反转义规则还原字符串
             return json.loads(f'"{raw_value}"')
         except Exception:
-            # 最后兜底：粗略反转义常见字�?
+            # 最后兜底：粗略反转义常见字符
             return (
                 raw_value
                 .replace(r"\\n", "\n")

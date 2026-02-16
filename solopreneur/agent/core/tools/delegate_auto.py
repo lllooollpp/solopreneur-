@@ -1,5 +1,5 @@
 """
-Delegate Auto 工具 - 自动依赖分析后串并行混合执行�?
+Delegate Auto 工具 - 自动依赖分析后串并行混合执行。
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class DelegateAutoTool(Tool):
-    """根据任务依赖自动选择串行或并行委派�?""
+    """根据任务依赖自动选择串行或并行委派。"""
 
     _PATH_RE = re.compile(r"[A-Za-z0-9_./\\-]+\.(?:py|ts|tsx|js|jsx|vue|java|kt|go|rs|sql|md|yaml|yml|json)")
 
@@ -33,7 +33,7 @@ class DelegateAutoTool(Tool):
     def description(self) -> str:
         return (
             "自动分析任务依赖并执行混合调度："
-            "独立任务并行，存在依赖的任务串行�?
+            "独立任务并行，存在依赖的任务串行。"
         )
 
     @property
@@ -44,7 +44,7 @@ class DelegateAutoTool(Tool):
             "properties": {
                 "jobs": {
                     "type": "array",
-                    "description": "任务列表。可�?depends_on 指明依赖；不提供时自动推断�?,
+                    "description": "任务列表。可选 depends_on 指明依赖；不提供时自动推断。",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -52,7 +52,7 @@ class DelegateAutoTool(Tool):
                             "agent": {"type": "string", "enum": agent_names, "description": "Agent名称"},
                             "task": {"type": "string", "description": "任务描述"},
                             "context": {"type": "string", "description": "可选上下文"},
-                            "project_dir": {"type": "string", "description": "可选项目目�?},
+                            "project_dir": {"type": "string", "description": "可选项目目录"},
                             "depends_on": {
                                 "type": "array",
                                 "items": {"type": "string"},
@@ -66,7 +66,7 @@ class DelegateAutoTool(Tool):
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 8,
-                    "description": "最大并发度，默�?",
+                    "description": "最大并发度，默认3",
                 },
             },
             "required": [],
@@ -82,8 +82,8 @@ class DelegateAutoTool(Tool):
 
         if not jobs:
             return (
-                "错误: jobs 不能为空。请传入 jobs 数组�?
-                "或提供可解析�?raw JSON（含 agent/task 列表）�?
+                "错误: jobs 不能为空。请传入 jobs 数组，"
+                "或提供可解析的 raw JSON（含 agent/task 列表）。"
             )
 
         normalized = self._normalize_jobs(jobs)
@@ -91,7 +91,7 @@ class DelegateAutoTool(Tool):
         layers, cycle = self._topo_layers(normalized)
 
         if cycle:
-            # 回退到输入顺序串行，确保可执�?
+            # 回退到输入顺序串行，确保可执行
             layers = [[j["id"] for j in normalized]]
 
         id_to_job = {j["id"]: j for j in normalized}
@@ -157,7 +157,7 @@ class DelegateAutoTool(Tool):
         fail_count = len(normalized) - ok_count
 
         lines = [
-            f"自动调度完成：成�?{ok_count} / 失败 {fail_count}",
+            f"自动调度完成：成功 {ok_count} / 失败 {fail_count}",
             f"调度层数: {len(layers)}" + (" (检测到循环依赖，已回退串行)" if cycle else ""),
             "",
             "## 调度计划",
@@ -165,13 +165,13 @@ class DelegateAutoTool(Tool):
 
         for idx, layer in enumerate(layers, 1):
             labels = [f"{jid}({id_to_job[jid]['agent']})" for jid in layer]
-            lines.append(f"- 第{idx}�?{'并行' if len(layer) > 1 else '串行'}: " + ", ".join(labels))
+            lines.append(f"- 第{idx}层 {'并行' if len(layer) > 1 else '串行'}: " + ", ".join(labels))
 
         lines.append("")
         lines.append("## 执行结果")
         for job in normalized:
             jid = job["id"]
-            status = "�? if id_to_ok.get(jid) else "�?
+            status = "✅" if id_to_ok.get(jid) else "❌"
             lines.append(f"### {status} {jid} · {job['agent']}")
             lines.append(id_to_result.get(jid, ""))
             lines.append("")
@@ -212,7 +212,7 @@ class DelegateAutoTool(Tool):
             return
 
         for i, cur in enumerate(jobs):
-            # 审查/测试/发布类默认依赖前序实现任�?
+            # 审查/测试/发布类默认依赖前序实现任务
             if cur["class"] in {"review", "test", "release", "integration"}:
                 cur["depends_on"].extend(j["id"] for j in jobs[:i])
                 continue
@@ -275,13 +275,13 @@ class DelegateAutoTool(Tool):
         return [p.replace("\\", "/") for p in self._PATH_RE.findall(text or "")]
 
     def _parse_jobs_from_raw(self, raw: Any) -> tuple[list[dict[str, Any]], int | None]:
-        """从畸�?raw 字符串中尽量恢复 jobs �?max_parallel�?""
+        """从畸形 raw 字符串中尽量恢复 jobs 与 max_parallel。"""
         if not isinstance(raw, str) or not raw.strip():
             return [], None
 
         text = raw.strip()
 
-        # �?markdown 包裹
+        # 去 markdown 包裹
         text = re.sub(r"^```(?:json)?\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
 
@@ -293,7 +293,7 @@ class DelegateAutoTool(Tool):
             except Exception:
                 parsed_parallel = None
 
-        # 先尝试标�?JSON
+        # 先尝试标准 JSON
         try:
             obj = json.loads(text)
             if isinstance(obj, dict):
@@ -309,7 +309,7 @@ class DelegateAutoTool(Tool):
         except Exception:
             pass
 
-        # 回退：抽取多个顶�?{ ... } 对象
+        # 回退：抽取多个顶层 { ... } 对象
         jobs: list[dict[str, Any]] = []
         for frag in self._extract_json_objects(text):
             try:
@@ -328,7 +328,7 @@ class DelegateAutoTool(Tool):
         return jobs, parsed_parallel
 
     def _extract_json_objects(self, text: str) -> list[str]:
-        """从文本中提取顶层 JSON 对象片段�?""
+        """从文本中提取顶层 JSON 对象片段。"""
         parts: list[str] = []
         depth = 0
         start = -1

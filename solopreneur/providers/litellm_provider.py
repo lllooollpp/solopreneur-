@@ -77,11 +77,11 @@ class LiteLLMProvider(LLMProvider):
         litellm.suppress_debug_info = True
         # 自动丢弃模型不支持的参数
         litellm.drop_params = True
-        # 设置默认超时时间�?3 分钟 (180�?
+        # 设置默认超时时间为 3 分钟 (180秒)
         litellm.request_timeout = 180
     
     def _prepare_model_name(self, model: str) -> str:
-        """准备模型名称，添加必要的 provider 前缀�?""
+        """准备模型名称，添加必要的 provider 前缀。"""
         if self.is_openrouter and not model.startswith("openrouter/"):
             model = f"openrouter/{model}"
         if ("glm" in model.lower() or "zhipu" in model.lower()) and not (
@@ -105,7 +105,7 @@ class LiteLLMProvider(LLMProvider):
         temperature: float,
         stream: bool = False,
     ) -> dict[str, Any]:
-        """构建 acompletion 调用参数�?""
+        """构建 acompletion 调用参数。"""
         kwargs: dict[str, Any] = {
             "model": model,
             "messages": messages,
@@ -122,7 +122,7 @@ class LiteLLMProvider(LLMProvider):
         return kwargs
 
     def _handle_error(self, e: Exception, model: str):
-        """统一错误处理�?""
+        """统一错误处理。"""
         error_msg = str(e).lower()
         if "authentication" in error_msg or "unauthorized" in error_msg or "invalid api key" in error_msg:
             raise LLMAuthenticationError(
@@ -179,18 +179,18 @@ class LiteLLMProvider(LLMProvider):
         temperature: float = 0.7,
     ) -> LLMResponse:
         """
-        流式发�?chat completion 请求，支�?tool calls 和实时文本回调�?
+        流式发送 chat completion 请求，支持 tool calls 和实时文本回调。
 
         Args:
             messages: 消息列表
             tools: 工具定义列表
-            model: 模型标识�?
+            model: 模型标识符
             on_chunk: 异步回调 async def on_chunk(text: str)
             max_tokens: 最大令牌数
             temperature: 采样温度
 
         Returns:
-            LLMResponse 包含完整内容�?�?tool calls
+            LLMResponse 包含完整内容和/或 tool calls
         """
         model = self._prepare_model_name(model or self.default_model)
         kwargs = self._build_kwargs(model, messages, tools, max_tokens, temperature, stream=True)
@@ -206,7 +206,7 @@ class LiteLLMProvider(LLMProvider):
             async for chunk in response:
                 chunk_count += 1
 
-                # 处理没有 choices �?chunk（可能只�?usage�?
+                # 处理没有 choices 的 chunk（可能只有 usage）
                 if not chunk.choices:
                     if hasattr(chunk, "usage") and chunk.usage:
                         usage = {
@@ -308,7 +308,7 @@ class LiteLLMProvider(LLMProvider):
                 "total_tokens": response.usage.total_tokens,
             }
         else:
-            # 调试：记录没�?usage 的情�?
+            # 调试：记录没有 usage 的情况
             logger.warning(f"LLM response missing usage data. Response type: {type(response)}")
             if hasattr(response, '__dict__'):
                 logger.warning(f"Response attributes: {list(response.__dict__.keys())}")

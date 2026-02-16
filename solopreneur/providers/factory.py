@@ -19,7 +19,7 @@ def create_llm_provider(config, default_model: Optional[str] = None):
     """
     from solopreneur.providers.litellm_provider import LiteLLMProvider
 
-    # 优先级顺�?
+    # 优先级顺序:
     # 1. vllm (本地部署)
     # 2. zhipu (火山引擎)
     # 3. openrouter
@@ -94,5 +94,5 @@ def create_llm_provider(config, default_model: Optional[str] = None):
         )
 
     # 没有配置任何 Provider
-    logger.warning("未配置任�?LLM Provider")
+    logger.warning("未配置任何 LLM Provider")
     return None

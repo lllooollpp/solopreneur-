@@ -16,12 +16,12 @@ from solopreneur.storage import SubagentTaskPersistence
 
 router = APIRouter()
 
-# 全局项目管理器实�?
+# 全局项目管理器实例
 _project_manager: Optional[ProjectManager] = None
 
 
 def get_project_manager() -> ProjectManager:
-    """获取项目管理器实例（单例�?""
+    """获取项目管理器实例（单例）"""
     global _project_manager
     if _project_manager is None:
         _project_manager = ProjectManager()
@@ -31,7 +31,7 @@ def get_project_manager() -> ProjectManager:
 @router.get("/projects")
 async def list_projects():
     """
-    获取所有项目列�?
+    获取所有项目列表
     
     Returns:
         项目列表
@@ -75,7 +75,7 @@ async def get_project(project_id: str):
 @router.post("/projects")
 async def create_project(data: ProjectCreate):
     """
-    创建新项�?
+    创建新项目
     
     支持创建本地项目或从 Git 仓库克隆
     
@@ -83,7 +83,7 @@ async def create_project(data: ProjectCreate):
         data: 项目创建数据
         
     Returns:
-        创建的项目信�?
+        创建的项目信息
     """
     try:
         manager = get_project_manager()
@@ -169,7 +169,7 @@ async def pull_project(project_id: str):
     """
     拉取 Git 仓库更新
     
-    仅适用于从 Git 仓库克隆的项�?
+    仅适用于从 Git 仓库克隆的项目
     
     Args:
         project_id: 项目ID
@@ -199,7 +199,7 @@ async def get_project_status(project_id: str):
         project_id: 项目ID
         
     Returns:
-        项目状态信�?
+        项目状态信息
     """
     try:
         manager = get_project_manager()
@@ -224,7 +224,7 @@ class ProjectEnvUpdateRequest(BaseModel):
 
 @router.get("/projects/{project_id}/env")
 async def get_project_env(project_id: str):
-    """获取项目环境变量列表�?""
+    """获取项目环境变量列表。"""
     try:
         manager = get_project_manager()
         project = manager.get_project(project_id)
@@ -244,7 +244,7 @@ async def get_project_env(project_id: str):
 
 @router.put("/projects/{project_id}/env")
 async def set_project_env(project_id: str, data: ProjectEnvUpdateRequest):
-    """覆盖设置项目环境变量�?""
+    """覆盖设置项目环境变量。"""
     try:
         manager = get_project_manager()
         project = manager.set_project_env_vars(project_id, data.env_vars)
@@ -266,7 +266,7 @@ async def set_project_env(project_id: str, data: ProjectEnvUpdateRequest):
 
 @router.delete("/projects/{project_id}/env/{key}")
 async def delete_project_env(project_id: str, key: str):
-    """删除项目中的单个环境变量�?""
+    """删除项目中的单个环境变量。"""
     try:
         manager = get_project_manager()
         deleted, project = manager.delete_project_env_var(project_id, key)
@@ -290,7 +290,7 @@ async def delete_project_env(project_id: str, key: str):
 @router.get("/projects/{project_id}/docs")
 async def get_project_docs(project_id: str):
     """
-    获取项目�?Wiki 文档列表
+    获取项目的 Wiki 文档列表
 
     Args:
         project_id: 项目ID
@@ -306,7 +306,7 @@ async def get_project_docs(project_id: str):
         if not project:
             raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
 
-        # 查找项目目录下的 docs �?wiki 文件�?
+        # 查找项目目录下的 docs 或 wiki 文件夹
         project_path = Path(project.path)
         docs_dirs = []
 
@@ -343,9 +343,9 @@ async def get_project_docs(project_id: str):
 @router.post("/projects/{project_id}/wiki/generate")
 async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
     """
-    触发为指定项目生�?Wiki 文档的后台子任务�?
+    触发为指定项目生成 Wiki 文档的后台子任务。
 
-    返回任务 ID（已接受），实际生成由后台子 Agent 执行并在完成后通过系统消息汇报�?
+    返回任务 ID（已接受），实际生成由后台子 Agent 执行并在完成后通过系统消息汇报。
     """
     try:
         manager = get_project_manager()
@@ -374,7 +374,7 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
         task_id = str(uuid.uuid4())[:8]
         task_store = SubagentTaskPersistence()
 
-        # 先落一�?pending，便于前�?诊断查询到任�?
+        # 先落一条 pending，便于前端/诊断查询到任务
         task_store.upsert(
             task_id=task_id,
             label=f"Wiki生成: {project.name}",
@@ -396,7 +396,7 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
                 )
 
                 logger.info("=" * 60)
-                logger.info(f"[{task_id}] 🚀 开始后�?Wiki 生成任务")
+                logger.info(f"[{task_id}] 🚀 开始后台 Wiki 生成任务")
                 logger.info(f"[{task_id}] 项目: {project.name}")
                 logger.info(f"[{task_id}] 路径: {project.path}")
                 logger.info(f"[{task_id}] Agent: {agent_def.name} ({agent_def.title})")
@@ -412,7 +412,7 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
                 )
 
                 logger.info("=" * 60)
-                logger.info(f"[{task_id}] �?Wiki 生成完成")
+                logger.info(f"[{task_id}] ✅ Wiki 生成完成")
                 logger.info(f"[{task_id}] 结果长度: {len(result)} 字符")
                 logger.info("=" * 60)
 
@@ -437,7 +437,7 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
                 )
             except Exception as e:
                 logger.error("=" * 60)
-                logger.error(f"[{task_id}] �?Wiki 生成失败")
+                logger.error(f"[{task_id}] ❌ Wiki 生成失败")
                 logger.error(f"[{task_id}] 错误类型: {type(e).__name__}")
                 logger.error(f"[{task_id}] 错误信息: {e}")
                 logger.error("=" * 60, exc_info=True)

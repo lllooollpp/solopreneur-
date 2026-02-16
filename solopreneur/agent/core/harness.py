@@ -1,13 +1,17 @@
-﻿"""
+"""
 长期运行 Agent 框架
 基于 Anthropic "Effective harnesses for long-running agents"
 
-�?Agent 能够:
-1. 跨会话保持进�?2. 每次只处理一个功�?(强约�?
-3. 自动记录和恢复状�?4. 强制提交质量闸门
-5. 测试用例驱动的完成判�?
+让 Agent 能够:
+1. 跨会话保持进度
+2. 每次只处理一个功能 (强约束)
+3. 自动记录和恢复状态
+4. 强制提交质量闸门
+5. 测试用例驱动的完成判定
+
 关键约束:
-- 同一时间只能有一�?in_progress 的功�?- 完成功能前必须检�?working tree clean
+- 同一时间只能有一个 in_progress 的功能
+- 完成功能前必须检查 working tree clean
 - 每个功能必须有对应的测试用例
 """
 import json
@@ -22,7 +26,7 @@ from loguru import logger
 
 
 class FeatureStatus(str, Enum):
-    """功能状�?""
+    """功能状态"""
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -41,7 +45,7 @@ class TestCase:
 
 @dataclass
 class Feature:
-    """功能�?""
+    """功能项"""
     id: str
     category: str
     priority: str  # P0, P1, P2
@@ -60,22 +64,27 @@ class LongRunningHarness:
     """
     长期运行 Agent 框架
     
-    负责�?    1. 管理 feature_list.json - 功能清单
-    2. 记录进度�?progress.md - 进度文件
-    3. 提供会话上下文恢�?- 让新会话快速理解项目状�?    4. 强约束：每次只处理一个功�?    5. 提交质量闸门：完成前检�?working tree clean
+    负责：
+    1. 管理 feature_list.json - 功能清单
+    2. 记录进度到 progress.md - 进度文件
+    3. 提供会话上下文恢复 - 让新会话快速理解项目状态
+    4. 强约束：每次只处理一个功能
+    5. 提交质量闸门：完成前检查 working tree clean
     
     关键约束:
-    - start_feature() 时，如果有其�?in_progress，会自动将其转为 blocked
-    - complete_feature() 时，会检�?git working tree 是否干净
+    - start_feature() 时，如果有其他 in_progress，会自动将其转为 blocked
+    - complete_feature() 时，会检查 git working tree 是否干净
     - 只有所有测试用例通过才能标记完成
     
     使用方式:
     ```python
     harness = LongRunningHarness(workspace_path)
     
-    # 首次初始�?    harness.initialize("project_name", initial_features)
+    # 首次初始化
+    harness.initialize("project_name", initial_features)
     
-    # 每次会话开始时获取上下�?    context = harness.get_session_context()
+    # 每次会话开始时获取上下文
+    context = harness.get_session_context()
     
     # 开始功能（强约束：会自动阻塞其他进行中的功能）
     harness.start_feature("FEAT-001")
@@ -83,7 +92,8 @@ class LongRunningHarness:
     # 运行测试用例
     results = harness.run_tests("FEAT-001")
     
-    # 完成功能（强制检�?git clean�?    harness.complete_feature("FEAT-001", "实现完成")
+    # 完成功能（强制检查 git clean）
+    harness.complete_feature("FEAT-001", "实现完成")
     ```
     """
     
@@ -99,7 +109,7 @@ class LongRunningHarness:
         self.test_results_dir.mkdir(exist_ok=True)
     
     def is_initialized(self) -> bool:
-        """检查是否已初始�?""
+        """检查是否已初始化"""
         return self.feature_list_path.exists()
     
     def initialize(self, project_name: str, initial_features: list[dict]) -> None:
@@ -126,18 +136,20 @@ class LongRunningHarness:
         # 创建进度文件
         self._init_progress_file(project_name)
         
-        logger.info(f"�?Initialized long-running harness for {project_name}")
+        logger.info(f"✅ Initialized long-running harness for {project_name}")
         logger.info(f"   Feature list: {self.feature_list_path}")
         logger.info(f"   Progress file: {self.progress_path}")
     
     def get_session_context(self) -> dict[str, Any]:
         """
-        获取会话上下文（每次新会话开始时调用�?        
+        获取会话上下文（每次新会话开始时调用）
+        
         类似文章中的 "Getting up to speed" 流程:
         1. 读取进度文件
         2. 读取 feature list
         3. 获取 git log
-        4. 确定当前要做什�?        
+        4. 确定当前要做什么
+        
         Returns:
             dict: 包含 feature_list, recent_progress, git_log, current_feature, next_steps
         """
@@ -189,14 +201,16 @@ class LongRunningHarness:
         """
         会话启动时自动运行项目测试（硬闭环）
 
-        这是评审要求�?会话开始先跑正在开发项目的 E2E/回归测试"的实现�?
+        这是评审要求的"会话开始先跑正在开发项目的 E2E/回归测试"的实现。
+
         Returns:
             dict: {"passed": bool, "results": list, "summary": str, "should_continue": bool}
         """
         feature_list = self._load_feature_list()
         test_config = feature_list.get("test_config", {})
 
-        # 如果没有配置测试命令，尝试自动检�?        if not test_config:
+        # 如果没有配置测试命令，尝试自动检测
+        if not test_config:
             test_config = self._auto_detect_test_config()
 
         if not test_config.get("enabled", True):
@@ -210,7 +224,8 @@ class LongRunningHarness:
         results = []
         all_passed = True
 
-        # 运行配置的测试命�?        test_commands = test_config.get("commands", [])
+        # 运行配置的测试命令
+        test_commands = test_config.get("commands", [])
 
         if not test_commands:
             # 默认测试命令
@@ -223,7 +238,7 @@ class LongRunningHarness:
             if not result["passed"]:
                 all_passed = False
 
-        summary = f"{'�?All session startup tests passed' if all_passed else '�?Session startup tests failed'} ({len(results)} commands)"
+        summary = f"{'✅ All session startup tests passed' if all_passed else '❌ Session startup tests failed'} ({len(results)} commands)"
 
         # 记录测试结果
         self._append_progress(f"🔄 Session startup tests: {summary}")
@@ -239,15 +254,15 @@ class LongRunningHarness:
         """自动检测项目的测试配置"""
         test_config = {"enabled": True, "commands": [], "block_on_failure": True}
 
-        # 检�?Python 项目
+        # 检测 Python 项目
         if (self.workspace / "pyproject.toml").exists() or (self.workspace / "setup.py").exists():
             test_config["commands"].append({"name": "pytest", "command": "pytest -x -q"})
 
-        # 检�?Node.js 项目
+        # 检测 Node.js 项目
         if (self.workspace / "package.json").exists():
             test_config["commands"].append({"name": "npm test", "command": "npm test --if-present"})
 
-        # 检�?Playwright E2E 测试
+        # 检测 Playwright E2E 测试
         if (self.workspace / "playwright.config.ts").exists() or (self.workspace / "e2e").exists():
             test_config["commands"].append({"name": "playwright", "command": "npx playwright test --reporter=list"})
 
@@ -260,7 +275,7 @@ class LongRunningHarness:
         ]
 
     def _run_command(self, command: str) -> dict:
-        """运行命令并返回结�?""
+        """运行命令并返回结果"""
         try:
             result = subprocess.run(
                 command,
@@ -284,8 +299,11 @@ class LongRunningHarness:
     
     def get_startup_prompt(self) -> str:
         """
-        获取启动提示词（�?Agent 使用�?
-        这是一个标准化的启动流程，确保每次会话都能快速理解状�?        包含：会话启动时运行测试的强制流�?        """
+        获取启动提示词（给 Agent 使用）
+
+        这是一个标准化的启动流程，确保每次会话都能快速理解状态
+        包含：会话启动时运行测试的强制流程
+        """
         context = self.get_session_context()
 
         if not context.get("initialized"):
@@ -300,11 +318,14 @@ harness.initialize("project_name", features)
 ```
 """
 
-        prompt = f"""# 项目上下�?
-## ⚠️ 会话启动检查清�?
-**在开始任何工作之前，请按以下顺序执行�?*
+        prompt = f"""# 项目上下文
 
-1. **运行项目测试** - 验证上次会话的改动没有破坏现有功�?   ```bash
+## ⚠️ 会话启动检查清单
+
+**在开始任何工作之前，请按以下顺序执行：**
+
+1. **运行项目测试** - 验证上次会话的改动没有破坏现有功能
+   ```bash
    # Python 项目
    pytest
 
@@ -315,21 +336,28 @@ harness.initialize("project_name", features)
    npx playwright test
    ```
 
-2. **如果测试失败** - 优先修复失败的测试，再继续新的开发工�?
-3. **检�?Working Tree** - 确认 git 状�?   ```bash
+2. **如果测试失败** - 优先修复失败的测试，再继续新的开发工作
+
+3. **检查 Working Tree** - 确认 git 状态
+   ```bash
    git status
    ```
-   如果有未提交的更改，考虑是否需要先提交或暂存�?
+   如果有未提交的更改，考虑是否需要先提交或暂存。
+
 ---
 
-## 当前状�?- 项目: {context['project']} v{context['version']}
-- 统计: 总计 {context['statistics'].get('total', 0)} 个功�?  - �?已完�? {context['statistics'].get('completed', 0)}
-  - 🔄 进行�? {context['statistics'].get('in_progress', 0)}
-  - �?待处�? {context['statistics'].get('pending', 0)}
+## 当前状态
+- 项目: {context['project']} v{context['version']}
+- 统计: 总计 {context['statistics'].get('total', 0)} 个功能
+  - ✅ 已完成: {context['statistics'].get('completed', 0)}
+  - 🔄 进行中: {context['statistics'].get('in_progress', 0)}
+  - ⏳ 待处理: {context['statistics'].get('pending', 0)}
 
-## 最近进�?{context['recent_progress']}
+## 最近进度
+{context['recent_progress']}
 
-## 最近提�?{chr(10).join(context['git_log'][:5]) if context['git_log'] else '暂无提交'}
+## 最近提交
+{chr(10).join(context['git_log'][:5]) if context['git_log'] else '暂无提交'}
 
 ## 当前任务
 """
@@ -339,21 +367,25 @@ harness.initialize("project_name", features)
             prompt += f"""
 - ID: {f['id']}
 - 描述: {f['description']}
-- 优先�? {f['priority']}
-- 状�? {f['status']}
+- 优先级: {f['priority']}
+- 状态: {f['status']}
 - 步骤:
 {chr(10).join(f'  - {s}' for s in f.get('steps', []))}
-- 验收标准: {f.get('test_criteria', '未定�?)}
-- 测试用例: {len(f.get('test_cases', []))} �?"""
+- 验收标准: {f.get('test_criteria', '未定义')}
+- 测试用例: {len(f.get('test_cases', []))} 个
+"""
         else:
             prompt += "所有功能已完成！🎉\n"
 
         prompt += f"""
-## 下一�?{chr(10).join(f'- {s}' for s in context['next_steps']) if context['next_steps'] else '- 无待处理任务'}
+## 下一步
+{chr(10).join(f'- {s}' for s in context['next_steps']) if context['next_steps'] else '- 无待处理任务'}
 
-## 功能完成前的检查清�?- [ ] 单元测试已编写并通过
-- [ ] 集成测试已编写并通过（如适用�?- [ ] E2E 测试已编写并通过（前端功能）
-- [ ] 运行 `pytest` �?`npm test` 全部通过
+## 功能完成前的检查清单
+- [ ] 单元测试已编写并通过
+- [ ] 集成测试已编写并通过（如适用）
+- [ ] E2E 测试已编写并通过（前端功能）
+- [ ] 运行 `pytest` 或 `npm test` 全部通过
 - [ ] 运行 `npx playwright test` 全部通过（前端功能）
 - [ ] Git working tree 干净
 """
@@ -362,8 +394,10 @@ harness.initialize("project_name", features)
     
     def start_feature(self, feature_id: str, force: bool = False) -> dict:
         """
-        标记功能为进行中（强约束版本�?        
-        强约束逻辑�?        1. 如果有其�?in_progress 的功能，会自动将其转�?blocked
+        标记功能为进行中（强约束版本）
+        
+        强约束逻辑：
+        1. 如果有其他 in_progress 的功能，会自动将其转为 blocked
         2. 除非 force=True，否则不允许同时有多个进行中
         
         Args:
@@ -427,15 +461,17 @@ harness.initialize("project_name", features)
         force: bool = False
     ) -> dict:
         """
-        标记功能为已完成（强约束版本�?
+        标记功能为已完成（强约束版本）
+
         强约束逻辑（硬门禁）：
         1. 强制运行功能测试用例，必须全部通过
-        2. 强制检�?git working tree 是否干净
-        3. 两项都通过才允许完�?
+        2. 强制检查 git working tree 是否干净
+        3. 两项都通过才允许完成
+
         Args:
             feature_id: 功能 ID
             notes: 完成备注
-            verify_clean: 是否检�?git working tree 干净
+            verify_clean: 是否检查 git working tree 干净
             run_tests: 是否运行测试用例（默认强制）
             force: 是否跳过所有检查（危险，仅限特殊情况）
 
@@ -463,7 +499,8 @@ harness.initialize("project_name", features)
                 "message": f"Feature {feature_id} is not in_progress (current: {target_feature.get('status')}). Only in_progress features can be completed."
             }
 
-        # 硬门�?1：强制运行测试用�?        test_result = None
+        # 硬门禁 1：强制运行测试用例
+        test_result = None
         if run_tests and not force:
             test_result = self.run_feature_tests(feature_id)
             if not test_result["passed"]:
@@ -474,7 +511,8 @@ harness.initialize("project_name", features)
                     "message": f"Tests failed for {feature_id}. Fix failing tests before completing.\n{test_result['summary']}"
                 }
 
-        # 硬门�?2：检�?working tree（强约束�?        if verify_clean and not force:
+        # 硬门禁 2：检查 working tree（强约束）
+        if verify_clean and not force:
             clean_check = self.verify_working_tree_clean()
             if not clean_check["clean"]:
                 return {
@@ -484,7 +522,8 @@ harness.initialize("project_name", features)
                     "message": f"Working tree not clean: {clean_check['changes']}. Commit or stash changes first."
                 }
 
-        # 所有门禁通过，标记完�?        target_feature["status"] = "completed"
+        # 所有门禁通过，标记完成
+        target_feature["status"] = "completed"
         target_feature["completed_at"] = datetime.now().isoformat()
         if notes:
             target_feature["notes"] = notes
@@ -495,7 +534,7 @@ harness.initialize("project_name", features)
                 "timestamp": datetime.now().isoformat()
             }
         self._save_feature_list(feature_list)
-        self._append_progress(f"�?Completed #{feature_id}: {notes}")
+        self._append_progress(f"✅ Completed #{feature_id}: {notes}")
         logger.info(f"Completed feature: {feature_id}")
         return {
             "success": True,
@@ -506,7 +545,7 @@ harness.initialize("project_name", features)
     
     def verify_working_tree_clean(self) -> dict:
         """
-        检�?git working tree 是否干净
+        检查 git working tree 是否干净
         
         Returns:
             dict: {"clean": bool, "changes": list, "message": str}
@@ -540,7 +579,8 @@ harness.initialize("project_name", features)
     
     def run_feature_tests(self, feature_id: str) -> dict:
         """
-        运行功能的测试用�?        
+        运行功能的测试用例
+        
         Args:
             feature_id: 功能 ID
         
@@ -574,7 +614,7 @@ harness.initialize("project_name", features)
                 "results": results
             }, f, indent=2, ensure_ascii=False)
         
-        summary = f"{'�?All tests passed' if all_passed else '�?Some tests failed'} ({len(results)} tests)"
+        summary = f"{'✅ All tests passed' if all_passed else '❌ Some tests failed'} ({len(results)} tests)"
         self._append_progress(f"🧪 Tests #{feature_id}: {summary}")
         
         return {"passed": all_passed, "results": results, "summary": summary}
@@ -611,8 +651,14 @@ harness.initialize("project_name", features)
     
     def run_smoke_tests(self) -> dict:
         """
-        运行冒烟测试（每次会话启动时强制运行�?        
-        冒烟测试包括�?        1. 后端 API 健康检�?        2. 前端构建检�?        3. 数据库连接检�?        4. 关键依赖导入检�?        
+        运行冒烟测试（每次会话启动时强制运行）
+        
+        冒烟测试包括：
+        1. 后端 API 健康检查
+        2. 前端构建检查
+        3. 数据库连接检查
+        4. 关键依赖导入检查
+        
         Returns:
             dict: {"passed": bool, "results": list, "summary": str}
         """
@@ -653,7 +699,7 @@ harness.initialize("project_name", features)
             if not result["passed"]:
                 all_passed = False
         
-        summary = f"{'�?All smoke tests passed' if all_passed else '�?Smoke tests failed'} ({len(results)} tests)"
+        summary = f"{'✅ All smoke tests passed' if all_passed else '❌ Smoke tests failed'} ({len(results)} tests)"
         logger.info(f"Smoke tests: {summary}")
         
         return {"passed": all_passed, "results": results, "summary": summary}
@@ -663,8 +709,8 @@ harness.initialize("project_name", features)
         获取当前唯一允许的功能（强约束版本）
         
         强约束：
-        - 如果有多�?in_progress，返回第一个并将其余标记为 blocked
-        - 如果没有 in_progress，返回第一�?pending
+        - 如果有多个 in_progress，返回第一个并将其余标记为 blocked
+        - 如果没有 in_progress，返回第一个 pending
         
         Returns:
             dict: 当前功能，或 None
@@ -675,7 +721,7 @@ harness.initialize("project_name", features)
         in_progress = [f for f in features if f.get("status") == "in_progress"]
         
         if len(in_progress) > 1:
-            # 强约束：只保留第一个，其余标记�?blocked
+            # 强约束：只保留第一个，其余标记为 blocked
             primary = in_progress[0]
             for f in in_progress[1:]:
                 f["status"] = "blocked"
@@ -686,7 +732,7 @@ harness.initialize("project_name", features)
         elif len(in_progress) == 1:
             return in_progress[0]
         
-        # 没有进行中的，返回第一�?pending
+        # 没有进行中的，返回第一个 pending
         for f in features:
             if f.get("status") == "pending":
                 return f
@@ -694,7 +740,7 @@ harness.initialize("project_name", features)
         return None
 
     def block_feature(self, feature_id: str, reason: str) -> bool:
-        """标记功能为阻塞状�?""
+        """标记功能为阻塞状态"""
         feature_list = self._load_feature_list()
 
         for f in feature_list.get("features", []):
@@ -709,15 +755,15 @@ harness.initialize("project_name", features)
         return False
 
     def record_progress(self, message: str) -> None:
-        """记录进度（通用方法�?""
+        """记录进度（通用方法）"""
         self._append_progress(message)
     
     def add_feature(self, feature: dict) -> None:
-        """添加新功�?""
+        """添加新功能"""
         feature_list = self._load_feature_list()
         feature_list.setdefault("features", []).append(feature)
         self._save_feature_list(feature_list)
-        self._append_progress(f"�?Added #{feature.get('id', 'new')}: {feature.get('description', '')}")
+        self._append_progress(f"➕ Added #{feature.get('id', 'new')}: {feature.get('description', '')}")
     
     def get_feature(self, feature_id: str) -> dict | None:
         """获取单个功能"""
@@ -739,14 +785,14 @@ harness.initialize("project_name", features)
     # ==================== 私有方法 ====================
     
     def _load_feature_list(self) -> dict:
-        """加载功能清单（兼�?list �?dict 两种格式�?""
+        """加载功能清单（兼容 list 和 dict 两种格式）"""
         if not self.feature_list_path.exists():
             return {"project": "unknown", "features": [], "statistics": {}}
         
         with open(self.feature_list_path, encoding="utf-8") as f:
             data = json.load(f)
 
-        # 兼容旧格式：如果文件内容是列表，包装为标�?dict 格式
+        # 兼容旧格式：如果文件内容是列表，包装为标准 dict 格式
         if isinstance(data, list):
             logger.warning(
                 f"feature_list.json is a plain list, converting to dict format"
@@ -770,21 +816,26 @@ harness.initialize("project_name", features)
             json.dump(feature_list, f, indent=2, ensure_ascii=False)
     
     def _init_progress_file(self, project_name: str) -> None:
-        """初始化进度文�?""
+        """初始化进度文件"""
         today = datetime.now().strftime("%Y-%m-%d")
-        content = f"""# {project_name} 开发进�?
-## 最新会�?({today})
+        content = f"""# {project_name} 开发进度
+
+## 最新会话 ({today})
 
 ### 进行中的工作
-- [ ] 待开�?
-### 下一步计�?1. 查看 feature_list.json 了解功能列表
-2. 选择一个功能开始实�?
+- [ ] 待开始
+
+### 下一步计划
+1. 查看 feature_list.json 了解功能列表
+2. 选择一个功能开始实现
+
 ---
 
 ## 历史记录
 
 ### {today}
-- 项目初始�?- 创建长期运行框架
+- 项目初始化
+- 创建长期运行框架
 """
         with open(self.progress_path, "w", encoding="utf-8") as f:
             f.write(content)
@@ -808,7 +859,7 @@ harness.initialize("project_name", features)
             if "### 进行中的工作" in line:
                 insert_idx = i + 1
                 break
-            elif "### 完成的工�? in line and insert_idx == 0:
+            elif "### 完成的工作" in line and insert_idx == 0:
                 insert_idx = i
                 lines.insert(insert_idx, "\n### 进行中的工作\n")
                 insert_idx += 1
@@ -873,20 +924,24 @@ harness.initialize("project_name", features)
             **status_count
         }
 
-    # ==================== 状态门禁控�?====================
+    # ==================== 状态门禁控制 ====================
 
     # 合法状态转换图
     VALID_TRANSITIONS = {
         "pending": ["in_progress", "blocked"],
         "in_progress": ["completed", "blocked", "pending"],
-        "completed": [],  # 已完成不能转�?        "blocked": ["pending", "in_progress"]
+        "completed": [],  # 已完成不能转换
+        "blocked": ["pending", "in_progress"]
     }
 
     def _validate_status_transition(self, current_status: str, new_status: str) -> tuple[bool, str]:
         """
-        验证状态转换是否合�?
+        验证状态转换是否合法
+
         Args:
-            current_status: 当前状�?            new_status: 目标状�?
+            current_status: 当前状态
+            new_status: 目标状态
+
         Returns:
             tuple: (is_valid: bool, message: str)
         """
@@ -901,7 +956,7 @@ harness.initialize("project_name", features)
         return False, f"Invalid transition: {current_status} -> {new_status}. Allowed: {allowed}"
 
     def _record_status_change(self, feature_id: str, old_status: str, new_status: str, reason: str = "") -> None:
-        """记录状态变更审计日�?""
+        """记录状态变更审计日志"""
         audit_entry = {
             "timestamp": datetime.now().isoformat(),
             "feature_id": feature_id,
@@ -922,12 +977,16 @@ harness.initialize("project_name", features)
         bypass_validation: bool = False
     ) -> dict:
         """
-        状态转换入口（门禁控制�?
-        所有状态变更必须通过此方法，直接修改 feature_list.json 无效�?
+        状态转换入口（门禁控制）
+
+        所有状态变更必须通过此方法，直接修改 feature_list.json 无效。
+
         Args:
             feature_id: 功能 ID
-            new_status: 目标状�?            reason: 变更原因
-            bypass_validation: 是否跳过验证（仅限管理员�?
+            new_status: 目标状态
+            reason: 变更原因
+            bypass_validation: 是否跳过验证（仅限管理员）
+
         Returns:
             dict: {"success": bool, "message": str, "audit_id": str}
         """
@@ -945,12 +1004,14 @@ harness.initialize("project_name", features)
 
         current_status = feature.get("status", "pending")
 
-        # 验证状态转�?        if not bypass_validation:
+        # 验证状态转换
+        if not bypass_validation:
             is_valid, msg = self._validate_status_transition(current_status, new_status)
             if not is_valid:
                 return {"success": False, "message": msg, "audit_id": None}
 
-        # 执行状态转�?        feature["status"] = new_status
+        # 执行状态转换
+        feature["status"] = new_status
         if reason:
             feature["status_reason"] = reason
 
@@ -969,9 +1030,11 @@ harness.initialize("project_name", features)
 
     def get_status_audit_log(self, feature_id: str | None = None) -> list[dict]:
         """
-        获取状态变更审计日�?
+        获取状态变更审计日志
+
         Args:
-            feature_id: 可选，过滤特定功能的日�?
+            feature_id: 可选，过滤特定功能的日志
+
         Returns:
             list: 审计日志列表
         """
@@ -988,7 +1051,8 @@ harness.initialize("project_name", features)
                     if feature_id is None or entry.get("feature_id") == feature_id:
                         logs.append(entry)
 
-        return logs[-100:]  # 返回最�?100 �?
+        return logs[-100:]  # 返回最近 100 条
+
 
 # 便捷函数
 def get_harness(workspace: Path | str | None = None) -> LongRunningHarness:

@@ -1,7 +1,7 @@
 """
 Agent 管理 API 端点
 
-管理可配置的 Agents（支持任意领域：软件工程、医疗、法律等�?
+管理可配置的 Agents（支持任意领域：软件工程、医疗、法律等）
 """
 from fastapi import APIRouter, HTTPException, Path as PathParam
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 class AgentItem(BaseModel):
-    """Agent 列表�?""
+    """Agent 列表项"""
     name: str
     title: str
     emoji: str
@@ -74,7 +74,7 @@ class AgentUpdateRequest(BaseModel):
 
 
 def _get_agent_manager() -> AgentManager:
-    """获取 AgentManager 实例（使用组件管理器�?""
+    """获取 AgentManager 实例（使用组件管理器）"""
     from solopreneur.core.dependencies import get_component_manager
     manager = get_component_manager()
     return manager.get_agent_manager()
@@ -86,11 +86,11 @@ async def get_agents(
     source: str | None = None,
 ):
     """
-    获取所有可�?Agent 列表
+    获取所有可用 Agent 列表
     
     Args:
-        domain: 按领域过�?(software, medical, legal, general)
-        source: 按来源过�?(preset, custom)
+        domain: 按领域过滤 (software, medical, legal, general)
+        source: 按来源过滤 (preset, custom)
     
     Returns:
         AgentsResponse: Agent 列表
@@ -142,7 +142,7 @@ async def get_agent(
         agent = manager.get_agent(agent_name)
         
         if not agent:
-            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' 不存�?)
+            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' 不存在")
         
         return AgentDetail(
             name=agent.name,
@@ -171,7 +171,7 @@ async def get_agent(
 @router.post("/agents")
 async def create_agent(request: AgentCreateRequest):
     """
-    创建新的自定�?Agent
+    创建新的自定义 Agent
     
     Args:
         request: Agent 创建请求
@@ -186,7 +186,7 @@ async def create_agent(request: AgentCreateRequest):
         if manager.get_agent(request.name):
             raise HTTPException(
                 status_code=400, 
-                detail=f"Agent '{request.name}' 已存�?
+                detail=f"Agent '{request.name}' 已存在"
             )
         
         # 创建 Agent 定义
@@ -230,7 +230,7 @@ async def update_agent(
     """
     更新 Agent
     
-    支持更新自定�?Agent，或基于预设 Agent 创建自定义覆盖版本�?
+    支持更新自定义 Agent，或基于预设 Agent 创建自定义覆盖版本。
     
     Args:
         agent_name: Agent 名称
@@ -244,7 +244,7 @@ async def update_agent(
         
         existing = manager.get_agent(agent_name)
         if not existing:
-            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' 不存�?)
+            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' 不存在")
         
         # 构建更新数据
         update_data = {}
@@ -269,9 +269,9 @@ async def update_agent(
         if request.metadata is not None:
             update_data["metadata"] = request.metadata
         
-        # 使用 manager.update_agent 处理（支持预�?Agent 创建自定义覆盖）
+        # 使用 manager.update_agent 处理（支持预设 Agent 创建自定义覆盖）
         if manager.update_agent(agent_name, update_data):
-            source_msg = "（基于预设创建自定义版本�? if existing.metadata.get("source") == "preset" else ""
+            source_msg = "（基于预设创建自定义版本）" if existing.metadata.get("source") == "preset" else ""
             return {
                 "success": True,
                 "message": f"Agent '{agent_name}' 更新成功{source_msg}",
@@ -291,9 +291,9 @@ async def delete_agent(
     agent_name: str = PathParam(..., description="Agent 名称")
 ):
     """
-    删除自定�?Agent
+    删除自定义 Agent
     
-    注意：只能删除自定义 Agent，预�?Agent 不可删除
+    注意：只能删除自定义 Agent，预设 Agent 不可删除
     
     Args:
         agent_name: Agent 名称
@@ -306,7 +306,7 @@ async def delete_agent(
         
         existing = manager.get_agent(agent_name)
         if not existing:
-            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' 不存�?)
+            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' 不存在")
         
         # 检查是否为预设
         if existing.metadata.get("source") == "preset":
@@ -318,7 +318,7 @@ async def delete_agent(
         if manager.delete_agent(agent_name):
             return {
                 "success": True,
-                "message": f"Agent '{agent_name}' 已删�?,
+                "message": f"Agent '{agent_name}' 已删除",
             }
         else:
             raise HTTPException(status_code=500, detail="删除 Agent 失败")
@@ -333,9 +333,9 @@ async def delete_agent(
 @router.post("/agents/{agent_name}/reload")
 async def reload_agents():
     """
-    重新加载所�?Agent 配置
+    重新加载所有 Agent 配置
     
-    用于开发时热重载配�?
+    用于开发时热重载配置
     
     Returns:
         重载结果
@@ -347,7 +347,7 @@ async def reload_agents():
         count = len(manager.list_agents())
         return {
             "success": True,
-            "message": f"已重�?{count} �?Agent",
+            "message": f"已重载 {count} 个 Agent",
             "count": count,
         }
         

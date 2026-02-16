@@ -1,6 +1,6 @@
-﻿"""
+"""
 指标查询 API 端点
-提供 llm_usage �?subagent_tasks 的聚合统�?
+提供 llm_usage 与 subagent_tasks 的聚合统计
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
-﻿"""
-状态查询端�?
-提供 Agent 当前运行状�?
+"""
+状态查询端点
+提供 Agent 当前运行状态
 """
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 class AgentStatusResponse(BaseModel):
-    """Agent 状态响应模�?""
+    """Agent 状态响应模型"""
     status: str  # IDLE, THINKING, ERROR, OFFLINE
     current_task: Optional[str] = None
     error_message: Optional[str] = None
@@ -21,7 +21,7 @@ class AgentStatusResponse(BaseModel):
 @router.get("/status", response_model=AgentStatusResponse)
 async def get_agent_status():
     """
-    获取 Agent 当前状�?
+    获取 Agent 当前状态
     
     Returns:
         AgentStatusResponse: 包含状态、当前任务、错误信息等
@@ -29,7 +29,7 @@ async def get_agent_status():
     import time
     from pathlib import Path
     
-    # 检查后端是否运行（通过检查进程或配置文件�?
+    # 检查后端是否运行（通过检查进程或配置文件）
     try:
         # 获取运行时间（从启动时间戳文件）
         runtime_file = Path.home() / ".solopreneur" / "runtime.txt"
@@ -39,11 +39,11 @@ async def get_agent_status():
             start_time = float(runtime_file.read_text().strip())
             uptime_seconds = int(time.time() - start_time)
         else:
-            # 创建运行时间�?
+            # 创建运行时间戳
             runtime_file.parent.mkdir(parents=True, exist_ok=True)
             runtime_file.write_text(str(time.time()))
         
-        # 返回真实状�?
+        # 返回真实状态
         return AgentStatusResponse(
             status="IDLE",
             current_task=None,

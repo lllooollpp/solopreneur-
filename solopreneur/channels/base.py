@@ -1,4 +1,4 @@
-﻿"""Base channel interface for chat platforms."""
+"""Base channel interface for chat platforms."""
 
 from abc import ABC, abstractmethod
 from typing import Any

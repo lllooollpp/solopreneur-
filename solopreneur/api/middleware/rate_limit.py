@@ -1,5 +1,5 @@
 """
-API 速率限制中间�?
+API 速率限制中间件
 防止滥用和DDoS攻击
 """
 import time
@@ -11,7 +11,7 @@ from loguru import logger
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
-    简单的速率限制中间�?
+    简单的速率限制中间件
     基于IP地址进行限制
     """
     
@@ -19,12 +19,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.request_counts = defaultdict(list)
-        self.cleanup_interval = 60  # �?0秒清理一次过期记�?
+        self.cleanup_interval = 60  # 每60秒清理一次过期记录
         self.last_cleanup = time.time()
     
     async def dispatch(self, request: Request, call_next):
         """处理请求并应用速率限制"""
-        # 跳过健康检查端�?
+        # 跳过健康检查端点
         if request.url.path in ["/health", "/ready", "/"]:
             return await call_next(request)
         
@@ -39,14 +39,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             self._cleanup_old_requests(current_time)
             self.last_cleanup = current_time
         
-        # 获取此IP的请求历�?
+        # 获取此IP的请求历史
         request_times = self.request_counts[client_ip]
         
-        # 移除超过1分钟的请求记�?
+        # 移除超过1分钟的请求记录
         cutoff_time = current_time - 60
         request_times[:] = [t for t in request_times if t > cutoff_time]
         
-        # 检查是否超过限�?
+        # 检查是否超过限制
         if len(request_times) >= self.requests_per_minute:
             logger.warning(
                 f"速率限制触发: IP {client_ip} 超过 {self.requests_per_minute} 请求/分钟"
@@ -66,7 +66,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # 继续处理请求
         response = await call_next(request)
         
-        # 添加速率限制响应�?
+        # 添加速率限制响应头
         response.headers["X-RateLimit-Limit"] = str(self.requests_per_minute)
         response.headers["X-RateLimit-Remaining"] = str(
             self.requests_per_minute - len(request_times)
@@ -107,4 +107,4 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             del self.request_counts[ip]
         
         if ips_to_remove:
-            logger.debug(f"清理�?{len(ips_to_remove)} 个过期IP记录")
+            logger.debug(f"清理了 {len(ips_to_remove)} 个过期IP记录")

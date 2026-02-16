@@ -1,7 +1,9 @@
 """
-Harness 工具 - 管理长期运行任务�?Feature List
+Harness 工具 - 管理长期运行任务的 Feature List
 
-基于 Anthropic "Effective harnesses for long-running agents" 设计理念�?�?AI 能够初始化和管理 feature list，确保任务完整执行�?"""
+基于 Anthropic "Effective harnesses for long-running agents" 设计理念。
+让 AI 能够初始化和管理 feature list，确保任务完整执行。
+"""
 
 from __future__ import annotations
 
@@ -14,11 +16,14 @@ from solopreneur.agent.core.harness import LongRunningHarness
 
 class HarnessTool(Tool):
     """
-    Harness 工具 - 管理长期运行任务�?Feature List
+    Harness 工具 - 管理长期运行任务的 Feature List
 
-    支持�?    - init: 初始�?feature list（首次运行时调用�?    - status: 查看当前 feature 状�?    - start: 开始一�?feature
-    - complete: 完成一�?feature
-    - list: 列出所�?features
+    支持：
+    - init: 初始化 feature list（首次运行时调用）
+    - status: 查看当前 feature 状态
+    - start: 开始一个 feature
+    - complete: 完成一个 feature
+    - list: 列出所有 features
     """
 
     def __init__(self, workspace: Path):
@@ -105,7 +110,7 @@ This creates a feature_list.json to track progress and ensure completion."""
             return f"Error: Unknown action: {action}"
 
     def _init(self, project_name: str | None, features: list[dict] | None) -> str:
-        """初始�?feature list"""
+        """初始化 feature list"""
         if self.harness.is_initialized():
             return "Harness already initialized. Use 'status' to see current progress."
 
@@ -113,14 +118,14 @@ This creates a feature_list.json to track progress and ensure completion."""
             project_name = self.workspace.name
 
         if not features:
-            # 生成默认�?feature 模板
+            # 生成默认的 feature 模板
             features = [
                 {
                     "id": "FEAT-001",
                     "category": "setup",
                     "priority": "P0",
                     "description": "项目初始化和环境配置",
-                    "steps": ["创建项目结构", "配置开发环�?, "初始化依�?],
+                    "steps": ["创建项目结构", "配置开发环境", "初始化依赖"],
                     "test_criteria": "项目可以正常运行",
                     "status": "pending",
                 }
@@ -128,7 +133,7 @@ This creates a feature_list.json to track progress and ensure completion."""
 
         try:
             self.harness.initialize(project_name, features)
-            return f"�?Harness initialized for '{project_name}'\n\n" \
+            return f"✅ Harness initialized for '{project_name}'\n\n" \
                    f"Features created: {len(features)}\n" \
                    f"Use 'harness status' to see next steps.\n" \
                    f"Use 'harness start FEAT-XXX' to begin working on a feature."
@@ -136,7 +141,7 @@ This creates a feature_list.json to track progress and ensure completion."""
             return f"Error initializing harness: {e}"
 
     def _status(self) -> str:
-        """获取当前状�?""
+        """获取当前状态"""
         if not self.harness.is_initialized():
             return "⚠️ Harness not initialized.\n\n" \
                    "For complex multi-step projects, use 'harness init' first to create a feature list.\n" \
@@ -176,18 +181,18 @@ This creates a feature_list.json to track progress and ensure completion."""
         return "\n".join(lines)
 
     def _start(self, feature_id: str | None) -> str:
-        """开始一�?feature"""
+        """开始一个 feature"""
         if not self.harness.is_initialized():
             return "Error: Harness not initialized. Use 'harness init' first."
 
         if not feature_id:
-            # 自动选择下一�?pending �?feature
+            # 自动选择下一个 pending 的 feature
             context = self.harness.get_session_context()
             pending = context.get("statistics", {}).get("pending", 0)
             if pending == 0:
                 return "No pending features. All features completed!"
 
-            # 获取第一�?pending feature
+            # 获取第一个 pending feature
             feature_list = self.harness._load_feature_list()
             for f in feature_list.get("features", []):
                 if f.get("status") == "pending":
@@ -200,19 +205,19 @@ This creates a feature_list.json to track progress and ensure completion."""
         try:
             self.harness.start_feature(feature_id)
             feature = self.harness.get_feature(feature_id)
-            return f"�?Started feature: {feature_id}\n\n" \
+            return f"✅ Started feature: {feature_id}\n\n" \
                    f"Description: {feature.get('description', 'N/A')}\n" \
                    f"Steps:\n" + "\n".join(f"  - {s}" for s in feature.get("steps", []))
         except Exception as e:
             return f"Error starting feature: {e}"
 
     def _complete(self, feature_id: str | None, notes: str | None) -> str:
-        """完成一�?feature"""
+        """完成一个 feature"""
         if not self.harness.is_initialized():
             return "Error: Harness not initialized."
 
         if not feature_id:
-            # 获取当前 in_progress �?feature
+            # 获取当前 in_progress 的 feature
             features = self.harness.get_features_by_status("in_progress")
             if not features:
                 return "Error: No feature in progress. Start one first with 'harness start'."
@@ -222,7 +227,7 @@ This creates a feature_list.json to track progress and ensure completion."""
             self.harness.complete_feature(feature_id, notes or "Completed")
             stats = self.harness._load_feature_list().get("statistics", {})
 
-            result = f"�?Completed feature: {feature_id}\n\n"
+            result = f"✅ Completed feature: {feature_id}\n\n"
             result += f"Progress: {stats.get('completed', 0)}/{stats.get('total', 0)} completed\n"
 
             if stats.get("pending", 0) > 0:
@@ -235,7 +240,7 @@ This creates a feature_list.json to track progress and ensure completion."""
             return f"Error completing feature: {e}"
 
     def _list(self) -> str:
-        """列出所�?features"""
+        """列出所有 features"""
         if not self.harness.is_initialized():
             return "Harness not initialized. Use 'harness init' first."
 
@@ -245,14 +250,14 @@ This creates a feature_list.json to track progress and ensure completion."""
         lines = ["## Feature List", ""]
 
         status_emoji = {
-            "pending": "�?,
+            "pending": "⏳",
             "in_progress": "🔄",
-            "completed": "�?,
+            "completed": "✅",
             "blocked": "🚫",
         }
 
         for f in features:
-            emoji = status_emoji.get(f.get("status", "pending"), "�?)
+            emoji = status_emoji.get(f.get("status", "pending"), "❓")
             lines.append(f"{emoji} **{f.get('id')}**: {f.get('description')}")
             lines.append(f"   - Status: {f.get('status')}")
             lines.append(f"   - Priority: {f.get('priority', 'N/A')}")

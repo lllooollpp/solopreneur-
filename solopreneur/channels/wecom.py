@@ -13,7 +13,7 @@ try:
     from defusedxml import ElementTree as ET
     XML_PARSER_SAFE = True
 except ImportError:
-    # 如果没有安装defusedxml，使用标准库但禁用危险特�?
+    # 如果没有安装defusedxml，使用标准库但禁用危险特性
     import xml.etree.ElementTree as ET
     XML_PARSER_SAFE = False
     import warnings
@@ -32,18 +32,18 @@ class WeComConfig:
     agent_id: str  # 应用 ID
     secret: str  # 应用密钥（用于发送消息）
     token: str  # 接口验证 Token（用于接收消息）
-    aes_key: str  # 消息加密密钥（Base64 编码�?
+    aes_key: str  # 消息加密密钥（Base64 编码）
 
 
 @dataclass
 class WeComMessage:
     """企业微信消息格式"""
     msg_id: str
-    from_user: str  # 发送�?UserID
+    from_user: str  # 发送者 UserID
     to_user: str  # 接收者（通常是应用）
-    msg_type: str  # text, image, voice �?
+    msg_type: str  # text, image, voice 等
     content: str  # 消息内容
-    create_time: int  # 时间�?
+    create_time: int  # 时间戳
     agent_id: str  # 应用 ID
 
 
@@ -52,11 +52,11 @@ class WeComCrypto:
     
     def __init__(self, token: str, encoding_aes_key: str, corp_id: str):
         """
-        初始化加密工�?
+        初始化加密工具
         
         Args:
             token: 接口验证 Token
-            encoding_aes_key: 消息加密密钥（Base64 编码�?3位）
+            encoding_aes_key: 消息加密密钥（Base64 编码，43位）
             corp_id: 企业 ID
         """
         self.token = token
@@ -72,10 +72,10 @@ class WeComCrypto:
         解密企业微信消息
         
         Args:
-            encrypt_msg: 加密的消息内容（Base64�?
+            encrypt_msg: 加密的消息内容（Base64）
             
         Returns:
-            str: 解密后的 XML 字符�?
+            str: 解密后的 XML 字符串
         """
         try:
             # Base64 解码
@@ -109,14 +109,14 @@ class WeComCrypto:
         加密企业微信回复消息
         
         Args:
-            reply_msg: 回复消息�?XML 字符�?
-            nonce: 随机字符�?
+            reply_msg: 回复消息的 XML 字符串
+            nonce: 随机字符串
             
         Returns:
-            str: 加密后的消息（Base64�?
+            str: 加密后的消息（Base64）
         """
         try:
-            # 生成随机字符串（16字节�?
+            # 生成随机字符串（16字节）
             import os
             random_str = os.urandom(16)
             
@@ -149,8 +149,8 @@ class WeComCrypto:
         生成消息签名
         
         Args:
-            timestamp: 时间�?
-            nonce: 随机字符�?
+            timestamp: 时间戳
+            nonce: 随机字符串
             encrypt_msg: 加密消息
             
         Returns:
@@ -166,8 +166,8 @@ class WeComCrypto:
         
         Args:
             signature: 待验证的签名
-            timestamp: 时间�?
-            nonce: 随机字符�?
+            timestamp: 时间戳
+            nonce: 随机字符串
             encrypt_msg: 加密消息
             
         Returns:
@@ -182,7 +182,7 @@ def parse_wecom_message(xml_content: str) -> WeComMessage:
     解析企业微信 XML 消息
     
     Args:
-        xml_content: XML 字符�?
+        xml_content: XML 字符串
         
     Returns:
         WeComMessage: 解析后的消息对象
@@ -205,12 +205,12 @@ def build_text_reply(to_user: str, from_user: str, content: str) -> str:
     构建文本回复消息 XML
     
     Args:
-        to_user: 接收�?UserID
-        from_user: 发送者（应用�?
+        to_user: 接收者 UserID
+        from_user: 发送者（应用）
         content: 文本内容
         
     Returns:
-        str: XML 字符�?
+        str: XML 字符串
     """
     import time
     

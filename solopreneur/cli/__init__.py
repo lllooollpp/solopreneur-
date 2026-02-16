@@ -1,1 +1,1 @@
-﻿"""CLI module for solopreneur."""
+"""CLI module for solopreneur."""

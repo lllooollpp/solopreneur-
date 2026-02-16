@@ -1,4 +1,4 @@
-﻿"""Utility functions for solopreneur."""
+"""Utility functions for solopreneur."""
 
 from pathlib import Path
 from datetime import datetime

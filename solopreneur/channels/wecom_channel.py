@@ -34,7 +34,8 @@ class WeComChannel(BaseChannel):
     """
     企业微信通道
 
-    通过 Webhook 接收消息，通过 API 发送消�?    """
+    通过 Webhook 接收消息，通过 API 发送消息
+    """
 
     name = "wecom"
 
@@ -44,7 +45,7 @@ class WeComChannel(BaseChannel):
         self._running = False
 
     async def start(self) -> None:
-        """启动通道（企业微信通过 FastAPI 路由处理，这里无需启动�?""
+        """启动通道（企业微信通过 FastAPI 路由处理，这里无需启动）"""
         self._running = True
         logger.info("WeCom channel started (waiting for webhooks)")
 
@@ -55,8 +56,9 @@ class WeComChannel(BaseChannel):
 
     async def send(self, msg: OutboundMessage) -> None:
         """发送消息到企业微信"""
-        # 实际实现需要调用企业微�?API
-        # 这里只是占位�?        logger.info(f"Sending WeCom message to {msg.chat_id}: {msg.content[:50]}...")
+        # 实际实现需要调用企业微信 API
+        # 这里只是占位符
+        logger.info(f"Sending WeCom message to {msg.chat_id}: {msg.content[:50]}...")
         # TODO: 实现企业微信 API 调用
 
     async def handle_webhook(
@@ -119,7 +121,8 @@ class WeComChannel(BaseChannel):
         if not self.config.token:
             return False
 
-        # 排序并加�?        tmp_arr = [self.config.token, timestamp, nonce, echostr]
+        # 排序并加密
+        tmp_arr = [self.config.token, timestamp, nonce, echostr]
         tmp_arr.sort()
         tmp_str = "".join(tmp_arr)
 

@@ -1,6 +1,6 @@
 """
 项目管理模块
-管理用户项目（本地或�?Git 拉取�?
+管理用户项目（本地或从 Git 拉取）
 """
 
 from .models import Project, ProjectCreate, ProjectUpdate, ProjectEnvVar, ProjectEnvCategory

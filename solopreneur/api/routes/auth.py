@@ -1,6 +1,6 @@
 """
 GitHub Copilot 认证端点
-处理 OAuth 设备流认�?+ 多账�?Token 池管�?
+处理 OAuth 设备流认证 + 多账号 Token 池管理
 """
 from fastapi import APIRouter, HTTPException, Path as PathParam
 from pydantic import BaseModel
@@ -14,7 +14,7 @@ router = APIRouter()
 
 def get_copilot_provider() -> GitHubCopilotProvider:
     """
-    获取或创�?Copilot Provider 实例
+    获取或创建 Copilot Provider 实例
 
     使用组件管理器统一管理单例
     """
@@ -29,7 +29,7 @@ def get_copilot_provider() -> GitHubCopilotProvider:
 
 @router.get("/auth/models")
 async def get_models():
-    """获取可用的模型列�?""
+    """获取可用的模型列表"""
     try:
         from solopreneur.core.dependencies import get_component_manager
         from solopreneur.providers.factory import create_llm_provider
@@ -37,7 +37,7 @@ async def get_models():
         manager = get_component_manager()
         config = manager.get_config()
 
-        # 仅在开�?copilot_priority 时优先使�?Copilot
+        # 仅在开启 copilot_priority 时优先使用 Copilot
         copilot_priority = getattr(config.providers, "copilot_priority", False)
         copilot_provider = manager.get_copilot_provider()
         if copilot_priority and copilot_provider.session:
@@ -48,7 +48,7 @@ async def get_models():
                 "provider": "copilot"
             }
 
-        # 否则检查其�?Provider
+        # 否则检查其他 Provider
         llm_provider = create_llm_provider(config, default_model=config.agents.defaults.model)
 
         if llm_provider:
@@ -57,7 +57,7 @@ async def get_models():
 
             # 检测当前使用的 Provider
             if providers_config.vllm.api_base:
-                # 当配置了本地 vLLM 接口时，优先返回 local 标识和默认模型（�?config.agents.defaults.model 中读取）
+                # 当配置了本地 vLLM 接口时，优先返回 local 标识和默认模型（从 config.agents.defaults.model 中读取）
                 default_model = getattr(config.agents.defaults, 'model', None)
                 return {
                     "models": ["llama-3-8b", "llama-3-70b", "qwen-7b", "qwen-14b", "yi-34b", "your-model-name"],
@@ -65,7 +65,7 @@ async def get_models():
                     "local": True,
                     "authenticated": True,
                     "provider": "vllm",
-                    "note": "本地 vLLM/OpenAI 兼容接口，请根据实际部署的模型填写模型名�?
+                    "note": "本地 vLLM/OpenAI 兼容接口，请根据实际部署的模型填写模型名称"
                 }
             elif providers_config.zhipu.api_key:
                 return {
@@ -104,12 +104,12 @@ async def get_models():
                     "provider": "gemini"
                 }
 
-        # 没有配置任何 Provider，返回默认列�?
+        # 没有配置任何 Provider，返回默认列表
         return {
             "models": ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "claude-sonnet-4"],
             "authenticated": False,
             "provider": "none",
-            "note": "未配置任�?LLM Provider，请在配置管理页面添�?
+            "note": "未配置任何 LLM Provider，请在配置管理页面添加"
         }
     except Exception as e:
         logger.error(f"Failed to get models: {e}")
@@ -121,7 +121,7 @@ async def get_models():
 # ========================================================================
 
 class DeviceFlowStartResponse(BaseModel):
-    """设备流启动响�?""
+    """设备流启动响应"""
     device_code: str
     user_code: str
     verification_uri: str
@@ -132,7 +132,7 @@ class DeviceFlowStartResponse(BaseModel):
 class TokenPollRequest(BaseModel):
     """Token 轮询请求"""
     device_code: str
-    slot_id: int = 0  # 0 = 自动分配下一个可�?slot
+    slot_id: int = 0  # 0 = 自动分配下一个可用 slot
 
 
 class TokenResponse(BaseModel):
@@ -144,7 +144,7 @@ class TokenResponse(BaseModel):
 
 
 class PoolSlotInfo(BaseModel):
-    """池槽位信�?""
+    """池槽位信息"""
     slot_id: int
     label: str
     state: str
@@ -157,7 +157,7 @@ class PoolSlotInfo(BaseModel):
 
 
 class PoolStatusResponse(BaseModel):
-    """池状态响�?""
+    """池状态响应"""
     authenticated: bool
     slots: list[PoolSlotInfo]
     active_count: int
@@ -171,13 +171,13 @@ class AddSlotRequest(BaseModel):
 
 class SlotLimitRequest(BaseModel):
     """账号 Token 限制配置请求"""
-    max_tokens_per_day: int = 0      # 每日最�?Token 限制�?=无限制）
+    max_tokens_per_day: int = 0      # 每日最大 Token 限制（0=无限制）
     max_requests_per_day: int = 0     # 每日最大请求次数（0=无限制）
     max_requests_per_hour: int = 0    # 每小时最大请求次数（0=无限制）
 
 
 # ========================================================================
-# 旧接�?(保持兼容)
+# 旧接口 (保持兼容)
 # ========================================================================
 
 @router.post("/auth/github/device", response_model=DeviceFlowStartResponse)
@@ -197,24 +197,24 @@ async def start_github_device_flow():
             interval=device_flow.interval
         )
     except Exception as e:
-        logger.error(f"启动设备流失�? {e}")
+        logger.error(f"启动设备流失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/auth/github/token", response_model=TokenResponse)
 async def poll_github_token(request: TokenPollRequest):
     """
-    轮询 GitHub Token（支持指�?slot�?
+    轮询 GitHub Token（支持指定 slot）
 
-    - slot_id=0 或不传：自动分配下一个可用编�?
-    - slot_id=N：写入指�?slot
+    - slot_id=0 或不传：自动分配下一个可用编号
+    - slot_id=N：写入指定 slot
     """
     logger.info(f"Polling for GitHub Token (target slot: {request.slot_id})")
     
     try:
         provider = get_copilot_provider()
         
-        # 非阻塞轮询一�?
+        # 非阻塞轮询一次
         response = await provider._http_client.post(
             provider.TOKEN_URL,
             headers={"Accept": "application/json"},
@@ -228,14 +228,14 @@ async def poll_github_token(request: TokenPollRequest):
         data = response.json()
         
         if "access_token" in data:
-            # 获取成功，立即获�?Copilot Token
+            # 获取成功，立即获取 Copilot Token
             github_token = data["access_token"]
             copilot_token, expires_at = await provider.get_copilot_token(github_token)
             
             # 确定目标 slot_id
             slot_id = request.slot_id
             if slot_id <= 0:
-                # 自动分配：取当前最�?slot_id + 1
+                # 自动分配：取当前最大 slot_id + 1
                 existing_ids = [s.slot_id for s in provider.pool.all_slots]
                 slot_id = max(existing_ids, default=0) + 1
             
@@ -260,7 +260,7 @@ async def poll_github_token(request: TokenPollRequest):
         
         error = data.get("error")
         if error == "authorization_pending":
-            raise HTTPException(status_code=202, detail="授权待处�?)
+            raise HTTPException(status_code=202, detail="授权待处理")
         elif error == "slow_down":
             raise HTTPException(status_code=429, detail="请求过快")
         elif error in ["expired_token", "access_denied"]:
@@ -277,7 +277,7 @@ async def poll_github_token(request: TokenPollRequest):
 
 @router.get("/auth/github/status")
 async def get_auth_status():
-    """获取当前认证状态（�?Token 池信息）"""
+    """获取当前认证状态（含 Token 池信息）"""
     provider = get_copilot_provider()
     pool = provider.pool
     
@@ -301,7 +301,7 @@ async def get_auth_status():
 
 @router.post("/auth/github/logout")
 async def logout():
-    """退出登录，清除所�?slot"""
+    """退出登录，清除所有 slot"""
     logger.info("User logged out from GitHub Copilot")
     
     provider = get_copilot_provider()
@@ -313,12 +313,12 @@ async def logout():
 
 
 # ========================================================================
-# 多账�?Token 池管�?API
+# 多账号 Token 池管理 API
 # ========================================================================
 
 @router.get("/auth/pool/status")
 async def get_pool_status():
-    """获取 Token 池详细状�?""
+    """获取 Token 池详细状态"""
     provider = get_copilot_provider()
     pool = provider.pool
     
@@ -334,7 +334,7 @@ async def get_pool_status():
 @router.post("/auth/pool/login", response_model=DeviceFlowStartResponse)
 async def pool_start_login(request: AddSlotRequest = AddSlotRequest()):
     """
-    �?Token 池启动新的设备流登录
+    为 Token 池启动新的设备流登录
     
     返回 device_code 等信息，前端需要展示验证码给用户，
     然后调用 /auth/pool/poll 轮询结果
@@ -358,7 +358,7 @@ async def pool_start_login(request: AddSlotRequest = AddSlotRequest()):
 
 
 class PoolPollRequest(BaseModel):
-    """池轮询请�?""
+    """池轮询请求"""
     device_code: str
     slot_id: int = 0  # 0 = 自动分配
     label: str = ""
@@ -367,9 +367,9 @@ class PoolPollRequest(BaseModel):
 @router.post("/auth/pool/poll")
 async def pool_poll_token(request: PoolPollRequest):
     """
-    轮询 Token 池登录结�?
+    轮询 Token 池登录结果
     
-    - slot_id=0：自动分配下一个编�?
+    - slot_id=0：自动分配下一个编号
     - label：自定义标签
     """
     try:
@@ -439,14 +439,14 @@ async def pool_remove_slot(slot_id: int = PathParam(..., ge=1)):
     provider = get_copilot_provider()
     
     if provider.pool.remove_slot(slot_id):
-        return {"success": True, "message": f"Slot {slot_id} 已移�?}
+        return {"success": True, "message": f"Slot {slot_id} 已移除"}
     else:
-        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存�?)
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
 
 
 @router.post("/auth/pool/{slot_id}/refresh")
 async def pool_refresh_slot(slot_id: int = PathParam(..., ge=1)):
-    """刷新指定 slot �?Copilot Token"""
+    """刷新指定 slot 的 Copilot Token"""
     provider = get_copilot_provider()
     pool = provider.pool
     
@@ -458,16 +458,16 @@ async def pool_refresh_slot(slot_id: int = PathParam(..., ge=1)):
             break
     
     if target is None:
-        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存�?)
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
     
     try:
         await provider.refresh_slot_token(target)
-        # 重新获取更新后的状�?
+        # 重新获取更新后的状态
         updated_status = pool.get_status()
         slot_info = next((s for s in updated_status if s["slot_id"] == slot_id), None)
         return {
             "success": True,
-            "message": f"Slot {slot_id} Token 已刷�?,
+            "message": f"Slot {slot_id} Token 已刷新",
             "slot": slot_info,
         }
     except Exception as e:
@@ -477,7 +477,7 @@ async def pool_refresh_slot(slot_id: int = PathParam(..., ge=1)):
 
 @router.put("/auth/pool/{slot_id}/label")
 async def pool_update_label(slot_id: int = PathParam(..., ge=1), request: AddSlotRequest = AddSlotRequest()):
-    """更新指定 slot 的标�?""
+    """更新指定 slot 的标签"""
     provider = get_copilot_provider()
     pool = provider.pool
 
@@ -488,7 +488,7 @@ async def pool_update_label(slot_id: int = PathParam(..., ge=1), request: AddSlo
             break
 
     if target is None:
-        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存�?)
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
 
     target.label = request.label or f"账号{slot_id}"
     pool._save_slot(target)
@@ -502,11 +502,11 @@ async def pool_set_limits(
     request: SlotLimitRequest = SlotLimitRequest()
 ):
     """
-    设置指定账号�?Token 使用限制
+    设置指定账号的 Token 使用限制
 
     Args:
         slot_id: 账号槽位 ID
-        max_tokens_per_day: 每日最�?Token 数（0=无限制）
+        max_tokens_per_day: 每日最大 Token 数（0=无限制）
         max_requests_per_day: 每日最大请求次数（0=无限制）
         max_requests_per_hour: 每小时最大请求次数（0=无限制）
     """
@@ -521,7 +521,7 @@ async def pool_set_limits(
             break
 
     if target is None:
-        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存�?)
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
 
     # 更新限制配置
     target.max_tokens_per_day = request.max_tokens_per_day
@@ -530,26 +530,26 @@ async def pool_set_limits(
     pool._save_slot(target)
 
     logger.info(
-        f"Slot {slot_id} 限制已更�? "
-        f"tokens/day={request.max_tokens_per_day or '�?}, "
-        f"req/day={request.max_requests_per_day or '�?}, "
-        f"req/hour={request.max_requests_per_hour or '�?}"
+        f"Slot {slot_id} 限制已更新: "
+        f"tokens/day={request.max_tokens_per_day or '无'}, "
+        f"req/day={request.max_requests_per_day or '无'}, "
+        f"req/hour={request.max_requests_per_hour or '无'}"
     )
 
     return {
         "success": True,
-        "message": f"Slot {slot_id} �?Token 限制已更�?,
+        "message": f"Slot {slot_id} 的 Token 限制已更新",
         "limits": {
-            "max_tokens_per_day": request.max_tokens_per_day or "无限�?,
-            "max_requests_per_day": request.max_requests_per_day or "无限�?,
-            "max_requests_per_hour": request.max_requests_per_hour or "无限�?,
+            "max_tokens_per_day": request.max_tokens_per_day or "无限制",
+            "max_requests_per_day": request.max_requests_per_day or "无限制",
+            "max_requests_per_hour": request.max_requests_per_hour or "无限制",
         }
     }
 
 
 @router.get("/auth/pool/{slot_id}/usage")
 async def pool_get_usage(slot_id: int = PathParam(..., ge=1)):
-    """获取指定账号�?Token 使用统计"""
+    """获取指定账号的 Token 使用统计"""
     provider = get_copilot_provider()
     pool = provider.pool
 
@@ -561,7 +561,7 @@ async def pool_get_usage(slot_id: int = PathParam(..., ge=1)):
             break
 
     if target is None:
-        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存�?)
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
 
     usage = target.get_usage_summary()
 
@@ -575,7 +575,7 @@ async def pool_get_usage(slot_id: int = PathParam(..., ge=1)):
 
 @router.post("/auth/pool/{slot_id}/reset-usage")
 async def pool_reset_usage(slot_id: int = PathParam(..., ge=1)):
-    """重置指定账号的使用统�?""
+    """重置指定账号的使用统计"""
     provider = get_copilot_provider()
     pool = provider.pool
 
@@ -587,15 +587,15 @@ async def pool_reset_usage(slot_id: int = PathParam(..., ge=1)):
             break
 
     if target is None:
-        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存�?)
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} 不存在")
 
-    # 重置计数�?
+    # 重置计数器
     target.tokens_used_today = 0
     target.requests_today = 0
     target.requests_hour = 0
     pool._save_slot(target)
 
-    logger.info(f"Slot {slot_id} 使用统计已重�?)
+    logger.info(f"Slot {slot_id} 使用统计已重置")
 
     return {
         "success": True,

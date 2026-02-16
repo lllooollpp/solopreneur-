@@ -21,8 +21,8 @@ class ProjectEnvCategory(str, Enum):
 
 class ProjectEnvVar(BaseModel):
     """项目环境变量定义"""
-    key: str = Field(..., min_length=1, max_length=100, description="变量名，�?DB_HOST")
-    value: str = Field(..., description="变量�?)
+    key: str = Field(..., min_length=1, max_length=100, description="变量名，如 DB_HOST")
+    value: str = Field(..., description="变量值")
     category: ProjectEnvCategory = Field(default=ProjectEnvCategory.GENERAL, description="变量分类")
     description: str = Field(default="", max_length=500, description="变量说明")
     sensitive: bool = Field(default=False, description="是否敏感（如密码、密钥）")
@@ -45,21 +45,21 @@ class ProjectSource(str, Enum):
 
 
 class ProjectStatus(str, Enum):
-    """项目状�?""
+    """项目状态"""
     ACTIVE = "active"         # 活跃
-    ARCHIVED = "archived"     # 已归�?
-    ERROR = "error"           # 错误状�?
+    ARCHIVED = "archived"     # 已归档
+    ERROR = "error"           # 错误状态
 
 
 class GitInfo(BaseModel):
     """Git 仓库信息"""
-    url: str = Field(..., description="Git 仓库 URL（已脱敏，不包含 token�?)
-    original_url: Optional[str] = Field(default=None, description="原始 URL（包�?token，仅内部使用�?)
+    url: str = Field(..., description="Git 仓库 URL（已脱敏，不包含 token）")
+    original_url: Optional[str] = Field(default=None, description="原始 URL（包含 token，仅内部使用）")
     branch: str = Field(default="main", description="分支名称")
-    last_commit: Optional[str] = Field(default=None, description="最后提�?SHA")
-    last_sync: Optional[datetime] = Field(default=None, description="最后同步时�?)
+    last_commit: Optional[str] = Field(default=None, description="最后提交 SHA")
+    last_sync: Optional[datetime] = Field(default=None, description="最后同步时间")
     # 认证信息（可选）
-    username: Optional[str] = Field(default=None, description="Git 用户�?)
+    username: Optional[str] = Field(default=None, description="Git 用户名")
     # 代理配置（可选）
     use_proxy: bool = Field(default=False, description="是否使用代理")
     proxy_url: Optional[str] = Field(default=None, description="代理地址，如 http://127.0.0.1:7890")
@@ -70,7 +70,7 @@ class Project(BaseModel):
     """
     项目模型
     
-    每个项目对应一个工作目录和独立的会话存�?
+    每个项目对应一个工作目录和独立的会话存储
     """
     id: str = Field(..., description="项目唯一ID")
     name: str = Field(..., min_length=1, max_length=100, description="项目名称")
@@ -80,19 +80,19 @@ class Project(BaseModel):
     # 路径信息
     path: str = Field(..., description="项目本地路径（绝对路径）")
     
-    # Git 信息（如果是从仓库克隆的�?
+    # Git 信息（如果是从仓库克隆的）
     git_info: Optional[GitInfo] = Field(default=None, description="Git 仓库信息")
     
     # 会话关联
     session_id: str = Field(..., description="关联的聊天会话ID")
 
-    # 项目级环境变�?
+    # 项目级环境变量
     env_vars: list[ProjectEnvVar] = Field(default_factory=list, description="项目环境变量")
     
-    # 状�?
+    # 状态
     status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
     
-    # 时间�?
+    # 时间戳
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
     
@@ -102,7 +102,7 @@ class Project(BaseModel):
         """验证路径"""
         path = Path(v)
         if not path.is_absolute():
-            raise ValueError("项目路径必须是绝对路�?)
+            raise ValueError("项目路径必须是绝对路径")
         return str(path.resolve())
     
     def to_dict(self) -> dict:
@@ -146,7 +146,7 @@ class Project(BaseModel):
     
     @classmethod
     def from_dict(cls, data: dict) -> "Project":
-        """从字典创建实�?""
+        """从字典创建实例"""
         git_info = None
         if data.get("git_info"):
             git_info = GitInfo(**data["git_info"])
@@ -199,7 +199,7 @@ class ProjectCreate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("项目名称不能为空")
-        # 检查非法字�?
+        # 检查非法字符
         invalid_chars = '<>:"/\\|?*'
         for char in invalid_chars:
             if char in v:

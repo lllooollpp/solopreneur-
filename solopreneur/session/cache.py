@@ -33,7 +33,7 @@ class Session:
         self.updated_at = datetime.now()
 
     def to_messages(self) -> List[Dict]:
-        """转换�?LLM 消息格式"""
+        """转换为 LLM 消息格式"""
         messages = []
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
@@ -51,7 +51,8 @@ class Session:
 
 class SessionCache:
     """
-    会话缓存（LRU 策略�?    线程安全的会话管理器
+    会话缓存（LRU 策略）
+    线程安全的会话管理器
     """
 
     def __init__(self, max_size: int = 100, max_history: int = 20):
@@ -66,14 +67,16 @@ class SessionCache:
         system_prompt: str = "",
         metadata: Optional[Dict] = None
     ) -> Session:
-        """获取或创建会�?""
+        """获取或创建会话"""
         with self._lock:
             if session_id in self._sessions:
-                # LRU: 移到最�?                session = self._sessions.pop(session_id)
+                # LRU: 移到最后
+                session = self._sessions.pop(session_id)
                 self._sessions[session_id] = session
                 return session
 
-            # 创建新会�?            session = Session(
+            # 创建新会话
+            session = Session(
                 session_id=session_id,
                 system_prompt=system_prompt,
                 metadata=metadata or {}
@@ -104,12 +107,12 @@ class SessionCache:
             return False
 
     def clear(self):
-        """清空所有会�?""
+        """清空所有会话"""
         with self._lock:
             self._sessions.clear()
 
     def list_sessions(self) -> List[Session]:
-        """列出所有会�?""
+        """列出所有会话"""
         with self._lock:
             return list(self._sessions.values())
 
@@ -143,7 +146,8 @@ def get_session_cache(
     Args:
         max_size: 最大缓存会话数
         max_history: 每个会话最大消息数
-        force_new: 强制创建新实�?
+        force_new: 强制创建新实例
+
     Returns:
         SessionCache 实例
     """

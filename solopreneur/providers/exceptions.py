@@ -1,11 +1,11 @@
 """
-LLM Provider 异常类定�?
-统一的异常处理机�?
+LLM Provider 异常类定义
+统一的异常处理机制
 """
 
 
 class LLMProviderError(Exception):
-    """LLM提供者基础异常�?""
+    """LLM提供者基础异常类"""
     def __init__(self, message: str, provider: str = None, model: str = None):
         self.message = message
         self.provider = provider

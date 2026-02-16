@@ -1,4 +1,4 @@
-﻿"""���������� - ���Ŷ�AgentЭ���Ŀ�����ˮ�ߣ�֧���Զ�/�ֲ�/���ģʽ��"""
+﻿"""工作流引擎 - 编排多Agent协作的开发流水线，支持自动/分步/混合模式。"""
 
 import json
 import re
@@ -20,46 +20,46 @@ from solopreneur.agent.core.tools.base import Tool
 
 @dataclass
 class WorkflowStep:
-    """��������һ�����衣"""
+    """工作流的一个步骤。"""
 
-    agent: str  # ִ�иò���� Agent ���ƣ�ԭ role��
+    agent: str  # 执行该步骤的 Agent 名称（原 role）
     
-    # ���������ԣ�role ����ָ�� agent
+    # 兼容性属性，role 别名指向 agent
     @property
     def role(self) -> str:
         return self.agent
-    task_template: str  # ��������ģ�壬�ɰ��� {description} �� {prev_output} ռλ��
-    label: str  # �����ǩ
-    save_as: str = ""  # ���������ļ������������ĿĿ¼������ղ�����
+    task_template: str  # 任务描述模板，可包含 {description} 和 {prev_output} 占位符
+    label: str  # 步骤标签
+    save_as: str = ""  # 输出保存的文件名（相对于项目目录），留空不保存
 
 
 @dataclass
 class Workflow:
-    """Ԥ����Ŀ�����������"""
+    """预定义的开发工作流。"""
 
-    name: str  # ��������ʶ
-    title: str  # ��ʾ����
-    description: str  # ����������
+    name: str  # 工作流标识
+    title: str  # 显示名称
+    description: str  # 工作流描述
     steps: list[WorkflowStep] = field(default_factory=list)
 
 
 @dataclass
 class WorkflowSession:
-    """�ֲ��������Ự������ִ�н��ȡ�"""
+    """分步工作流会话，跟踪执行进度。"""
 
     session_id: str
     workflow: Workflow
     description: str
     project_name: str
     project_dir: str = ""
-    current_step: int = 0  # ��һ����ִ�еĲ������� (0-based)
-    step_outputs: list[str] = field(default_factory=list)  # ÿ�������
+    current_step: int = 0  # 下一个待执行的步骤索引 (0-based)
+    step_outputs: list[str] = field(default_factory=list)  # 每步的输出
     step_statuses: list[str] = field(default_factory=list)  # "success" | "error" | "skipped" | "injected"
     started_at: float = 0.0
     finished: bool = False
 
     def resolved_project_dir(self, workspace: Path) -> Path:
-        """�������ι�����ʵ��ʹ�õ���ĿĿ¼��"""
+        """解析本次工作流实际使用的项目目录。"""
         if self.project_dir:
             return Path(self.project_dir).expanduser().resolve()
         if self.project_name:
@@ -72,7 +72,7 @@ class WorkflowSession:
 
     @property
     def prev_output(self) -> str:
-        """���һ������Ч�����"""
+        """最近一步的有效输出。"""
         for output in reversed(self.step_outputs):
             if output:
                 return output
@@ -83,141 +83,141 @@ class WorkflowSession:
         return self.current_step >= self.total_steps or self.finished
 
     def status_summary(self) -> str:
-        """���ػỰ״̬ժҪ��"""
+        """返回会话状态摘要。"""
         lines = [
-            f"?? **������**: {self.workflow.title} (`{self.workflow.name}`)",
-            f"?? **�Ự**: `{self.session_id}`",
-            f"?? **����**: {self.description}",
-            f"?? **����**: {self.current_step}/{self.total_steps} ��",
+            f"📦 **工作流**: {self.workflow.title} (`{self.workflow.name}`)",
+            f"🆔 **会话**: `{self.session_id}`",
+            f"📝 **任务**: {self.description}",
+            f"📊 **进度**: {self.current_step}/{self.total_steps} 步",
         ]
-        # ����ɲ���
+        # 已完成步骤
         for i, step in enumerate(self.workflow.steps):
             if i < len(self.step_statuses):
-                emoji = {"success": "?", "error": "?", "skipped": "??", "injected": "??"}.get(
-                    self.step_statuses[i], "?"
+                emoji = {"success": "✅", "error": "❌", "skipped": "⏭️", "injected": "📌"}.get(
+                    self.step_statuses[i], "❓"
                 )
-                lines.append(f"  {emoji} ���� {i + 1}: {step.label} ({step.agent})")
+                lines.append(f"  {emoji} 步骤 {i + 1}: {step.label} ({step.agent})")
             elif i == self.current_step:
-                lines.append(f"  ?? ���� {i + 1}: {step.label} ({step.agent}) �� **��ǰ����**")
+                lines.append(f"  ▶️ 步骤 {i + 1}: {step.label} ({step.agent}) — **当前待办**")
             else:
-                lines.append(f"  ? ���� {i + 1}: {step.label} ({step.agent})")
+                lines.append(f"  ⬜ 步骤 {i + 1}: {step.label} ({step.agent})")
         
         if self.finished:
-            lines.append("\n?? **״̬**: �����")
+            lines.append("\n🏁 **状态**: 已完成")
         else:
             next_step = self.workflow.steps[self.current_step]
-            lines.append(f"\n?? **Tech Lead �������**:")
-            lines.append(f"1. �������������")
-            lines.append(f"2. ������⣬����ִ��: `workflow_control(session_id=\"{self.session_id}\", command=\"next\")`��")
-            lines.append(f"3. �����Ҫ�޸ģ�����ʹ�� `delegate` ������ `workflow_control(..., command=\"inject\")` ע��������")
+            lines.append(f"\n💡 **Tech Lead 建议操作**:")
+            lines.append(f"1. 审查上述产出。")
+            lines.append(f"2. 如果满意，继续执行: `workflow_control(session_id=\"{self.session_id}\", command=\"next\")`。")
+            lines.append(f"3. 如果需要修改，可以使用 `delegate` 重做或 `workflow_control(..., command=\"inject\")` 注入修正。")
             
         return "\n".join(lines)
 
 
-# ���� Ԥ���幤���� ������������������������������������������������������������������������������������������������������������
+# ── 预定义工作流 ──────────────────────────────────────────────────────
 
 FEATURE_WORKFLOW = Workflow(
     name="feature",
-    title="���ܿ���",
-    description="�����Ĺ��ܿ������̣�������� �� �ܹ���� �� ����ʵ�� �� ������� �� ����",
+    title="功能开发",
+    description="完整的功能开发流程：需求分析 → 架构设计 → 编码实现 → 代码审查 → 测试",
     steps=[
         WorkflowStep(
             agent="product_manager",
-            label="�������",
+            label="需求分析",
             task_template=(
-                "�������¹������������Ʒ�����ĵ���PRD����\n"
-                "��Ŀ����: ��Ŀ�����浽 `{project_dir}`\n\n{description}"
+                "分析以下功能需求，输出产品需求文档（PRD）。\n"
+                "项目名称: 项目将保存到 `{project_dir}`\n\n{description}"
             ),
             save_as="docs/requirements.md",
         ),
         WorkflowStep(
             agent="architect",
-            label="�ܹ����",
+            label="架构设计",
             task_template=(
-                "�������������ĵ�����Ƽ���������\n"
-                "��ĿĿ¼: `{project_dir}`\n\n"
-                "# ԭʼ����\n{description}\n\n"
-                "# ��Ʒ�����ĵ�\n{prev_output}"
+                "基于以下需求文档，设计技术方案。\n"
+                "项目目录: `{project_dir}`\n\n"
+                "# 原始需求\n{description}\n\n"
+                "# 产品需求文档\n{prev_output}"
             ),
             save_as="docs/architecture.md",
         ),
         WorkflowStep(
             agent="developer",
-            label="����ʵ��",
+            label="编码实现",
             task_template=(
-                "�������¼�����Ʒ������б���ʵ�֡�\n\n"
-                "## ��Ҫ����ĿĿ¼\n"
-                "���д����ļ����봴������ĿĿ¼�£�`{project_dir}`\n"
-                "�����ʹ�� `write_file` �����ڸ�Ŀ¼�´���ʵ�ʵ�Դ�����ļ���.py, .js, .html, .css �ȣ���"
-                "�����ǽ��������������ݡ�\n"
-                "������ `list_dir` �鿴��ĿĿ¼�ṹ��Ȼ�󴴽���Ҫ���ļ���\n\n"
-                "## ������ɵĲ���\n"
-                "1. �� `{project_dir}` �´�����������Ŀ�ṹ��Ŀ¼���ļ���\n"
-                "2. ʹ�� `write_file` д��ÿ��Դ�����ļ�����������\n"
-                "3. ���谲װ������ʹ�� `exec` ����ִ�а�װ����\n"
-                "4. �������������ļ��嵥\n\n"
-                "# ԭʼ����\n{description}\n\n"
-                "# �������\n{prev_output}"
+                "根据以下技术设计方案进行编码实现。\n\n"
+                "## 重要：项目目录\n"
+                "所有代码文件必须创建在项目目录下：`{project_dir}`\n"
+                "你必须使用 `write_file` 工具在该目录下创建实际的源代码文件（.py, .js, .html, .css 等），"
+                "而不是仅仅描述代码内容。\n"
+                "请先用 `list_dir` 查看项目目录结构，然后创建必要的文件。\n\n"
+                "## 必须完成的操作\n"
+                "1. 在 `{project_dir}` 下创建完整的项目结构（目录和文件）\n"
+                "2. 使用 `write_file` 写入每个源代码文件的完整内容\n"
+                "3. 如需安装依赖，使用 `exec` 工具执行安装命令\n"
+                "4. 最后输出创建的文件清单\n\n"
+                "# 原始需求\n{description}\n\n"
+                "# 技术设计\n{prev_output}"
             ),
         ),
         WorkflowStep(
             agent="code_reviewer",
-            label="�������",
+            label="代码审查",
             task_template=(
-                "��鱾�ι��ܿ����Ĵ�������\n"
-                "��ĿĿ¼: `{project_dir}`\n"
-                "��ʹ�� `list_dir` �� `read_file` �鿴��Ŀʵ�ʴ����ļ�������顣\n\n"
-                "# ��������\n{description}\n\n"
-                "# �����߱���\n{prev_output}"
+                "审查本次功能开发的代码变更。\n"
+                "项目目录: `{project_dir}`\n"
+                "请使用 `list_dir` 和 `read_file` 查看项目实际代码文件进行审查。\n\n"
+                "# 功能描述\n{description}\n\n"
+                "# 开发者报告\n{prev_output}"
             ),
             save_as="docs/review.md",
         ),
         WorkflowStep(
             agent="security_engineer",
-            label="��ȫ���",
+            label="安全审查",
             task_template=(
-                "���ڵ�ǰʵ�ֽ���Ӧ�ð�ȫ��鲢������ִ���޸����顣\n"
-                "��ĿĿ¼: `{project_dir}`\n"
-                "��ʹ�� `list_dir` / `read_file` ����֤�ݻ���顣\n\n"
-                "# ��������\n{description}\n\n"
-                "# ���������\n{prev_output}"
+                "基于当前实现进行应用安全审查并给出可执行修复建议。\n"
+                "项目目录: `{project_dir}`\n"
+                "请使用 `list_dir` / `read_file` 进行证据化审查。\n\n"
+                "# 功能描述\n{description}\n\n"
+                "# 代码审查结果\n{prev_output}"
             ),
             save_as="docs/security-review.md",
         ),
         WorkflowStep(
             agent="tester",
-            label="����",
+            label="测试",
             task_template=(
-                "Ϊ���¹��ܱ�д��ִ�в��ԡ�\n"
-                "��ĿĿ¼: `{project_dir}`\n\n"
-                "## ?? ǿ��Ҫ��\n"
-                "1. ʹ�� `list_dir` �鿴��ĿĿ¼���˽���Ŀ�ṹ�ͼ���ջ\n"
-                "2. ʹ�� `read_file` �Ķ����д��룬���ʵ��ϸ��\n"
-                "3. ʹ�� `write_file` ���������ļ�\n"
-                "4. **����ʹ�� `exec` ����ʵ�����в���**������ֻ������������\n"
-                "5. �������ʧ�ܣ��޸����Ⲣ��������\n"
-                "6. �������ղ��Խ����ͨ��/ʧ��������\n\n"
-                "## ��ֹ��Ϊ\n"
-                "- ? ��Ҫֻ���'����ִ����������'\n"
-                "- ? ��Ҫֻ����������в���\n"
-                "- ? ����ʵ�ʵ��� exec �������в��鿴���\n\n"
-                "## ?? E2E ���ԣ�ǰ��/Web ��Ŀ���룩\n"
-                "�����Ŀ���� HTML/CSS/JS ��ǰ�˿�� (React/Vue/Svelte ��)��\n"
-                "�����ʹ�� Playwright ��д������ E2E ���ԣ�\n"
+                "为以下功能编写和执行测试。\n"
+                "项目目录: `{project_dir}`\n\n"
+                "## ⚠️ 强制要求\n"
+                "1. 使用 `list_dir` 查看项目目录，了解项目结构和技术栈\n"
+                "2. 使用 `read_file` 阅读现有代码，理解实现细节\n"
+                "3. 使用 `write_file` 创建测试文件\n"
+                "4. **必须使用 `exec` 工具实际运行测试**，不能只描述测试命令\n"
+                "5. 如果测试失败，修复问题并重新运行\n"
+                "6. 报告最终测试结果（通过/失败数量）\n\n"
+                "## 禁止行为\n"
+                "- ❌ 不要只输出'建议执行以下命令'\n"
+                "- ❌ 不要只描述如何运行测试\n"
+                "- ✅ 必须实际调用 exec 工具运行并查看结果\n\n"
+                "## 🌐 E2E 测试（前端/Web 项目必须）\n"
+                "如果项目包含 HTML/CSS/JS 或前端框架 (React/Vue/Svelte 等)，\n"
+                "你必须使用 Playwright 编写并运行 E2E 测试：\n"
                 "```\n"
                 "exec: npx playwright install --with-deps chromium\n"
-                "write_file: e2e/basic.spec.ts  # �� e2e/test_basic.py\n"
+                "write_file: e2e/basic.spec.ts  # 或 e2e/test_basic.py\n"
                 "exec: npx playwright test --reporter=list\n"
                 "```\n"
-                "�� Playwright ���û�һ����֤���ܣ���ҳ�桢���� UI���������\n\n"
-                "## ?? Git �ύ\n"
-                "������ɺ�ʹ�� `git` �����ύ�����ļ���\n"
+                "用 Playwright 像用户一样验证功能：打开页面、操作 UI、检查结果。\n\n"
+                "## 📝 Git 提交\n"
+                "测试完成后，使用 `git` 工具提交测试文件：\n"
                 "```\n"
                 "git: action=add, files=['.']\n"
                 "git: action=commit, message='test: add tests for <feature>'\n"
                 "```\n\n"
-                "# ��������\n{description}\n\n"
-                "# ��ȫ����������鷴��\n{prev_output}"
+                "# 功能描述\n{description}\n\n"
+                "# 安全审查与代码审查反馈\n{prev_output}"
             ),
         ),
     ],
@@ -225,38 +225,38 @@ FEATURE_WORKFLOW = Workflow(
 
 BUGFIX_WORKFLOW = Workflow(
     name="bugfix",
-    title="Bug �޸�",
-    description="Bug �޸����̣�������� �� �޸�ʵ�� �� ������� �� ������֤",
+    title="Bug 修复",
+    description="Bug 修复流程：问题分析 → 修复实现 → 代码审查 → 测试验证",
     steps=[
         WorkflowStep(
             agent="developer",
-            label="����������޸�",
+            label="问题分析与修复",
             task_template=(
-                "�������޸����� Bug��\n"
-                "��ĿĿ¼: `{project_dir}`\n"
-                "��ʹ�� `list_dir` �� `read_file` �鿴���룬"
-                "ʹ�� `write_file` �� `edit_file` �޸����⡣\n\n{description}"
+                "分析并修复以下 Bug。\n"
+                "项目目录: `{project_dir}`\n"
+                "请使用 `list_dir` 和 `read_file` 查看代码，"
+                "使用 `write_file` 或 `edit_file` 修复问题。\n\n{description}"
             ),
         ),
         WorkflowStep(
             agent="code_reviewer",
-            label="�޸����",
+            label="修复审查",
             task_template=(
-                "������� Bug �޸��Ĵ�������\n"
-                "��ĿĿ¼: `{project_dir}`\n\n"
-                "# Bug ����\n{description}\n\n"
-                "# �޸�����\n{prev_output}"
+                "审查以下 Bug 修复的代码变更。\n"
+                "项目目录: `{project_dir}`\n\n"
+                "# Bug 描述\n{description}\n\n"
+                "# 修复报告\n{prev_output}"
             ),
             save_as="docs/bugfix-review.md",
         ),
         WorkflowStep(
             agent="tester",
-            label="�ع����",
+            label="回归测试",
             task_template=(
-                "������� Bug �޸���д�ع���Բ�ִ�С�\n"
-                "��ĿĿ¼: `{project_dir}`\n\n"
-                "# Bug ����\n{description}\n\n"
-                "# �޸������\n{prev_output}"
+                "针对以下 Bug 修复编写回归测试并执行。\n"
+                "项目目录: `{project_dir}`\n\n"
+                "# Bug 描述\n{description}\n\n"
+                "# 修复与审查\n{prev_output}"
             ),
         ),
     ],
@@ -264,26 +264,26 @@ BUGFIX_WORKFLOW = Workflow(
 
 REVIEW_WORKFLOW = Workflow(
     name="review",
-    title="�������",
-    description="��������������̣������� �� ��ȫ��� �� ���Բ��佨��",
+    title="代码审查",
+    description="独立代码审查流程：审查代码 → 安全检查 → 测试补充建议",
     steps=[
         WorkflowStep(
             agent="code_reviewer",
-            label="�������",
+            label="代码审查",
             task_template=(
-                "������´��������\n"
-                "��ĿĿ¼: `{project_dir}`\n\n{description}"
+                "审查以下代码或变更。\n"
+                "项目目录: `{project_dir}`\n\n{description}"
             ),
             save_as="docs/review.md",
         ),
         WorkflowStep(
             agent="tester",
-            label="���Խ���",
+            label="测试建议",
             task_template=(
-                "���ݴ��������������Ҫ����Ĳ��ԡ�\n"
-                "��ĿĿ¼: `{project_dir}`\n\n"
-                "# �������\n{description}\n\n"
-                "# �����\n{prev_output}"
+                "根据代码审查结果建议需要补充的测试。\n"
+                "项目目录: `{project_dir}`\n\n"
+                "# 审查内容\n{description}\n\n"
+                "# 审查结果\n{prev_output}"
             ),
         ),
     ],
@@ -291,104 +291,104 @@ REVIEW_WORKFLOW = Workflow(
 
 DEPLOY_WORKFLOW = Workflow(
     name="deploy",
-    title="��������",
-    description="�������̣�������֤ �� �������� �� ����",
+    title="部署上线",
+    description="部署流程：测试验证 → 部署配置 → 上线",
     steps=[
         WorkflowStep(
             agent="tester",
-            label="����ǰ����",
+            label="部署前测试",
             task_template=(
-                "ִ�в���ǰ������������֤��\n"
-                "��ĿĿ¼: `{project_dir}`\n\n{description}"
+                "执行部署前的完整测试验证。\n"
+                "项目目录: `{project_dir}`\n\n{description}"
             ),
         ),
         WorkflowStep(
             agent="release_manager",
-            label="����׼��",
+            label="发布准备",
             task_template=(
-                "׼�������嵥�����߻ع�������\n"
-                "��ĿĿ¼: `{project_dir}`\n\n"
-                "# ����Ŀ��\n{description}\n\n"
-                "# ���Խ��\n{prev_output}"
+                "准备发布清单与上线回滚方案。\n"
+                "项目目录: `{project_dir}`\n\n"
+                "# 发布目标\n{description}\n\n"
+                "# 测试结果\n{prev_output}"
             ),
             save_as="docs/release-plan.md",
         ),
         WorkflowStep(
             agent="devops",
-            label="����������ִ��",
+            label="部署配置与执行",
             task_template=(
-                "���ò�ִ�в���\n"
-                "��ĿĿ¼: `{project_dir}`\n\n"
-                "# ��������\n{description}\n\n"
-                "# ����׼��\n{prev_output}"
+                "配置并执行部署。\n"
+                "项目目录: `{project_dir}`\n\n"
+                "# 部署需求\n{description}\n\n"
+                "# 发布准备\n{prev_output}"
             ),
             save_as="docs/deployment.md",
         ),
         WorkflowStep(
             agent="sre_engineer",
-            label="��������֤",
+            label="发布后验证",
             task_template=(
-                "ִ�з������ȶ�����֤��ɹ۲��Լ�顣\n"
-                "��ĿĿ¼: `{project_dir}`\n"
-                "������澯��SLO ��ع���ս��ۡ�\n\n"
-                "# ������Ϣ\n{description}\n\n"
-                "# ������\n{prev_output}"
+                "执行发布后稳定性验证与可观测性检查。\n"
+                "项目目录: `{project_dir}`\n"
+                "请输出告警、SLO 与回归风险结论。\n\n"
+                "# 发布信息\n{description}\n\n"
+                "# 部署结果\n{prev_output}"
             ),
             save_as="docs/post-deploy-validation.md",
         ),
     ],
 )
 
-# ������ע���
+# 工作流注册表
 WORKFLOWS: dict[str, Workflow] = {
     w.name: w
     for w in (FEATURE_WORKFLOW, BUGFIX_WORKFLOW, REVIEW_WORKFLOW, DEPLOY_WORKFLOW)
 }
 
 
-# ���� ����ֽ���ʾ�ʣ�effc.md Initializer Agent������������������������������������������
+# ── 需求分解提示词（effc.md Initializer Agent）────────────────────
 
-_DECOMPOSE_PROMPT = """����һ������ֽ�ר�ҡ��뽫������Ŀ����ֽ�Ϊ�����ġ������������Ĺ��ܵ�(Feature)��
+_DECOMPOSE_PROMPT = """你是一个需求分解专家。请将以下项目需求分解为独立的、可增量开发的功能点(Feature)。
 
-## ��������
+## 需求描述
 {description}
 
-## ���Ҫ��
-����� JSON ���飬ÿ�����ܰ��������ֶΣ�
-- id: Ψһ��ʶ����ʽ FEAT-001, FEAT-002, ...
-- category: ���� (core / ui / api / infra / test)
-- priority: ���ȼ� (P0=���ı��� / P1=��Ҫ / P2=ê�����)
-- description: ����������һ�仰��������ȷ��
-- steps: ʵ�ֲ��裨�ַ������飬3-5 ����
-- test_criteria: ���ձ�׼��һ�仰��
+## 输出要求
+请输出 JSON 数组，每个功能包含以下字段：
+- id: 唯一标识，格式 FEAT-001, FEAT-002, ...
+- category: 分类 (core / ui / api / infra / test)
+- priority: 优先级 (P0=核心必需 / P1=重要 / P2=锚上添花)
+- description: 功能描述（一句话，具体明确）
+- steps: 实现步骤（字符串数组，3-5 步）
+- test_criteria: 验收标准（一句话）
 
-## �ֽ�ԭ��
-1. ÿ�� Feature Ӧ�ÿ�����һ�� workflow ѭ������ɣ�Լ 15-30 ���ӣ�
-2. P0 �������ȣ�ȷ�����Ĺ�����ʵ��
-3. ����֮�������ͨ�����ȼ�������P0 ������P1 ������
-4. ÿ�� Feature ����������ȷ�����ձ�׼
-5. �е���Ŀͨ�� 8-20 �� Feature��������Ŀ 20-50 ��
-6. ��Ҫ��©������ʩ Feature����Ŀ��ʼ����������װ�����õȣ�
+## 分解原则
+1. 每个 Feature 应该可以在一次 workflow 循环内完成（约 15-30 分钟）
+2. P0 功能优先，确保核心功能先实现
+3. 功能之间的依赖通过优先级隐含表达（P0 先做，P1 后做）
+4. 每个 Feature 都必须有明确的验收标准
+5. 中等项目通常 8-20 个 Feature，大型项目 20-50 个
+6. 不要遗漏基础设施 Feature（项目初始化、依赖安装、配置等）
 
-����� JSON ���飬��Ҫ���� markdown �����������ı���
+仅输出 JSON 数组，不要包含 markdown 代码块或其他文本。
 """
 
 
-# ���� ���������� ��������������������������������������������������������������������������������������������������������������
+# ── 工作流引擎 ───────────────────────────────────────────────────────
 
 
 class WorkflowEngine:
     """
-    ִ��Ԥ����Ŀ�����������
+    执行预定义的开发工作流。
 
-    �𲽵��ò�ͬAgent���� Agent����ÿ���������ݸ���һ����
-    �������м���ﵽ��ĿĿ¼��
-    ֧���Զ���ˮ��ģʽ�ͷֲ�����ģʽ��
+    逐步调用不同Agent的子 Agent，将每步产出传递给下一步，
+    并保存中间产物到项目目录。
+    支持自动流水线模式和分步交互模式。
 
-    ���� LongRunningHarness��effc.md ģʽ����
-    - ÿ����ɺ��Զ���¼���ȵ� progress.md
-    - ���ղ����������Ž�
-    - ֧�ֿ�Ự��������
+    集成 LongRunningHarness（effc.md 模式）：
+    - 每步完成后自动记录进度到 progress.md
+    - 最终步骤接入测试门禁
+    - 支持跨会话增量开发
     """
 
     def __init__(
@@ -401,16 +401,16 @@ class WorkflowEngine:
         self.agent_manager = agent_manager
         self.workspace = workspace
         self.sessions: dict[str, WorkflowSession] = {}
-        self._harness = None  # LongRunningHarness�����ⲿ����
+        self._harness = None  # LongRunningHarness，由外部设置
 
     def set_harness(self, harness) -> None:
-        """ע�� LongRunningHarness ������ effc.md ����ģʽ��"""
+        """注入 LongRunningHarness 以启用 effc.md 增量模式。"""
         self._harness = harness
 
-    # ���� Git �뻷������ ����������������������������������������������������������������������������������������
+    # ── Git 与环境管理 ────────────────────────────────────────────
 
     def _ensure_git_repo(self, project_dir: Path) -> None:
-        """ȷ����ĿĿ¼��һ�� Git �ֿ⣨effc.md: ��ʼ git �ύ����"""
+        """确保项目目录是一个 Git 仓库（effc.md: 初始 git 提交）。"""
         project_dir.mkdir(parents=True, exist_ok=True)
         git_dir = project_dir / ".git"
         if git_dir.exists():
@@ -421,23 +421,23 @@ class WorkflowEngine:
                 cwd=str(project_dir),
                 capture_output=True, timeout=15,
             )
-            # ����Ĭ���û��������״� commit �����
+            # 配置默认用户（避免首次 commit 报错）
             subprocess.run(
                 ["git", "config", "user.email", "solopreneur@local"],
                 cwd=str(project_dir),
                 capture_output=True, timeout=5,
             )
             subprocess.run(
-                ["git", "config", "user.name", "solopreneur"],
+                ["git", "config", "user.name", "Solopreneur"],
                 cwd=str(project_dir),
                 capture_output=True, timeout=5,
             )
-            logger.info(f"Git �ֿ��ѳ�ʼ��: {project_dir}")
+            logger.info(f"Git 仓库已初始化: {project_dir}")
         except Exception as e:
-            logger.warning(f"Git init ʧ�ܣ���������������: {e}")
+            logger.warning(f"Git init 失败（不阻塞工作流）: {e}")
 
     def _git_commit(self, project_dir: Path, message: str) -> bool:
-        """����ĿĿ¼ִ�� git add + commit��effc.md: ÿ�� feature �ύ����"""
+        """在项目目录执行 git add + commit（effc.md: 每个 feature 提交）。"""
         try:
             subprocess.run(
                 ["git", "add", "-A"],
@@ -455,11 +455,11 @@ class WorkflowEngine:
             # nothing to commit is OK
             return True
         except Exception as e:
-            logger.warning(f"Git commit ʧ�ܣ���������: {e}")
+            logger.warning(f"Git commit 失败（不阻塞）: {e}")
             return False
 
     def _generate_init_sh(self, project_dir: Path) -> None:
-        """ΪĿ����Ŀ���� init.sh ����ű���effc.md: Initializer Agent ���ܣ���"""
+        """为目标项目生成 init.sh 启动脚本（effc.md: Initializer Agent 功能）。"""
         init_sh = project_dir / "init.sh"
         if init_sh.exists():
             return
@@ -500,7 +500,7 @@ echo "=== Init complete ==="
             init_sh.write_text(content, encoding="utf-8")
             logger.info(f"Generated init.sh: {init_sh}")
         except Exception as e:
-            logger.warning(f"���� init.sh ʧ��: {e}")
+            logger.warning(f"生成 init.sh 失败: {e}")
 
     def get_session(self, session_id: str) -> WorkflowSession | None:
         return self.sessions.get(session_id)
@@ -515,18 +515,18 @@ echo "=== Init complete ==="
         on_progress: Any = None,
     ) -> str:
         """
-        ִ��ָ���Ĺ�������
+        执行指定的工作流。
 
         Args:
-            workflow_name: ���������ơ�
-            description: ����������
-            project_name: ��Ŀ���ơ�
-            mode: "auto" (ȫ�Զ�) �� "step" (ִֻ�е�һ������ͣ)��
-            on_progress: ���Ȼص���
+            workflow_name: 工作流名称。
+            description: 任务描述。
+            project_name: 项目名称。
+            mode: "auto" (全自动) 或 "step" (只执行第一步后暂停)。
+            on_progress: 进度回调。
         """
         workflow = WORKFLOWS.get(workflow_name)
         if not workflow:
-            return f"����: δ֪������ '{workflow_name}'������: {', '.join(WORKFLOWS.keys())}"
+            return f"错误: 未知工作流 '{workflow_name}'。可用: {', '.join(WORKFLOWS.keys())}"
 
         session_id = str(uuid.uuid4())[:8]
         session = WorkflowSession(
@@ -542,15 +542,15 @@ echo "=== Init complete ==="
         if mode == "auto":
             return await self._run_all(session, on_progress)
         else:
-            # �ֲ�ģʽ��ִ�е�һ��
+            # 分步模式：执行第一步
             result = await self.next_step(session_id, on_progress=on_progress)
             return (
-                f"?? **�������Ự�ѿ��� (�ֲ�ģʽ)**\nID: `{session_id}`\n\n"
+                f"🚀 **工作流会话已开启 (分步模式)**\nID: `{session_id}`\n\n"
                 f"{session.status_summary()}\n\n"
                 f"--- \n"
-                f"### ���� 1 ����:\n{result}\n\n"
+                f"### 步骤 1 产出:\n{result}\n\n"
                 f"--- \n"
-                f"?? �����ʹ�� `workflow_control` ���������ƺ������裺������������ע�����ݻ������"
+                f"💡 你可以使用 `workflow_control` 工具来控制后续步骤：继续、跳过、注入内容或结束。"
             )
 
     async def next_step(
@@ -558,43 +558,43 @@ echo "=== Init complete ==="
         session_id: str,
         on_progress: Any = None,
     ) -> str:
-        """ִ�лỰ����һ�����衣"""
+        """执行会话的下一个步骤。"""
         session = self.get_session(session_id)
         if not session:
-            return f"����: δ�ҵ��Ự `{session_id}`"
+            return f"错误: 未找到会话 `{session_id}`"
         
         if session.is_complete:
-            return "����: �ù����������"
+            return "错误: 该工作流已完成"
 
         step_idx = session.current_step
         step = session.workflow.steps[step_idx]
         agent_def = self.agent_manager.get_agent(step.agent)
         
         if not agent_def:
-            error = f"����: Agent '{step.agent}' ������"
+            error = f"错误: Agent '{step.agent}' 不存在"
             session.step_outputs.append(error)
             session.step_statuses.append("error")
             session.current_step += 1
             return error
 
-        # ֪ͨ����
+        # 通知进度
         if on_progress:
             await on_progress(step_idx + 1, session.total_steps, step.agent, step.label, "running")
 
-        logger.info(f"�Ự {session_id} ���� {step_idx + 1}/{session.total_steps}: "
+        logger.info(f"会话 {session_id} 步骤 {step_idx + 1}/{session.total_steps}: "
                 f"{agent_def.emoji} {agent_def.title} - {step.label}")
 
-        # ������ĿĿ¼
+        # 计算项目目录
         project_dir = str(session.resolved_project_dir(self.workspace))
 
-        # ��������
+        # 构建任务
         task = step.task_template.format(
             description=session.description,
             prev_output=session.prev_output,
             project_dir=project_dir,
         )
 
-        # Harness ������ע�룺�� Subagent �˽���Ŀ�������
+        # Harness 上下文注入：让 Subagent 了解项目整体进度
         context_for_agent = session.prev_output
         harness_ctx = self._get_harness_context_for_subagent()
         if harness_ctx:
@@ -613,34 +613,34 @@ echo "=== Init complete ==="
             )
             status = "success"
 
-            # ���� Harness ���ȼ�¼��effc.md ģʽ������
+            # ── Harness 进度记录（effc.md 模式）──
             if self._harness:
                 try:
                     self._harness.record_progress(
-                        f"?? ���������� {step_idx + 1}/{session.total_steps} "
-                        f"[{step.label}] ({step.agent}) ���"
+                        f"📋 工作流步骤 {step_idx + 1}/{session.total_steps} "
+                        f"[{step.label}] ({step.agent}) 完成"
                     )
                 except Exception as he:
-                    logger.warning(f"Harness ��¼����ʧ��: {he}")
+                    logger.warning(f"Harness 记录进度失败: {he}")
 
         except Exception as e:
-            # �����������쳣��Ϣ������ str(e) Ϊ�գ�
+            # 保留完整的异常信息（避免 str(e) 为空）
             err_desc = f"{type(e).__name__}: {e}" if str(e) else repr(e)
-            result = f"ִ��ʧ��: {err_desc}"
+            result = f"执行失败: {err_desc}"
             status = "error"
-            logger.error(f"���� {step_idx + 1} ʧ��: {err_desc}")
+            logger.error(f"步骤 {step_idx + 1} 失败: {err_desc}")
 
-            # Harness ��¼ʧ�ܲ���
+            # Harness 记录失败步骤
             if self._harness:
                 try:
                     self._harness.record_progress(
-                        f"? ���������� {step_idx + 1}/{session.total_steps} "
-                        f"[{step.label}] ({step.agent}) ʧ��: {err_desc[:200]}"
+                        f"❌ 工作流步骤 {step_idx + 1}/{session.total_steps} "
+                        f"[{step.label}] ({step.agent}) 失败: {err_desc[:200]}"
                     )
                 except Exception:
                     pass
 
-            # ����Ƿ��в����ļ���д�루Developer �����ڱ���ǰ�Ѵ������ļ���
+            # 检测是否有部分文件已写入（Developer 可能在崩溃前已创建了文件）
             if project_dir:
                 import os
                 try:
@@ -651,13 +651,13 @@ echo "=== Init complete ==="
                                 rel = os.path.relpath(os.path.join(root, f), project_dir)
                                 written_files.append(rel)
                     if written_files:
-                        result += f"\n\n?? �����ļ���д�� ({len(written_files)} ��):\n"
+                        result += f"\n\nℹ️ 部分文件已写入 ({len(written_files)} 个):\n"
                         result += "\n".join(f"  - {f}" for f in sorted(written_files)[:20])
-                        logger.info(f"���� {step_idx + 1} ʧ�ܵ���д�� {len(written_files)} ���ļ�")
+                        logger.info(f"步骤 {step_idx + 1} 失败但已写入 {len(written_files)} 个文件")
                 except Exception:
-                    pass  # ��Ӱ��������
+                    pass  # 不影响主流程
 
-        # ����������������Ž������ݳ��� 100 �ַ��ű��棩
+        # 保存产出物（最低质量门禁：内容超过 100 字符才保存）
         min_save_length = 100
         if step.save_as and status == "success" and len(result) >= min_save_length:
             project_dir_path = session.resolved_project_dir(self.workspace)
@@ -667,8 +667,8 @@ echo "=== Init complete ==="
             output_path.write_text(result, encoding="utf-8")
         elif step.save_as and status == "success" and len(result) < min_save_length:
             logger.warning(
-                f"���� {step_idx + 1} �������ݹ��� ({len(result)} �ַ�)��"
-                f"�������� {step.save_as}"
+                f"步骤 {step_idx + 1} 产出内容过短 ({len(result)} 字符)，"
+                f"跳过保存 {step.save_as}"
             )
 
         session.step_outputs.append(result)
@@ -684,28 +684,28 @@ echo "=== Init complete ==="
         return result
 
     async def skip_step(self, session_id: str) -> str:
-        """������ǰ���衣"""
+        """跳过当前步骤。"""
         session = self.get_session(session_id)
-        if not session: return f"����: δ�ҵ��Ự `{session_id}`"
-        if session.is_complete: return "����: �����������"
+        if not session: return f"错误: 未找到会话 `{session_id}`"
+        if session.is_complete: return "错误: 工作流已完成"
 
         step_idx = session.current_step
         step = session.workflow.steps[step_idx]
         session.step_outputs.append("")
         session.step_statuses.append("skipped")
         session.current_step += 1
-        return f"���������� {step_idx + 1}: {step.label} ({step.agent})"
+        return f"已跳过步骤 {step_idx + 1}: {step.label} ({step.agent})"
 
     async def inject_step(self, session_id: str, content: str) -> str:
-        """�ڵ�ǰ����ע���ֶ����������Ϊ��һ�������롣"""
+        """在当前步骤注入手动结果，并作为下一步的输入。"""
         session = self.get_session(session_id)
-        if not session: return f"����: δ�ҵ��Ự `{session_id}`"
-        if session.is_complete: return "����: �����������"
+        if not session: return f"错误: 未找到会话 `{session_id}`"
+        if session.is_complete: return "错误: 工作流已完成"
 
         step_idx = session.current_step
         step = session.workflow.steps[step_idx]
         
-        # ����ò�����Ҫ�����ļ���Ҳ����ע�������
+        # 如果该步骤需要保存文件，也保存注入的内容
         if step.save_as:
             project_dir = session.resolved_project_dir(self.workspace)
             project_dir.mkdir(parents=True, exist_ok=True)
@@ -715,16 +715,16 @@ echo "=== Init complete ==="
         session.step_outputs.append(content)
         session.step_statuses.append("injected")
         session.current_step += 1
-        return f"�ɹ�Ϊ���� {step_idx + 1}: {step.label} ע���ֶ��ɹ����ݡ�"
+        return f"成功为步骤 {step_idx + 1}: {step.label} 注入手动成果内容。"
 
     async def _post_workflow_validation(self, session: WorkflowSession) -> None:
         """
-        ��������ɺ��������֤��effc.md ����ģʽ����
+        工作流完成后的质量验证（effc.md 增量模式）。
 
-        ��飺
-        1. ���һ����tester��������Ƿ����ʵ�ʲ���ִ��
-        2. �Ƿ����в��趼�ɹ�
-        3. ��¼���״̬�� Harness
+        检查：
+        1. 最后一步（tester）的输出是否包含实际测试执行
+        2. 是否所有步骤都成功
+        3. 记录完成状态到 Harness
         """
         if not self._harness:
             return
@@ -734,23 +734,23 @@ echo "=== Init complete ==="
             total_steps = session.total_steps
             all_success = success_count == total_steps
 
-            # ������һ����ͨ���� tester���Ƿ�ֻ����˽����û��ʵ��ִ��
+            # 检查最后一步（通常是 tester）是否只输出了建议而没有实际执行
             last_output = session.step_outputs[-1] if session.step_outputs else ""
             tester_warning = ""
             if session.workflow.steps and session.workflow.steps[-1].agent == "tester":
                 no_exec_indicators = [
-                    "�������ڱ���ִ��",
-                    "���ֶ�����",
-                    "����ִ����������",
+                    "建议您在本地执行",
+                    "请手动运行",
+                    "建议执行以下命令",
                     "recommend running",
                     "please run",
                 ]
                 if any(ind in last_output for ind in no_exec_indicators):
-                    tester_warning = " ?? Tester δʵ��ִ�в��ԣ�������˽���"
+                    tester_warning = " ⚠️ Tester 未实际执行测试，仅输出了建议"
 
             self._harness.record_progress(
-                f"?? ������ [{session.workflow.title}] ��� "
-                f"({success_count}/{total_steps} �ɹ�)"
+                f"🏁 工作流 [{session.workflow.title}] 完成 "
+                f"({success_count}/{total_steps} 成功)"
                 f"{tester_warning}"
             )
 
@@ -761,19 +761,19 @@ echo "=== Init complete ==="
                     if s == "error"
                 ]
                 self._harness.record_progress(
-                    f"?? ʧ�ܲ���: {', '.join(failed_steps)} �� ��Ҫ�޸�������"
+                    f"⚠️ 失败步骤: {', '.join(failed_steps)} — 需要修复后重试"
                 )
         except Exception as e:
-            logger.warning(f"����������֤ʧ��: {e}")
+            logger.warning(f"工作流后验证失败: {e}")
 
     def _get_next_feature_directive(self, session: WorkflowSession) -> str:
         """
-        ��������ѭ��ָ�
+        生成增量循环指令。
         
-        ��� Harness �л���δ��ɵ� feature������һ����ȷ��ָ��
-        �������� Agent �������� run_workflow ����������һ�� feature��
+        如果 Harness 中还有未完成的 feature，生成一段明确的指令
+        告诉主控 Agent 立即调用 run_workflow 继续开发下一个 feature。
         
-        ���� effc.md ����ģʽ�ĺ��ģ�һ�� feature ��ɺ��Զ��ν���һ����
+        这是 effc.md 增量模式的核心：一个 feature 完成后自动衔接下一个。
         """
         if not self._harness:
             return ""
@@ -785,8 +785,8 @@ echo "=== Init complete ==="
             remaining = pending + in_progress
             if not remaining:
                 return (
-                    "\n## ?? ���� Feature �����\n\n"
-                    "Harness ��û�и��������� Feature����Ŀ������ɡ�\n"
+                    "\n## 🎉 所有 Feature 已完成\n\n"
+                    "Harness 中没有更多待处理的 Feature。项目开发完成。\n"
                 )
 
             next_feat = remaining[0]
@@ -798,31 +798,31 @@ echo "=== Init complete ==="
             total = len(completed) + len(remaining)
 
             return (
-                f"\n## ? �������� - ��һ�� Feature\n\n"
-                f"**����**: {len(completed)}/{total} ����ɣ�"
-                f"ʣ�� {len(remaining)} ��\n\n"
-                f"**��һ�� Feature**:\n"
+                f"\n## ⚡ 增量开发 - 下一个 Feature\n\n"
+                f"**进度**: {len(completed)}/{total} 已完成，"
+                f"剩余 {len(remaining)} 个\n\n"
+                f"**下一个 Feature**:\n"
                 f"- ID: `{feat_id}`\n"
-                f"- ���ȼ�: {feat_priority}\n"
-                f"- ����: {feat_desc}\n\n"
-                f"**?? ���������ж�**: ���������� `run_workflow` ���ߣ�"
-                f"�� `{feat_desc}` ��Ϊ description ����������\n"
-                f"��Ҫͣ�����ܽ�����'��һ���ƻ�'��ֱ�ӵ��ù��߼�����\n"
+                f"- 优先级: {feat_priority}\n"
+                f"- 描述: {feat_desc}\n\n"
+                f"**⚠️ 必须立即行动**: 请立即调用 `run_workflow` 工具，"
+                f"以 `{feat_desc}` 作为 description 继续开发。\n"
+                f"不要停下来总结或输出'下一步计划'，直接调用工具继续。\n"
             )
         except Exception as e:
-            logger.warning(f"��ȡ��һ�� Feature ָ��ʧ��: {e}")
+            logger.warning(f"获取下一个 Feature 指令失败: {e}")
             return ""
 
     async def _run_all(self, session: WorkflowSession, on_progress: Any = None) -> str:
-        """�ڲ�ȫ�Զ����ܣ����� effc.md ������֤����"""
+        """内部全自动连跑（集成 effc.md 增量验证）。"""
         start_time = time.time()
 
-        # ���� effc.md ����׼�� ����
+        # ── effc.md 环境准备 ──
         project_dir = session.resolved_project_dir(self.workspace)
         self._ensure_git_repo(project_dir)
         self._generate_init_sh(project_dir)
 
-        # ���� effc.md ����ѭ�����Զ��ֽ������� Feature ���� ����
+        # ── effc.md 增量循环：自动分解需求并逐 Feature 开发 ──
         if self._harness:
             try:
                 incremental = await self._try_incremental(
@@ -832,63 +832,63 @@ echo "=== Init complete ==="
                     return incremental
             except Exception as e:
                 logger.warning(
-                    f"����ģʽ�쳣�����˵���ͨģʽ: {e}", exc_info=True
+                    f"增量模式异常，回退到普通模式: {e}", exc_info=True
                 )
 
-        # ���� ����Ϊ��ͨ���ι�����ģʽ������·��������
-        # Harness����¼��������ʼ
+        # ── 以下为普通单次工作流模式（回退路径）──
+        # Harness：记录工作流开始
         if self._harness:
             try:
                 self._harness.record_progress(
-                    f"?? ������ [{session.workflow.title}] ��ʼִ�� "
-                    f"({session.total_steps} ����)"
+                    f"🚀 工作流 [{session.workflow.title}] 开始执行 "
+                    f"({session.total_steps} 步骤)"
                 )
             except Exception as he:
-                logger.warning(f"Harness ��¼��ʼʧ��: {he}")
+                logger.warning(f"Harness 记录开始失败: {he}")
 
         while not session.is_complete:
             await self.next_step(session.session_id, on_progress=on_progress)
 
-        # ���� ��������ɺ��������֤��effc.md ����ģʽ������
+        # ── 工作流完成后的质量验证（effc.md 增量模式）──
         await self._post_workflow_validation(session)
 
         total_duration = time.time() - start_time
         success_count = sum(1 for s in session.step_statuses if s in ("success", "injected"))
         total_steps = session.total_steps
 
-        # ��������
+        # 构建报告
         workflow = session.workflow
         report_lines = [
-            f"# ?? ����������: {workflow.title} ({session.session_id})",
-            f"\n**����**: {session.description}",
-            f"**״̬**: ���",
-            f"**��ʱ**: {total_duration:.1f}s",
-            f"**�ɹ�����**: {success_count}/{total_steps}\n",
+            f"# 📦 工作流报告: {workflow.title} ({session.session_id})",
+            f"\n**任务**: {session.description}",
+            f"**状态**: 完成",
+            f"**耗时**: {total_duration:.1f}s",
+            f"**成功步骤**: {success_count}/{total_steps}\n",
             "---\n",
         ]
 
         for i, step in enumerate(workflow.steps):
             status = session.step_statuses[i] if i < len(session.step_statuses) else "pending"
-            status_emoji = {"success": "?", "error": "?", "skipped": "??", "injected": "??"}.get(status, "?")
-            report_lines.append(f"## {status_emoji} ���� {i + 1}: {step.label} ({step.agent})\n")
+            status_emoji = {"success": "✅", "error": "❌", "skipped": "⏭️", "injected": "📌"}.get(status, "⬜")
+            report_lines.append(f"## {status_emoji} 步骤 {i + 1}: {step.label} ({step.agent})\n")
             if i < len(session.step_outputs):
                 output = session.step_outputs[i]
-                # �ضϹ����Ĳ�������Կ��Ʊ����ܳ���
-                # ����������ͨ�� save_as ���浽�ļ�
+                # 截断过长的步骤输出以控制报告总长度
+                # 完整内容已通过 save_as 保存到文件
                 if len(output) > 3000:
-                    output = output[:3000] + "\n\n... [����ѽضϣ����������ѱ��浽��ĿĿ¼]"
+                    output = output[:3000] + "\n\n... [输出已截断，完整内容已保存到项目目录]"
                 report_lines.append(output)
             report_lines.append("\n---\n")
 
-        # ���� ����ѭ��ָ�effc.md ģʽ������
-        # ��� Harness �л���δ��ɵ� feature����ȷ���� Agent ����
+        # ── 增量循环指令（effc.md 模式）──
+        # 如果 Harness 中还有未完成的 feature，明确告诉 Agent 继续
         next_feature_directive = self._get_next_feature_directive(session)
         if next_feature_directive:
             report_lines.append(next_feature_directive)
 
         report = "\n".join(report_lines)
 
-        # ���汨��
+        # 保存报告
         if session.project_name or session.project_dir:
             project_dir = session.resolved_project_dir(self.workspace)
             project_dir.mkdir(parents=True, exist_ok=True)
@@ -897,7 +897,7 @@ echo "=== Init complete ==="
 
         return report
 
-    # ���� effc.md ����ѭ������ ����������������������������������������������������������������������������������
+    # ── effc.md 增量循环方法 ─────────────────────────────────────────
 
     async def _try_incremental(
         self,
@@ -906,27 +906,27 @@ echo "=== Init complete ==="
         start_time: float,
     ) -> str | None:
         """
-        ���� effc.md ����ģʽִ�С�
+        尝试 effc.md 增量模式执行。
 
-        1. ��� Harness û�� feature_list����ͨ�� LLM �ֽ�����
-        2. ��� Feature ִ�й����� pipeline
-        3. ÿ�� Feature ��ɺ�ͨ�� Harness �Ž�
+        1. 如果 Harness 没有 feature_list，先通过 LLM 分解需求
+        2. 逐个 Feature 执行工作流 pipeline
+        3. 每个 Feature 完成后通过 Harness 门禁
 
         Returns:
-            ���������ַ������������������ģʽ�򷵻� None�����˵���ͨģʽ����
+            增量报告字符串；如果不适用增量模式则返回 None（回退到普通模式）。
         """
         if not self._harness:
             return None
 
-        # ȷ�� harness �ѳ�ʼ����������ֽ⣩
+        # 确保 harness 已初始化（含需求分解）
         if not self._harness.is_initialized():
             try:
                 await self._decompose_requirements(session)
             except Exception as e:
-                logger.warning(f"����ֽ�ʧ�ܣ�������ͨģʽ: {e}")
+                logger.warning(f"需求分解失败，回退普通模式: {e}")
                 return None
 
-        # ����Ƿ��д������ Feature
+        # 检查是否有待处理的 Feature
         pending = self._harness.list_features(status="pending")
         in_progress = self._harness.list_features(status="in_progress")
         remaining = in_progress + pending
@@ -935,19 +935,19 @@ echo "=== Init complete ==="
             completed = self._harness.list_features(status="completed")
             if completed:
                 return (
-                    "# ?? ���� Feature �����\n\n"
-                    f"�� {len(completed)} �� Feature ȫ����ɡ���Ŀ������ϡ�"
+                    "# 🎉 所有 Feature 已完成\n\n"
+                    f"共 {len(completed)} 个 Feature 全部完成。项目开发完毕。"
                 )
-            return None  # û�� Feature ���ݣ����˵���ͨģʽ
+            return None  # 没有 Feature 数据，回退到普通模式
 
-        # ���� �Ự������ԣ�effc.md: getting up to speed�� ����
+        # ── 会话启动测试（effc.md: getting up to speed） ──
         try:
             startup_result = self._harness.run_session_startup_tests()
             if startup_result and not startup_result.get("all_passed", True):
                 failed = startup_result.get("failed", [])
                 self._harness.record_progress(
-                    f"?? �Ự�������ʧ�� ({len(failed)} ��)��"
-                    f"�����޸���������"
+                    f"⚠️ 会话启动测试失败 ({len(failed)} 项)，"
+                    f"优先修复现有问题"
                 )
                 logger.warning(
                     f"Session startup tests failed: {failed}"
@@ -955,19 +955,19 @@ echo "=== Init complete ==="
         except Exception as e:
             logger.debug(f"Session startup tests skipped: {e}")
 
-        # ���� ����ѭ������ ����
+        # ── 增量循环核心 ──
         MAX_FEATURES_PER_RUN = 10
-        MAX_TIME_PER_RUN = 3600  # 1 Сʱ��ȫ����
+        MAX_TIME_PER_RUN = 3600  # 1 小时安全限制
         all_reports: list[str] = []
         features_attempted = 0
 
         self._harness.record_progress(
-            f"?? ����ѭ����ʼ (������: {len(remaining)} �� Feature)"
+            f"🚀 增量循环开始 (待处理: {len(remaining)} 个 Feature)"
         )
 
         for _ in range(MAX_FEATURES_PER_RUN):
             if time.time() - start_time > MAX_TIME_PER_RUN:
-                self._harness.record_progress("? ����ѭ��ʱ�����Ƶ���")
+                self._harness.record_progress("⏰ 增量循环时间限制到达")
                 break
 
             current = self._harness.get_enforced_current_feature()
@@ -976,20 +976,20 @@ echo "=== Init complete ==="
 
             feat_id = current.get("id", f"FEAT-{features_attempted + 1:03d}")
             feat_desc = current.get("description", session.description)
-            logger.info(f"�T�T�T ����ѭ��: Feature {feat_id} - {feat_desc} �T�T�T")
+            logger.info(f"═══ 增量循环: Feature {feat_id} - {feat_desc} ═══")
 
-            # ��ʼ Feature��Harness �Ž���ڣ�
+            # 开始 Feature（Harness 门禁入口）
             if current.get("status") == "pending":
                 self._harness.start_feature(feat_id)
 
-            # ִ������������ pipeline
+            # 执行完整工作流 pipeline
             report = await self._run_single_feature(
                 session, feat_id, feat_desc, on_progress
             )
             all_reports.append(report)
             features_attempted += 1
 
-            # �Ž����ڣ�������� Feature
+            # 门禁出口：尝试完成 Feature
             try:
                 result = self._harness.complete_feature(
                     feat_id,
@@ -999,24 +999,24 @@ echo "=== Init complete ==="
                 )
                 if result.get("success"):
                     self._harness.record_progress(
-                        f"? Feature {feat_id} ���"
+                        f"✅ Feature {feat_id} 完成"
                     )
                 else:
                     self._harness.record_progress(
-                        f"?? Feature {feat_id} �Ž�δͨ��: "
+                        f"⚠️ Feature {feat_id} 门禁未通过: "
                         f"{result.get('message', '')[:200]}"
                     )
             except Exception as e:
-                logger.warning(f"Feature {feat_id} ��ɴ����쳣: {e}")
+                logger.warning(f"Feature {feat_id} 完成处理异常: {e}")
                 try:
                     self._harness.transition_feature_status(
                         feat_id, "completed",
-                        reason=f"��������ִ�У��Ž��쳣: {e}",
+                        reason=f"工作流已执行，门禁异常: {e}",
                     )
                 except Exception:
                     pass
 
-        # ���� ���ܱ��� ����
+        # ── 汇总报告 ──
         total_duration = time.time() - start_time
         all_features = self._harness.list_features()
         completed_total = len(
@@ -1028,32 +1028,32 @@ echo "=== Init complete ==="
         )
 
         report_lines = [
-            "# ?? ������������",
-            f"\n**����**: {session.description}",
-            f"**ģʽ**: effc.md ����ѭ��",
-            f"**����**: {completed_total}/{len(all_features)} Feature �����",
-            f"**����**: {features_attempted} �� Feature",
-            f"**ʣ��**: {remaining_count} ��",
-            f"**��ʱ**: {total_duration:.1f}s\n",
+            "# 📦 增量开发报告",
+            f"\n**任务**: {session.description}",
+            f"**模式**: effc.md 增量循环",
+            f"**进度**: {completed_total}/{len(all_features)} Feature 已完成",
+            f"**本轮**: {features_attempted} 个 Feature",
+            f"**剩余**: {remaining_count} 个",
+            f"**耗时**: {total_duration:.1f}s\n",
             "---\n",
         ]
 
         for i, fr in enumerate(all_reports):
             report_lines.append(f"## Feature {i + 1}\n")
             if len(fr) > 2000:
-                fr = fr[:2000] + "\n... [�ѽض�]"
+                fr = fr[:2000] + "\n... [已截断]"
             report_lines.append(fr)
             report_lines.append("\n---\n")
 
         if remaining_count > 0:
             report_lines.append(
-                f"\n## ?? ʣ�� {remaining_count} �� Feature\n\n"
-                "�ٴε��� `run_workflow` �����Զ�������\n"
+                f"\n## ⏭️ 剩余 {remaining_count} 个 Feature\n\n"
+                "再次调用 `run_workflow` 即可自动继续。\n"
             )
 
         report = "\n".join(report_lines)
 
-        # ���汨��
+        # 保存报告
         if session.project_name or session.project_dir:
             project_dir = session.resolved_project_dir(self.workspace)
             project_dir.mkdir(parents=True, exist_ok=True)
@@ -1070,7 +1070,7 @@ echo "=== Init complete ==="
         feat_desc: str,
         on_progress: Any = None,
     ) -> str:
-        """Ϊ���� Feature ���������Ĺ����� pipeline��"""
+        """为单个 Feature 运行完整的工作流 pipeline。"""
         session_id = f"{parent_session.session_id}-{feat_id}"
         feature_session = WorkflowSession(
             session_id=session_id,
@@ -1084,7 +1084,7 @@ echo "=== Init complete ==="
 
         if self._harness:
             self._harness.record_progress(
-                f"?? Feature [{feat_id}] ��������ʼ: {feat_desc}"
+                f"▶️ Feature [{feat_id}] 工作流开始: {feat_desc}"
             )
 
         while not feature_session.is_complete:
@@ -1092,35 +1092,35 @@ echo "=== Init complete ==="
 
         await self._post_workflow_validation(feature_session)
 
-        # effc.md: ÿ�� Feature ��ɺ��Զ� git commit
+        # effc.md: 每个 Feature 完成后自动 git commit
         project_dir = feature_session.resolved_project_dir(self.workspace)
         self._git_commit(
             project_dir,
             f"feat({feat_id}): {feat_desc[:60]}"
         )
 
-        # ���� Feature ����
+        # 构建 Feature 报告
         success_count = sum(
             1 for s in feature_session.step_statuses
             if s in ("success", "injected")
         )
         lines = [
             f"**Feature**: {feat_id} - {feat_desc}",
-            f"**���**: {success_count}/{feature_session.total_steps} ����ɹ�",
+            f"**结果**: {success_count}/{feature_session.total_steps} 步骤成功",
         ]
         for i, step in enumerate(feature_session.workflow.steps):
             if i < len(feature_session.step_statuses):
                 emoji = {
-                    "success": "?", "error": "?",
-                    "skipped": "??", "injected": "??",
-                }.get(feature_session.step_statuses[i], "?")
+                    "success": "✅", "error": "❌",
+                    "skipped": "⏭️", "injected": "📌",
+                }.get(feature_session.step_statuses[i], "❓")
                 lines.append(f"  {emoji} {step.label} ({step.agent})")
 
         if feature_session.step_outputs:
             last = feature_session.step_outputs[-1]
             if len(last) > 500:
                 last = last[:500] + "..."
-            lines.append(f"\n**��������ժҪ**:\n{last}")
+            lines.append(f"\n**最后步骤输出摘要**:\n{last}")
 
         return "\n".join(lines)
 
@@ -1128,12 +1128,12 @@ echo "=== Init complete ==="
         self, session: WorkflowSession
     ) -> None:
         """
-        ʹ�� LLM ������ֽ�Ϊ Feature �б��д�� Harness��
+        使用 LLM 将需求分解为 Feature 列表并写入 Harness。
 
-        ��Ӧ effc.md �е� Initializer Agent���ڵ�һ�� session
-        ���߲������ɿ����������� Feature �嵥��
+        对应 effc.md 中的 Initializer Agent：在第一个 session
+        将高层需求拆成可增量开发的 Feature 清单。
         """
-        logger.info(f"��ʼ�ֽ�����: {session.description[:100]}")
+        logger.info(f"开始分解需求: {session.description[:100]}")
 
         prompt = _DECOMPOSE_PROMPT.format(description=session.description)
         messages: list[dict[str, Any]] = [
@@ -1149,7 +1149,7 @@ echo "=== Init complete ==="
 
         if not features:
             logger.warning(
-                "����ֽ�δ���� Feature��ʹ��ԭʼ������Ϊ��һ Feature"
+                "需求分解未产生 Feature，使用原始描述作为单一 Feature"
             )
             features = [
                 {
@@ -1157,8 +1157,8 @@ echo "=== Init complete ==="
                     "category": "core",
                     "priority": "P0",
                     "description": session.description,
-                    "steps": ["ʵ����������"],
-                    "test_criteria": "���ܿ���������",
+                    "steps": ["实现完整功能"],
+                    "test_criteria": "功能可正常运行",
                     "status": "pending",
                 }
             ]
@@ -1166,7 +1166,7 @@ echo "=== Init complete ==="
         project_name = session.project_name or "project"
         self._harness.initialize(project_name, features)
 
-        # effc.md: ��ʼ git �ύ������ feature_list.json �� init.sh��
+        # effc.md: 初始 git 提交（包含 feature_list.json 和 init.sh）
         project_dir = session.resolved_project_dir(self.workspace)
         self._ensure_git_repo(project_dir)
         self._generate_init_sh(project_dir)
@@ -1175,14 +1175,14 @@ echo "=== Init complete ==="
             f"chore: initialize project with {len(features)} features"
         )
 
-        logger.info(f"�����ѷֽ�Ϊ {len(features)} �� Feature")
+        logger.info(f"需求已分解为 {len(features)} 个 Feature")
         self._harness.record_progress(
-            f"?? ����ֽ����: {len(features)} �� Feature"
+            f"📝 需求分解完成: {len(features)} 个 Feature"
         )
 
     def _parse_feature_json(self, content: str) -> list[dict]:
-        """�� LLM ��Ӧ�н��� Feature JSON��"""
-        # ֱ�ӽ���
+        """从 LLM 响应中解析 Feature JSON。"""
+        # 直接解析
         try:
             data = json.loads(content.strip())
             if isinstance(data, list):
@@ -1192,7 +1192,7 @@ echo "=== Init complete ==="
         except json.JSONDecodeError:
             pass
 
-        # ��ȡ JSON �����
+        # 提取 JSON 代码块
         for pattern in [
             r'```json\s*\n(.*?)```',
             r'```\s*\n(.*?)```',
@@ -1206,7 +1206,7 @@ echo "=== Init complete ==="
                 except (json.JSONDecodeError, IndexError):
                     continue
 
-        # ����ԣ���ȡ����� [...]
+        # 最后尝试：提取最外层 [...]
         match = re.search(r'\[.*\]', content, re.DOTALL)
         if match:
             try:
@@ -1216,11 +1216,11 @@ echo "=== Init complete ==="
             except json.JSONDecodeError:
                 pass
 
-        logger.warning(f"�޷����� Feature JSON: {content[:200]}")
+        logger.warning(f"无法解析 Feature JSON: {content[:200]}")
         return []
 
     def _normalize_features(self, features: list[dict]) -> list[dict]:
-        """��׼�� Feature ���ݣ�ȷ����Ҫ�ֶδ��ڡ�"""
+        """标准化 Feature 数据，确保必要字段存在。"""
         normalized = []
         for i, f in enumerate(features):
             feat = {
@@ -1238,10 +1238,10 @@ echo "=== Init complete ==="
 
     def _get_harness_context_for_subagent(self) -> str:
         """
-        Ϊ Subagent ���� Harness ������ժҪ��
+        为 Subagent 构建 Harness 上下文摘要。
 
-        ��ÿ�� Subagent �˽���Ŀ������Ⱥ͵�ǰ Feature ״̬��
-        �����ظ�ʵ������ɵĹ��ܡ�
+        让每个 Subagent 了解项目整体进度和当前 Feature 状态，
+        避免重复实现已完成的功能。
         """
         if not self._harness or not self._harness.is_initialized():
             return ""
@@ -1252,31 +1252,31 @@ echo "=== Init complete ==="
             current = ctx.get("current_feature")
 
             lines = [
-                "# ��Ŀ����������",
-                f"- �ܽ���: {stats.get('completed', 0)}/{stats.get('total', 0)} Feature �����",
-                f"- ������: {stats.get('in_progress', 0)}",
-                f"- ������: {stats.get('pending', 0)}",
+                "# 项目进度上下文",
+                f"- 总进度: {stats.get('completed', 0)}/{stats.get('total', 0)} Feature 已完成",
+                f"- 进行中: {stats.get('in_progress', 0)}",
+                f"- 待处理: {stats.get('pending', 0)}",
             ]
 
             if current:
                 lines.extend([
-                    "\n## ��ǰ Feature",
+                    "\n## 当前 Feature",
                     f"- ID: {current.get('id', '?')}",
-                    f"- ����: {current.get('description', '')}",
-                    f"- ���ձ�׼: {current.get('test_criteria', 'δ����')}",
+                    f"- 描述: {current.get('description', '')}",
+                    f"- 验收标准: {current.get('test_criteria', '未定义')}",
                 ])
 
             return "\n".join(lines)
         except Exception as e:
-            logger.debug(f"��ȡ Harness ������ʧ��: {e}")
+            logger.debug(f"获取 Harness 上下文失败: {e}")
             return ""
 
 
-# ���� ���������� ����������������������������������������������������������������������������������������������������������������
+# ── 工作流工具 ────────────────────────────────────────────────────────
 
 
 class RunWorkflowTool(Tool):
-    """ͨ�����ߵ���ִ��Ԥ����Ŀ�����������"""
+    """通过工具调用执行预定义的开发工作流。"""
 
     def __init__(self, engine: WorkflowEngine):
         self._engine = engine
@@ -1291,9 +1291,9 @@ class RunWorkflowTool(Tool):
             f"{w.title}({w.name})" for w in WORKFLOWS.values()
         )
         return (
-            f"���Ԥ����Ŀ�����ˮ�ߡ�֧��ȫ�Զ�ģʽ(auto)�ͷֲ�����ģʽ(step)��\n"
-            f"���ù�����: {flows}��\n"
-            f"�ֲ�ģʽ��������ÿ��֮����롢�޸Ĳ������ֶ�ί����������"
+            f"启动预定义的开发流水线。支持全自动模式(auto)和分步交互模式(step)。\n"
+            f"可用工作流: {flows}。\n"
+            f"分步模式允许你在每步之后介入、修改产出或手动委派其他任务。"
         )
 
     @property
@@ -1303,24 +1303,24 @@ class RunWorkflowTool(Tool):
             "properties": {
                 "workflow": {
                     "type": "string",
-                    "description": "����������",
+                    "description": "工作流名称",
                     "enum": list(WORKFLOWS.keys()),
                 },
                 "description": {
                     "type": "string",
-                    "description": "�����������ᴫ�ݸ��������е�ÿ��Agent",
+                    "description": "任务描述，会传递给工作流中的每个Agent",
                 },
                 "project_name": {
                     "type": "string",
-                    "description": "����ѡ����Ŀ���ƣ����ڱ��������",
+                    "description": "（可选）项目名称，用于保存产出物",
                 },
                 "project_dir": {
                     "type": "string",
-                    "description": "����ѡ����Ŀ����·�����ṩ������ʹ�ø�·�������������ļ���",
+                    "description": "（可选）项目绝对路径。提供后优先使用该路径保存与生成文件。",
                 },
                 "mode": {
                     "type": "string",
-                    "description": "ִ��ģʽ��'auto' (����ֱ�����) �� 'step' (ִ��һ������ͣ���ȴ�ָ��)",
+                    "description": "执行模式：'auto' (连跑直到完成) 或 'step' (执行一步后暂停并等待指令)",
                     "enum": ["auto", "step"],
                     "default": "auto",
                 },
@@ -1337,7 +1337,7 @@ class RunWorkflowTool(Tool):
         mode: str = "auto",
         **kwargs: Any,
     ) -> str:
-        """ִ�й�������"""
+        """执行工作流。"""
         return await self._engine.run(
             workflow_name=workflow,
             description=description,
@@ -1348,7 +1348,7 @@ class RunWorkflowTool(Tool):
 
 
 class WorkflowControlTool(Tool):
-    """���ڿ��Ƶ�ǰ�����еķֲ��������Ự��"""
+    """用于控制当前进行中的分步工作流会话。"""
 
     def __init__(self, engine: WorkflowEngine):
         self._engine = engine
@@ -1360,12 +1360,12 @@ class WorkflowControlTool(Tool):
     @property
     def description(self) -> str:
         return (
-            "���Ʒֲ�ִ�еĹ������Ự��֧��: \n"
-            "- next: ִ����һ��Ԥ������\n"
-            "- skip: ������ǰԤ������\n"
-            "- inject: ע���ֶ��ṩ��������Ϊ��ǰ����Ľ������������һ����\n"
-            "- status: �鿴�Ự����״̬\n"
-            "- abort: ǿ�ƽ����Ự"
+            "控制分步执行的工作流会话。支持: \n"
+            "- next: 执行下一个预定步骤\n"
+            "- skip: 跳过当前预定步骤\n"
+            "- inject: 注入手动提供的内容作为当前步骤的结果（将传给下一步）\n"
+            "- status: 查看会话进度状态\n"
+            "- abort: 强制结束会话"
         )
 
     @property
@@ -1375,16 +1375,16 @@ class WorkflowControlTool(Tool):
             "properties": {
                 "session_id": {
                     "type": "string",
-                    "description": "�������Ự ID (�� run_workflow ����л��)",
+                    "description": "工作流会话 ID (从 run_workflow 输出中获得)",
                 },
                 "command": {
                     "type": "string",
-                    "description": "����ָ��",
+                    "description": "控制指令",
                     "enum": ["next", "skip", "inject", "status", "abort"],
                 },
                 "content": {
                     "type": "string",
-                    "description": "ע������ݣ����� command='inject' ʱ��Ҫ��",
+                    "description": "注入的内容（仅当 command='inject' 时需要）",
                 },
             },
             "required": ["session_id", "command"],
@@ -1397,41 +1397,41 @@ class WorkflowControlTool(Tool):
         content: str = "",
         **kwargs: Any,
     ) -> str:
-        """ִ�п���ָ�"""
+        """执行控制指令。"""
         session = self._engine.get_session(session_id)
         if not session:
-            return f"����: δ�ҵ��Ự `{session_id}`"
+            return f"错误: 未找到会话 `{session_id}`"
 
         if command == "status":
             return session.status_summary()
 
         if command == "abort":
             session.finished = True
-            return f"? �Ự `{session_id}` ��ǿ����ֹ��"
+            return f"❌ 会话 `{session_id}` 已强制终止。"
 
         if command == "next":
             result = await self._engine.next_step(session_id)
             if session.is_complete:
-                return f"?? ������������� (���һ��)��\n\n{result}"
+                return f"🏁 工作流步骤完成 (最后一步)。\n\n{result}"
             return (
-                f"? ���� {session.current_step} ��ɡ�\n\n"
+                f"✅ 步骤 {session.current_step} 完成。\n\n"
                 f"{session.status_summary()}\n\n"
                 f"--- \n"
-                f"### �������:\n{result}"
+                f"### 步骤产出:\n{result}"
             )
 
         if command == "skip":
             msg = await self._engine.skip_step(session_id)
             if session.is_complete:
-                return f"?? ��������������������ɡ�\n\n{msg}"
-            return f"? {msg}\n\n{session.status_summary()}"
+                return f"🏁 步骤已跳过。工作流完成。\n\n{msg}"
+            return f"✅ {msg}\n\n{session.status_summary()}"
 
         if command == "inject":
             if not content:
-                return "����: ʹ�� 'inject' ָ��ʱ�����ṩ 'content' ������"
+                return "错误: 使用 'inject' 指令时必须提供 'content' 参数。"
             msg = await self._engine.inject_step(session_id, content)
             if session.is_complete:
-                return f"?? ������ע�롣��������ɡ�\n\n{msg}"
-            return f"? {msg}\n\n{session.status_summary()}"
+                return f"🏁 内容已注入。工作流完成。\n\n{msg}"
+            return f"✅ {msg}\n\n{session.status_summary()}"
 
-        return f"δָ֪��: {command}"
+        return f"未知指令: {command}"

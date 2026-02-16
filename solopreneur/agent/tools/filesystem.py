@@ -4,17 +4,13 @@ from pathlib import Path
 from typing import Any
 from loguru import logger
 
-from solopreneur.agent.core.tools.base import Tool
+from solopreneur.agent.tools.base import Tool
 
 
 def _validate_path(path: str, workspace: Path | None = None) -> tuple[Path, str | None]:
     """验证路径是否安全并在工作空间内。"""
     try:
-        raw = Path(path).expanduser()
-        if not raw.is_absolute() and workspace is not None:
-            resolved = (workspace / raw).resolve()
-        else:
-            resolved = raw.resolve()
+        resolved = Path(path).expanduser().resolve()
         
         # 如果指定了工作空间，检查路径是否在工作空间内
         if workspace:

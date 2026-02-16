@@ -21,7 +21,7 @@ class ProviderConfig(BaseModel):
 
 
 class ProvidersConfig(BaseModel):
-    """所�?Providers 配置"""
+    """所有 Providers 配置"""
     anthropic: ProviderConfig = Field(default_factory=ProviderConfig)
     openai: ProviderConfig = Field(default_factory=ProviderConfig)
     openrouter: ProviderConfig = Field(default_factory=ProviderConfig)
@@ -54,7 +54,7 @@ class TestConnectionResponse(BaseModel):
 
 @router.get("/providers")
 async def get_providers_config() -> ProvidersConfig:
-    """获取所�?Providers 配置"""
+    """获取所有 Providers 配置"""
     manager = get_component_manager()
     config = manager.get_config()
 
@@ -121,10 +121,12 @@ async def update_providers_config(config: ProvidersConfig):
 
     current_config.providers.copilot_priority = config.copilot_priority
 
-    # 保存到文�?    save_config(current_config)
+    # 保存到文件
+    save_config(current_config)
 
-    # 重置组件管理器以应用新配�?    manager.reset()
-    logger.info("Providers 配置已更�?)
+    # 重置组件管理器以应用新配置
+    manager.reset()
+    logger.info("Providers 配置已更新")
 
 
 @router.get("/agent-defaults")
@@ -152,11 +154,13 @@ async def update_agent_defaults(config: AgentDefaults):
     current_config.agents.defaults.temperature = config.temperature
     current_config.agents.defaults.review_mode = config.review_mode
 
-    # 保存到文�?    save_config(current_config)
+    # 保存到文件
+    save_config(current_config)
 
-    # 重置组件管理器以应用新配�?    manager.reset()
+    # 重置组件管理器以应用新配置
+    manager.reset()
     logger.info(
-        f"Agent 默认配置已更�? model={config.model}, max_tokens={config.max_tokens}, review_mode={config.review_mode}"
+        f"Agent 默认配置已更新: model={config.model}, max_tokens={config.max_tokens}, review_mode={config.review_mode}"
     )
 
 
@@ -173,7 +177,8 @@ async def test_provider_connection(request: TestConnectionRequest) -> TestConnec
         # 选择测试用的模型
         test_models = {
             "openai": "gpt-4o-mini",
-            "vllm": "dummy",  # vLLM 需要用户自己配置模�?            "zhipu": "glm-4",
+            "vllm": "dummy",  # vLLM 需要用户自己配置模型
+            "zhipu": "glm-4",
             "openrouter": "anthropic/claude-3.5-sonnet",
             "groq": "llama-3.1-8b-instant",
             "gemini": "gemini-1.5-flash",
@@ -194,11 +199,13 @@ async def test_provider_connection(request: TestConnectionRequest) -> TestConnec
 
         # 对于 vLLM，使用用户可能配置的模型
         if request.provider == "vllm" and request.config.api_base:
-            # vLLM 通常不需要真实的 api_key，但我们需要一个虚拟�?            # 不发送真实请求，只验�?API base 是否可达
+            # vLLM 通常不需要真实的 api_key，但我们需要一个虚拟值
+            # 不发送真实请求，只验证 API base 是否可达
             import httpx
             try:
                 async with httpx.AsyncClient(timeout=5.0) as client:
-                    # 尝试获取模型列表（OpenAI 兼容接口�?                    models_url = f"{request.config.api_base.rstrip('/')}/models"
+                    # 尝试获取模型列表（OpenAI 兼容接口）
+                    models_url = f"{request.config.api_base.rstrip('/')}/models"
                     response = await client.get(models_url)
                     if response.status_code < 500:
                         return TestConnectionResponse(success=True)
@@ -206,7 +213,8 @@ async def test_provider_connection(request: TestConnectionRequest) -> TestConnec
             except Exception as e:
                 return TestConnectionResponse(success=False, error=f"连接失败: {str(e)}")
 
-        # 其他 Provider 发送真实测试请�?        try:
+        # 其他 Provider 发送真实测试请求
+        try:
             await provider.chat(
                 messages=test_message,
                 max_tokens=10,
@@ -217,7 +225,7 @@ async def test_provider_connection(request: TestConnectionRequest) -> TestConnec
             if "authentication" in error_msg.lower() or "unauthorized" in error_msg.lower():
                 error_msg = "API Key 认证失败"
             elif "rate limit" in error_msg.lower():
-                error_msg = "速率限制或配额不�?
+                error_msg = "速率限制或配额不足"
             elif "timeout" in error_msg.lower():
                 error_msg = "请求超时"
             return TestConnectionResponse(success=False, error=error_msg)

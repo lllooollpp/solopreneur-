@@ -1,4 +1,4 @@
-﻿"""Metrics inspection tool for SQLite persistence dashboards."""
+"""Metrics inspection tool for SQLite persistence dashboards."""
 
 from __future__ import annotations
 

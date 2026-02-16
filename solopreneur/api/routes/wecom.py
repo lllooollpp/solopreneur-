@@ -16,7 +16,8 @@ from solopreneur.channels.wecom import (
 
 router = APIRouter()
 
-# 全局配置（实际从配置文件加载�?_wecom_config: Optional[WeComConfig] = None
+# 全局配置（实际从配置文件加载）
+_wecom_config: Optional[WeComConfig] = None
 _wecom_crypto: Optional[WeComCrypto] = None
 
 
@@ -25,7 +26,8 @@ def _ensure_config():
     global _wecom_config, _wecom_crypto
 
     if _wecom_config is None:
-        # 从配置文件加�?        try:
+        # 从配置文件加载
+        try:
             from solopreneur.core.dependencies import get_component_manager
             manager = get_component_manager()
             config = manager.get_config()
@@ -49,7 +51,7 @@ def _ensure_config():
 
 
 def init_wecom(config: WeComConfig):
-    """初始化企业微信配�?""
+    """初始化企业微信配置"""
     global _wecom_config, _wecom_crypto
     _wecom_config = config
     _wecom_crypto = WeComCrypto(
@@ -61,7 +63,7 @@ def init_wecom(config: WeComConfig):
 
 async def _process_message_async(message, chat_id: str, content: str) -> str:
     """
-    异步处理消息并返�?AI 回复
+    异步处理消息并返回 AI 回复
     
     使用 AgentLoop 处理消息
     """
@@ -112,16 +114,17 @@ async def _process_message_async(message, chat_id: str, content: str) -> str:
 
 async def _send_wecom_message(user_id: str, content: str):
     """
-    通过企业微信 API 主动发送消�?    
+    通过企业微信 API 主动发送消息
+    
     Args:
-        user_id: 接收�?UserID
+        user_id: 接收者 UserID
         content: 消息内容
     """
     try:
         import httpx
         
         if not _wecom_config:
-            logger.error("企业微信未配置，无法发送消�?)
+            logger.error("企业微信未配置，无法发送消息")
             return
         
         # 获取 access_token
@@ -137,7 +140,8 @@ async def _send_wecom_message(user_id: str, content: str):
             
             access_token = token_data["access_token"]
             
-            # 发送消�?            send_url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
+            # 发送消息
+            send_url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
             send_data = {
                 "touser": user_id,
                 "msgtype": "text",
@@ -152,12 +156,12 @@ async def _send_wecom_message(user_id: str, content: str):
             send_result = send_resp.json()
             
             if send_result.get("errcode", 0) == 0:
-                logger.info(f"消息发送成�? {user_id}")
+                logger.info(f"消息发送成功: {user_id}")
             else:
-                logger.error(f"消息发送失�? {send_result}")
+                logger.error(f"消息发送失败: {send_result}")
                 
     except Exception as e:
-        logger.error(f"发送企业微信消息失�? {e}")
+        logger.error(f"发送企业微信消息失败: {e}")
 
 
 @router.get("/wecom/callback")
@@ -170,33 +174,33 @@ async def wecom_verify(
     ),
     timestamp: str = Query(
         ..., 
-        description="时间�?,
+        description="时间戳",
         pattern=r"^\d+$",
         max_length=20
     ),
     nonce: str = Query(
         ..., 
-        description="随机字符�?,
+        description="随机字符串",
         pattern=r"^[a-zA-Z0-9]+$",
         max_length=200
     ),
     echostr: str = Query(
         ..., 
-        description="验证字符�?,
+        description="验证字符串",
         max_length=1000
     )
 ):
     """
     企业微信回调 URL 验证
     
-    企业微信首次配置回调地址时会发�?GET 请求进行验证
+    企业微信首次配置回调地址时会发送 GET 请求进行验证
     """
     logger.info(f"收到企业微信验证请求: timestamp={timestamp}, nonce={nonce}")
     
     _ensure_config()
     
     if not _wecom_crypto:
-        logger.error("企业微信未配�?)
+        logger.error("企业微信未配置")
         raise HTTPException(status_code=500, detail="WeChat Work not configured")
     
     try:
@@ -227,39 +231,40 @@ async def wecom_receive_message(
     ),
     timestamp: str = Query(
         ..., 
-        description="时间�?,
+        description="时间戳",
         pattern=r"^\d+$",
         max_length=20
     ),
     nonce: str = Query(
         ..., 
-        description="随机字符�?,
+        description="随机字符串",
         pattern=r"^[a-zA-Z0-9]+$",
         max_length=200
     ),
-    body: dict = Body(..., description="加密�?XML 消息")
+    body: dict = Body(..., description="加密的 XML 消息")
 ):
     """
     接收企业微信消息
     
-    企业微信�?POST 加密�?XML 消息到此端点
-    处理流程�?    1. 验证签名
+    企业微信会 POST 加密的 XML 消息到此端点
+    处理流程：
+    1. 验证签名
     2. 解密消息
-    3. 异步处理并返�?AI 回复
+    3. 异步处理并返回 AI 回复
     """
     logger.info(f"收到企业微信消息: timestamp={timestamp}, nonce={nonce}")
     
     _ensure_config()
     
     if not _wecom_crypto or not _wecom_config:
-        logger.error("企业微信未配�?)
+        logger.error("企业微信未配置")
         raise HTTPException(status_code=500, detail="WeChat Work not configured")
     
     try:
         # 提取加密消息
         encrypt_msg = body.get('Encrypt', '')
         if not encrypt_msg:
-            logger.error("消息体中未找�?Encrypt 字段")
+            logger.error("消息体中未找到 Encrypt 字段")
             raise HTTPException(status_code=400, detail="Missing Encrypt field")
         
         # 验证签名
@@ -275,11 +280,13 @@ async def wecom_receive_message(
         message = parse_wecom_message(xml_content)
         logger.info(f"解析消息成功: from={message.from_user}, type={message.msg_type}, content={message.content}")
         
-        # 只处理文本消�?        if message.msg_type != "text":
+        # 只处理文本消息
+        if message.msg_type != "text":
             # 非文本消息返回空响应
             return ""
         
-        # 在后台处理消息并发送回�?        async def process_and_reply():
+        # 在后台处理消息并发送回复
+        async def process_and_reply():
             try:
                 # 获取 AI 回复
                 ai_response = await _process_message_async(
@@ -288,17 +295,19 @@ async def wecom_receive_message(
                     content=message.content
                 )
                 
-                # 通过 API 发送回复（因为被动回复�?5 秒限制）
+                # 通过 API 发送回复（因为被动回复有 5 秒限制）
                 await _send_wecom_message(message.from_user, ai_response)
                 
             except Exception as e:
                 logger.error(f"后台处理消息失败: {e}")
-                # 发送错误提�?                await _send_wecom_message(message.from_user, "抱歉，处理您的消息时出现了问题�?)
+                # 发送错误提示
+                await _send_wecom_message(message.from_user, "抱歉，处理您的消息时出现了问题。")
         
         # 添加后台任务
         background_tasks.add_task(process_and_reply)
         
-        # 立即返回成功响应（告诉企业微信我们收到了�?        return "success"
+        # 立即返回成功响应（告诉企业微信我们收到了）
+        return "success"
         
     except Exception as e:
         logger.error(f"处理企业微信消息失败: {e}")
@@ -307,12 +316,14 @@ async def wecom_receive_message(
 
 @router.post("/wecom/send")
 async def wecom_send_message(
-    user_id: str = Query(..., description="接收�?UserID"),
+    user_id: str = Query(..., description="接收者 UserID"),
     content: str = Body(..., embed=True, description="消息内容")
 ):
     """
-    主动发送企业微信消�?    
-    用于测试或主动推送消�?    """
+    主动发送企业微信消息
+    
+    用于测试或主动推送消息
+    """
     _ensure_config()
     
     if not _wecom_config:
@@ -320,4 +331,4 @@ async def wecom_send_message(
     
     await _send_wecom_message(user_id, content)
     
-    return {"message": "发送成�?, "user_id": user_id}
+    return {"message": "发送成功", "user_id": user_id}

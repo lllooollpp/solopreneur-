@@ -1,5 +1,5 @@
 """
-技能配�?API 端点
+技能配置 API 端点
 管理技能的启用状态和变量
 """
 from fastapi import APIRouter, HTTPException, Path as PathParam
@@ -25,40 +25,40 @@ class SkillItem(BaseModel):
         """验证变量字典"""
         # 限制变量数量
         if len(v) > 50:
-            raise ValueError("技能变量数量不能超�?0�?)
+            raise ValueError("技能变量数量不能超过50个")
         
         # 验证每个键值对
         for key, value in v.items():
             if len(key) > 100:
-                raise ValueError(f"变量名过�? {key}")
+                raise ValueError(f"变量名过长: {key}")
             if len(value) > 10000:
-                raise ValueError(f"变量值过�? {key}")
+                raise ValueError(f"变量值过长: {key}")
         
         return v
 
 
 class SkillsResponse(BaseModel):
-    """技能列表响�?""
+    """技能列表响应"""
     skills: List[SkillItem]
 
 
 class SkillUpdateRequest(BaseModel):
-    """技能更新请�?""
+    """技能更新请求"""
     enabled: bool
 
 
 @router.get("/config/skills", response_model=SkillsResponse)
 async def get_skills():
     """
-    获取所有可用技能列�?
+    获取所有可用技能列表
     
     Returns:
         SkillsResponse: 包含所有技能的列表
     """
-    logger.info("获取技能列�?)
+    logger.info("获取技能列表")
     
     try:
-        # �?AgentManager 使用同一�?workspace 路径�?SkillsLoader，避免“页面与运行时路径不一致�?
+        # 与 AgentManager 使用同一份 workspace 路径与 SkillsLoader，避免“页面与运行时路径不一致”
         from solopreneur.core.dependencies import get_component_manager
         manager = get_component_manager()
         agent_manager = manager.get_agent_manager()
@@ -72,8 +72,8 @@ async def get_skills():
             source = skill.get("source", "builtin")
             source_mapped = "bundled" if source == "builtin" else source
 
-            # 优先�?frontmatter description 获取
-            description = "技�?
+            # 优先从 frontmatter description 获取
+            description = "技能"
             meta = skills_loader.get_skill_metadata(name) or {}
             if meta.get("description"):
                 description = meta["description"]
@@ -102,7 +102,7 @@ async def get_skills():
         return SkillsResponse(skills=skills)
         
     except Exception as e:
-        logger.error(f"获取技能列表失�? {e}")
+        logger.error(f"获取技能列表失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -112,30 +112,30 @@ async def update_skill(
         ...,
         pattern=r"^[a-zA-Z0-9\-_]+$",
         max_length=100,
-        description="技能名称，只允许字母数�?_"
+        description="技能名称，只允许字母数字-_"
     ),
     request: SkillUpdateRequest = None
 ):
     """
-    更新技能配�?
+    更新技能配置
     
     Args:
-        skill_name: 技能名�?
+        skill_name: 技能名称
         request: 更新请求
         
     Returns:
         更新结果
     """
-    logger.info(f"更新技能配�? {skill_name}, enabled={request.enabled}")
+    logger.info(f"更新技能配置: {skill_name}, enabled={request.enabled}")
     
     try:
         # 未来扩展: 持久化技能配置到配置文件
-        # 当前简单返回成功状�?
+        # 当前简单返回成功状态
         return {
             "success": True,
-            "message": f"技�?{skill_name} 已{'启用' if request.enabled else '禁用'}"
+            "message": f"技能 {skill_name} 已{'启用' if request.enabled else '禁用'}"
         }
         
     except Exception as e:
-        logger.error(f"更新技能配置失�? {e}")
+        logger.error(f"更新技能配置失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))

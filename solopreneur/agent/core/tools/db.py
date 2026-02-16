@@ -1,4 +1,4 @@
-﻿"""SQLite read-only inspection tool for persistence diagnostics."""
+"""SQLite read-only inspection tool for persistence diagnostics."""
 
 from __future__ import annotations
 

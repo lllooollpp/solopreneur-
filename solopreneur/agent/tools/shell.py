@@ -1,15 +1,12 @@
 """Shell execution tool."""
 
 import asyncio
-import functools
 import os
 import re
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
-from solopreneur.agent.core.tools.base import Tool
+from solopreneur.agent.tools.base import Tool
 
 
 class ExecTool(Tool):
@@ -52,22 +49,15 @@ class ExecTool(Tool):
         
         # 安全命令白名单（仅在whitelist_mode=True时使用）
         self.allow_patterns = allow_patterns or [
-            r"^(ls|dir|pwd|cd|type|Get-)\b",
-            r"^(cat|head|tail|less|more|wc|sort|uniq)\b",
-            r"^(grep|find|locate|which|where|rg|fd)\b",
-            r"^(echo|printf|Write-Output)\b",
+            r"^(ls|dir|pwd|cd)\b",
+            r"^(cat|head|tail|less|more)\b",
+            r"^(grep|find|locate|which)\b",
+            r"^(echo|printf)\b",
             r"^(git|hg|svn)\b",
-            r"^(python[0-9]?|pip[0-9]?|node|npm|npx|pnpm|yarn|bun)\b",
-            r"^(pytest|tox|coverage|mypy|ruff|flake8|black|isort)\b",
-            r"^(playwright|jest|vitest|mocha|cypress)\b",
-            r"^(go|cargo|rustc|java|javac|mvn|gradle|dotnet)\b",
-            r"^(docker|kubectl|make|cmake|terraform|helm)\b",
-            r"^(gcc|g\+\+|clang|rustup)\b",
-            r"^(curl|wget|ssh|scp)\b",
-            r"^(tar|zip|unzip|gzip)\b",
-            r"^(mkdir|touch|cp|mv|ln)\b",
-            r"^(env|set|export|printenv)\b",
-            r"^(sed|awk|cut|tr|xargs)\b",
+            r"^(python[0-9]?|pip[0-9]?|node|npm|npx)\b",
+            r"^(go|cargo|rustc|java|javac|mvn|gradle)\b",
+            r"^(docker|kubectl|make|cmake)\b",
+            r"^(gcc|g\+\+|clang)\b",
         ]
         
         self.restrict_to_workspace = restrict_to_workspace
@@ -104,62 +94,44 @@ class ExecTool(Tool):
             return guard_error
         
         try:
-            # 使用 subprocess.run 在线程池中执行，避免 Windows SelectorEventLoop
-            # 不支持 asyncio.create_subprocess_shell 的问题
-            # （uvicorn --reload 模式下使用 SelectorEventLoop）
-            loop = asyncio.get_running_loop()
-            result = await loop.run_in_executor(
-                None,
-                functools.partial(
-                    self._run_command_sync, command, cwd
-                ),
-            )
-            return result
-        except Exception as e:
-            return f"Error executing command: {str(e)}"
-
-    def _run_command_sync(self, command: str, cwd: str) -> str:
-        """在线程池中同步执行命令（兼容所有事件循环）。"""
-        try:
-            # 在 Windows 上确保子进程继承 PATH
-            env = os.environ.copy()
-            if sys.platform == "win32":
-                env.setdefault("PYTHONIOENCODING", "utf-8")
-
-            proc = subprocess.run(
+            process = await asyncio.create_subprocess_shell(
                 command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
                 cwd=cwd,
-                timeout=self.timeout,
-                env=env,
             )
-
+            
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=self.timeout
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                return f"Error: Command timed out after {self.timeout} seconds"
+            
             output_parts = []
-
-            if proc.stdout:
-                output_parts.append(proc.stdout.decode("utf-8", errors="replace"))
-
-            if proc.stderr:
-                stderr_text = proc.stderr.decode("utf-8", errors="replace")
+            
+            if stdout:
+                output_parts.append(stdout.decode("utf-8", errors="replace"))
+            
+            if stderr:
+                stderr_text = stderr.decode("utf-8", errors="replace")
                 if stderr_text.strip():
                     output_parts.append(f"STDERR:\n{stderr_text}")
-
-            if proc.returncode != 0:
-                output_parts.append(f"\nExit code: {proc.returncode}")
-
+            
+            if process.returncode != 0:
+                output_parts.append(f"\nExit code: {process.returncode}")
+            
             result = "\n".join(output_parts) if output_parts else "(no output)"
-
+            
             # Truncate very long output
             max_len = 10000
             if len(result) > max_len:
                 result = result[:max_len] + f"\n... (truncated, {len(result) - max_len} more chars)"
-
+            
             return result
-
-        except subprocess.TimeoutExpired:
-            return f"Error: Command timed out after {self.timeout} seconds"
+            
         except Exception as e:
             return f"Error executing command: {str(e)}"
 
@@ -173,10 +145,15 @@ class ExecTool(Tool):
             if re.search(pattern, lower):
                 return f"Error: Command blocked by safety guard (dangerous pattern detected: {pattern})"
 
-        # 2. 白名单模式检查（仅在 whitelist_mode=True 或用户显式传入 allow_patterns 时启用）
+        # 2. 白名单模式检查
         if self.whitelist_mode:
             if not any(re.search(p, lower) for p in self.allow_patterns):
                 return "Error: Command blocked by safety guard (not in allowlist). Enable only safe commands."
+
+        # 3. 允许模式检查（如果指定了非空allow_patterns且不是白名单模式）
+        if self.allow_patterns and not self.whitelist_mode:
+            if not any(re.search(p, lower) for p in self.allow_patterns):
+                return "Error: Command blocked by safety guard (not in allowlist)"
 
         # 4. 工作空间限制检查
         if self.restrict_to_workspace:

@@ -1,4 +1,4 @@
-﻿"""Repository and code search tools for software engineering workflows."""
+"""Repository and code search tools for software engineering workflows."""
 
 from __future__ import annotations
 
@@ -118,13 +118,13 @@ class SearchCodeTool(Tool):
 class GitInspectTool(Tool):
     """Read-only git inspection tool."""
 
-    # 类级别缓�?git 路径
+    # 类级别缓存 git 路径
     _git_path: str | None = None
 
     def __init__(self, workspace: Path, timeout: int = 30):
         self.workspace = workspace.resolve()
         self.timeout = timeout
-        # 查找 git 可执行文件路�?
+        # 查找 git 可执行文件路径
         if GitInspectTool._git_path is None:
             GitInspectTool._git_path = shutil.which("git")
 
@@ -233,16 +233,16 @@ class GitInspectTool(Tool):
 
 class GitCommandTool(Tool):
     """
-    Git 命令工具 - 支持常用�?git 写操作�?
+    Git 命令工具 - 支持常用的 git 写操作。
 
     提供 init、add、commit、push、pull 等常用操作，
-    自动处理 git 仓库初始化和常见错误�?
+    自动处理 git 仓库初始化和常见错误。
     """
 
     def __init__(self, workspace: Path, timeout: int = 60):
         self.workspace = workspace.resolve()
         self.timeout = timeout
-        # 使用 GitInspectTool �?git 路径缓存
+        # 使用 GitInspectTool 的 git 路径缓存
         if GitInspectTool._git_path is None:
             GitInspectTool._git_path = shutil.which("git")
 
@@ -320,7 +320,7 @@ Auto-handles: git config user.name/email if not set."""
         set_upstream: bool = False,
         **kwargs: Any,
     ) -> str:
-        # 检�?git 是否可用
+        # 检查 git 是否可用
         ok, _ = await self._run_git(["--version"])
         if not ok:
             return "Error: git command not found. Please install git first."
@@ -352,7 +352,7 @@ Auto-handles: git config user.name/email if not set."""
         return ok and "true" in result.lower()
 
     async def _init_repo(self) -> str:
-        """初始�?git 仓库"""
+        """初始化 git 仓库"""
         if await self._is_git_repo():
             return f"Git repository already exists at {self.workspace}"
 
@@ -374,10 +374,10 @@ Auto-handles: git config user.name/email if not set."""
         if ok_name and ok_email and name and email:
             return f"Git user already configured: {name} <{email}>"
 
-        # 使用默认�?
-        await self._run_git(["config", "user.name", "solopreneur"])
+        # 使用默认值
+        await self._run_git(["config", "user.name", "Solopreneur"])
         await self._run_git(["config", "user.email", "solopreneur@local"])
-        return "Git user configured: solopreneur <solopreneur@local>"
+        return "Git user configured: Solopreneur <solopreneur@local>"
 
     async def _add_files(self, files: list[str]) -> str:
         """添加文件到暂存区"""
@@ -402,7 +402,7 @@ Auto-handles: git config user.name/email if not set."""
         if not ok:
             return f"Error: git add failed: {result}"
 
-        # 显示暂存状�?
+        # 显示暂存状态
         ok, status = await self._run_git(["status", "--short"])
         staged = [line for line in status.split("\n") if line.strip() and line.strip()[0] in "MADRC"]
         return f"Files staged for commit ({len(staged)} files):\n{status}" if staged else "No changes to stage"
@@ -415,7 +415,7 @@ Auto-handles: git config user.name/email if not set."""
         if not message:
             return "Error: Commit message is required."
 
-        # 检查是否有暂存的更�?
+        # 检查是否有暂存的更改
         ok, status = await self._run_git(["status", "--short"])
         staged = [line for line in status.split("\n") if line.strip() and line.strip()[0] in "MADRC"]
         if not staged:
@@ -452,7 +452,7 @@ Auto-handles: git config user.name/email if not set."""
         return f"Pushed to origin/{target_branch}"
 
     async def _pull(self) -> str:
-        """从远程拉�?""
+        """从远程拉取"""
         if not await self._is_git_repo():
             return "Error: Not a git repository."
 
@@ -488,13 +488,13 @@ Auto-handles: git config user.name/email if not set."""
             return "Error: Not a git repository."
 
         if branch:
-            # 创建新分�?
+            # 创建新分支
             ok, result = await self._run_git(["branch", branch])
             if not ok:
                 return f"Error: git branch failed: {result}"
             return f"Branch '{branch}' created."
         else:
-            # 列出所有分�?
+            # 列出所有分支
             ok, result = await self._run_git(["branch", "-a"])
             if not ok:
                 return f"Error: git branch failed: {result}"

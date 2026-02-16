@@ -34,13 +34,13 @@ from solopreneur.providers.token_pool import TokenPool, TokenSlot, SlotState
 
 
 def _get_or_create_encryption_key() -> bytes:
-    """获取或创建加密密钥�?""
+    """获取或创建加密密钥。"""
     key_file = Path.home() / ".solopreneur" / ".token_key"
 
     if key_file.exists():
         return key_file.read_bytes()
     else:
-        # 生成新密�?
+        # 生成新密钥
         key = Fernet.generate_key()
         key_file.parent.mkdir(parents=True, exist_ok=True)
         key_file.write_bytes(key)
@@ -50,7 +50,7 @@ def _get_or_create_encryption_key() -> bytes:
 
 
 def _encrypt_token(token: str) -> str:
-    """加密token。如果crypto不可用，返回原文�?""
+    """加密token。如果crypto不可用，返回原文。"""
     if not CRYPTO_AVAILABLE:
         return token
 
@@ -61,7 +61,7 @@ def _encrypt_token(token: str) -> str:
 
 
 def _decrypt_token(encrypted_token: str) -> str:
-    """解密token。如果crypto不可用，返回原文�?""
+    """解密token。如果crypto不可用，返回原文。"""
     if not CRYPTO_AVAILABLE:
         return encrypted_token
 
@@ -86,7 +86,7 @@ class CopilotSession:
 
 @dataclass
 class DeviceFlowResponse:
-    """设备流启动响�?""
+    """设备流启动响应"""
 
     device_code: str
     user_code: str
@@ -99,7 +99,7 @@ class GitHubCopilotProvider(LLMProvider):
     """GitHub Copilot Provider 实现 - 使用 VS Code 官方 Client ID"""
 
     # VS Code GitHub Copilot 官方配置
-    # 使用 VS Code Copilot 扩展�?Client ID 来模拟官方客户端
+    # 使用 VS Code Copilot 扩展的 Client ID 来模拟官方客户端
     CLIENT_ID = "01ab8ac9400c4e429b23"  # VS Code Copilot 官方 Client ID
     DEVICE_AUTH_URL = "https://github.com/login/device/code"
     TOKEN_URL = "https://github.com/login/oauth/access_token"
@@ -115,9 +115,9 @@ class GitHubCopilotProvider(LLMProvider):
 
     def __init__(self, api_key: str | None = None, api_base: str | None = None, config=None, default_model: str | None = None):
         super().__init__(api_key=api_key or "", api_base=api_base)
-        # 保存配置的默认模�?
+        # 保存配置的默认模型
         self._default_model = default_model
-        # 模型列表缓存（避免频繁请�?GitHub API�?
+        # 模型列表缓存（避免频繁请求 GitHub API）
         self._models_cache: list[str] = []
         self._models_cache_time: datetime | None = None
         self._models_cache_ttl = timedelta(minutes=5)  # 缓存 5 分钟
@@ -130,19 +130,19 @@ class GitHubCopilotProvider(LLMProvider):
             },
         )
 
-        # ── Token Pool（多账号负载均衡�?──
+        # ── Token Pool（多账号负载均衡） ──
         self._pool = TokenPool(config=config)
 
         # 兼容旧单文件 token：自动迁移到 slot 1
         legacy_token_file = Path.home() / ".solopreneur" / ".copilot_token.json"
         self._pool.migrate_from_legacy(legacy_token_file)
 
-        # Token 持久化文件路径（保留用于兼容�?
+        # Token 持久化文件路径（保留用于兼容）
         self._token_file = legacy_token_file
 
     @property
     def pool(self) -> TokenPool:
-        """暴露 TokenPool 以供外部使用（CLI / API�?""
+        """暴露 TokenPool 以供外部使用（CLI / API）"""
         return self._pool
 
     @property
@@ -152,22 +152,22 @@ class GitHubCopilotProvider(LLMProvider):
 
     @session.setter
     def session(self, value: Optional[CopilotSession]):
-        """兼容旧代码：设置 session 时写�?slot 1"""
+        """兼容旧代码：设置 session 时写入 slot 1"""
         if value is not None:
             self._pool.add_slot(
                 slot_id=1,
                 github_access_token=value.github_access_token,
                 copilot_token=value.copilot_token,
                 expires_at=value.expires_at,
-                label="主账�?,
+                label="主账号",
             )
 
     async def __aenter__(self):
-        """异步上下文管理器入口�?""
+        """异步上下文管理器入口。"""
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """异步上下文管理器出口，确保资源清理�?""
+        """异步上下文管理器出口，确保资源清理。"""
         await self.close()
 
     # litellm 格式 -> Copilot API 格式 的模型名映射
@@ -185,7 +185,7 @@ class GitHubCopilotProvider(LLMProvider):
     }
 
     def _normalize_model_name(self, model: str) -> str:
-        """�?litellm 格式的模型名转换�?Copilot API 兼容名称�?
+        """将 litellm 格式的模型名转换为 Copilot API 兼容名称。
 
         Examples:
             'anthropic/claude-opus-4-5' -> 'claude-opus-4.5'
@@ -205,7 +205,7 @@ class GitHubCopilotProvider(LLMProvider):
 
     def get_default_model(self) -> str:
         """获取默认模型"""
-        # 优先使用配置的模型，否则使用硬编码默认�?
+        # 优先使用配置的模型，否则使用硬编码默认值
         if self._default_model:
             # 规范化模型名
             return self._normalize_model_name(self._default_model)
@@ -213,10 +213,10 @@ class GitHubCopilotProvider(LLMProvider):
 
     async def start_device_flow(self) -> DeviceFlowResponse:
         """
-        启动 OAuth 设备流认�?
+        启动 OAuth 设备流认证
 
         Returns:
-            DeviceFlowResponse: 包含 device_code、user_code 和验�?URL
+            DeviceFlowResponse: 包含 device_code、user_code 和验证 URL
         """
         logger.info("Starting GitHub Copilot device flow authentication")
         logger.debug(f"Device Auth URL: {self.DEVICE_AUTH_URL}")
@@ -262,7 +262,7 @@ class GitHubCopilotProvider(LLMProvider):
 
         Args:
             device_code: 设备代码
-            interval: 轮询间隔（秒�?
+            interval: 轮询间隔（秒）
 
         Returns:
             str: GitHub Access Token
@@ -363,7 +363,7 @@ class GitHubCopilotProvider(LLMProvider):
             logger.error(f"HTTP Error: {e.response.status_code}")
             logger.error(f"Response headers: {dict(e.response.headers)}")
 
-            # 记录详细的响应信息以便调�?
+            # 记录详细的响应信息以便调试
             try:
                 error_detail = e.response.json()
                 logger.error(f"Response body (JSON): {error_detail}")
@@ -409,11 +409,11 @@ class GitHubCopilotProvider(LLMProvider):
             CopilotSession: 会话信息
         """
         if not github_token:
-            # 启动设备�?
+            # 启动设备流
             device_flow = await self.start_device_flow()
 
-            logger.info(f"请访�? {device_flow.verification_uri}")
-            logger.info(f"并输入代�? {device_flow.user_code}")
+            logger.info(f"请访问: {device_flow.verification_uri}")
+            logger.info(f"并输入代码: {device_flow.user_code}")
 
             # 轮询等待授权
             github_token = await self.poll_for_token(device_flow.device_code, device_flow.interval)
@@ -429,7 +429,7 @@ class GitHubCopilotProvider(LLMProvider):
 
     async def refresh_token_if_needed(self):
         """如果 Token 即将过期或已过期，自动刷新（兼容旧接口）"""
-        # 使用池刷新逻辑，刷新所有过�?即将过期�?slot
+        # 使用池刷新逻辑，刷新所有过期/即将过期的 slot
         await self._refresh_expired_slots()
 
     async def _refresh_expired_slots(self):
@@ -438,7 +438,7 @@ class GitHubCopilotProvider(LLMProvider):
             if slot.state == SlotState.DEAD:
                 continue
             if slot.is_token_expired:
-                logger.info(f"[TokenPool] Slot {slot.slot_id} Token 过期，正在刷�?..")
+                logger.info(f"[TokenPool] Slot {slot.slot_id} Token 过期，正在刷新...")
                 try:
                     copilot_token, expires_at = await self.get_copilot_token(
                         slot.github_access_token
@@ -449,7 +449,7 @@ class GitHubCopilotProvider(LLMProvider):
                     self._pool.report_auth_error(slot.slot_id)
 
     async def refresh_slot_token(self, slot: TokenSlot):
-        """刷新单个 slot �?Copilot Token"""
+        """刷新单个 slot 的 Copilot Token"""
         try:
             copilot_token, expires_at = await self.get_copilot_token(slot.github_access_token)
             self._pool.update_copilot_token(slot.slot_id, copilot_token, expires_at)
@@ -468,7 +468,7 @@ class GitHubCopilotProvider(LLMProvider):
         Returns:
             list[str]: 可用模型列表
         """
-        # 检查缓存是否有�?
+        # 检查缓存是否有效
         if not force_refresh and self._models_cache and self._models_cache_time:
             if datetime.now() - self._models_cache_time < self._models_cache_ttl:
                 logger.debug(f"Using cached models: {self._models_cache}")
@@ -489,7 +489,7 @@ class GitHubCopilotProvider(LLMProvider):
                 "User-Agent": f"GithubCopilot/{self.COPILOT_VERSION}",
                 "Editor-Version": f"vscode/{self.VSCODE_VERSION}",
                 "Editor-Plugin-Version": f"copilot/{self.COPILOT_VERSION}",
-                "Copilot-Integration-Id": "vscode-chat",  # 关键头部�?
+                "Copilot-Integration-Id": "vscode-chat",  # 关键头部！
             }
 
             logger.debug(f"Fetching models from {models_url}")
@@ -501,7 +501,7 @@ class GitHubCopilotProvider(LLMProvider):
 
             # 解析模型列表 - API 返回格式: {"data": [{"id": "gpt-4o", ...}, ...]}
             if "data" in data and isinstance(data["data"], list):
-                # 只保留支�?/chat/completions 的聊天模�?
+                # 只保留支持 /chat/completions 的聊天模型
                 models = []
                 for m in data["data"]:
                     mid = m.get("id", "")
@@ -510,7 +510,7 @@ class GitHubCopilotProvider(LLMProvider):
                     # 跳过 embedding 模型
                     if cap_type == "embeddings":
                         continue
-                    # 如果�?supported_endpoints 字段，只保留支持 /chat/completions �?
+                    # 如果有 supported_endpoints 字段，只保留支持 /chat/completions 的
                     if endpoints and "/chat/completions" not in endpoints:
                         continue
                     models.append(mid)
@@ -521,7 +521,7 @@ class GitHubCopilotProvider(LLMProvider):
                 return models
             else:
                 logger.warning(f"Unexpected API response format: {data}")
-                # 如果 API 格式不同，返回默认列�?
+                # 如果 API 格式不同，返回默认列表
                 default_models = ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
                 self._models_cache = default_models
                 self._models_cache_time = datetime.now()
@@ -529,7 +529,7 @@ class GitHubCopilotProvider(LLMProvider):
 
         except Exception as e:
             logger.error(f"Failed to fetch models from API: {e}")
-            # 如果获取失败但有缓存，返回缓�?
+            # 如果获取失败但有缓存，返回缓存
             if self._models_cache:
                 logger.info(f"Using cached models due to API error: {self._models_cache}")
                 return self._models_cache
@@ -538,7 +538,7 @@ class GitHubCopilotProvider(LLMProvider):
             return default_models
 
     def _build_headers(self, copilot_token: str) -> dict:
-        """构建 Copilot API 请求�?""
+        """构建 Copilot API 请求头"""
         return {
             "Authorization": f"Bearer {copilot_token}",
             "Content-Type": "application/json",
@@ -559,7 +559,7 @@ class GitHubCopilotProvider(LLMProvider):
         stream: bool = False,
     ) -> AsyncIterator[str] | LLMResponse:
         """
-        调用 Copilot Chat API（带 Token 池负载均衡与 429 自动重试�?
+        调用 Copilot Chat API（带 Token 池负载均衡与 429 自动重试）
 
         Args:
             messages: 消息历史
@@ -570,7 +570,7 @@ class GitHubCopilotProvider(LLMProvider):
             stream: 是否流式输出
 
         Returns:
-            流式输出时返�?AsyncIterator[str]，否则返�?LLMResponse
+            流式输出时返回 AsyncIterator[str]，否则返回 LLMResponse
         """
         # 刷新过期 Token
         await self._refresh_expired_slots()
@@ -578,7 +578,7 @@ class GitHubCopilotProvider(LLMProvider):
         original_model = model or self.get_default_model()
         normalized_model = self._normalize_model_name(original_model)
 
-        logger.info(f"[GitHubCopilot] 原始模型: {original_model} �?规范化后: {normalized_model}")
+        logger.info(f"[GitHubCopilot] 原始模型: {original_model} → 规范化后: {normalized_model}")
 
         payload = {
             "messages": messages,
@@ -599,10 +599,10 @@ class GitHubCopilotProvider(LLMProvider):
         # ── 池调度循环：自动切换 slot 重试 ──
         last_error = None
         for attempt in range(self.MAX_POOL_RETRIES):
-            # 从池中获取一个可�?slot
+            # 从池中获取一个可用 slot
             slot = await self._pool.acquire()
 
-            # 如果 slot �?copilot token 过期，先刷新
+            # 如果 slot 的 copilot token 过期，先刷新
             if slot.is_token_expired:
                 await self.refresh_slot_token(slot)
 
@@ -619,14 +619,14 @@ class GitHubCopilotProvider(LLMProvider):
                 logger.debug(f"Chat response status: {response.status_code} (Slot {slot.slot_id})")
 
                 if response.status_code == 429:
-                    # 触发熔断，切换到下一�?slot 重试
+                    # 触发熔断，切换到下一个 slot 重试
                     retry_after = None
                     try:
                         retry_after = int(response.headers.get("retry-after", 0))
                     except (ValueError, TypeError):
                         pass
 
-                    # 打印完整的错误响应以便诊�?
+                    # 打印完整的错误响应以便诊断
                     response_text = response.text or 'N/A'
                     logger.error(
                         f"[Pool] ══════════════════════════════════════"
@@ -646,12 +646,12 @@ class GitHubCopilotProvider(LLMProvider):
 
                     self._pool.report_rate_limit(slot.slot_id, retry_after)
                     last_error = LLMRateLimitError(
-                        f"Slot {slot.slot_id} 触发 429，正在切�?..",
+                        f"Slot {slot.slot_id} 触发 429，正在切换...",
                         retry_after=retry_after,
                         provider="GitHubCopilotProvider",
                     )
                     logger.warning(
-                        f"[Pool] Slot {slot.slot_id} �?429, 第{attempt + 1}次重�? "
+                        f"[Pool] Slot {slot.slot_id} → 429, 第{attempt + 1}次重试, "
                         f"剩余可用: {self._pool.active_count}/{self._pool.size}"
                     )
                     continue
@@ -677,7 +677,7 @@ class GitHubCopilotProvider(LLMProvider):
                 except Exception:
                     logger.error(f"API error detail (TEXT): {e.response.text}")
                 last_error = e
-                # �?429 错误不重�?
+                # 非 429 错误不重试
                 raise
 
         # 所有重试耗尽
@@ -687,7 +687,7 @@ class GitHubCopilotProvider(LLMProvider):
         """解析 API 响应"""
         if "choices" not in data or not data["choices"]:
             raise LLMInvalidResponseError(
-                "API响应缺少choices字段或为�?, provider="GitHubCopilotProvider"
+                "API响应缺少choices字段或为空", provider="GitHubCopilotProvider"
             )
 
         choice = data["choices"][0]
@@ -765,7 +765,7 @@ class GitHubCopilotProvider(LLMProvider):
         max_tokens: int = 4096,
     ) -> LLMResponse:
         """
-        流式调用 Copilot Chat API（带 Token 池负载均衡与 429 自动重试�?
+        流式调用 Copilot Chat API（带 Token 池负载均衡与 429 自动重试）
 
         Args:
             messages: 消息历史
@@ -776,7 +776,7 @@ class GitHubCopilotProvider(LLMProvider):
             max_tokens: 最大令牌数
 
         Returns:
-            LLMResponse 包含完整内容�?�?tool calls
+            LLMResponse 包含完整内容和/或 tool calls
         """
         await self._refresh_expired_slots()
 
@@ -813,7 +813,7 @@ class GitHubCopilotProvider(LLMProvider):
             async with self._http_client.stream(
                 "POST", self.COPILOT_CHAT_URL, headers=headers, json=payload
             ) as response:
-                # 检�?429
+                # 检查 429
                 if response.status_code == 429:
                     retry_after = None
                     try:
@@ -822,12 +822,12 @@ class GitHubCopilotProvider(LLMProvider):
                         pass
                     self._pool.report_rate_limit(slot.slot_id, retry_after)
                     last_error = LLMRateLimitError(
-                        f"Slot {slot.slot_id} 触发 429 (stream)，正在切�?..",
+                        f"Slot {slot.slot_id} 触发 429 (stream)，正在切换...",
                         retry_after=retry_after,
                         provider="GitHubCopilotProvider",
                     )
                     logger.warning(
-                        f"[Pool] Slot {slot.slot_id} �?429 (stream), 第{attempt + 1}次重�? "
+                        f"[Pool] Slot {slot.slot_id} → 429 (stream), 第{attempt + 1}次重试, "
                         f"剩余可用: {self._pool.active_count}/{self._pool.size}"
                     )
                     got_429 = True
@@ -840,7 +840,7 @@ class GitHubCopilotProvider(LLMProvider):
                 if got_429:
                     continue
 
-                # 检查其他错�?
+                # 检查其他错误
                 if response.status_code in (401, 403):
                     self._pool.report_auth_error(slot.slot_id)
                     try:
@@ -907,7 +907,7 @@ class GitHubCopilotProvider(LLMProvider):
                                 if "arguments" in fn:
                                     tool_calls_data[idx]["arguments"] += fn["arguments"]
 
-            # 如果�?429 重试，继续循环（got_429 已在上面 continue�?
+            # 如果是 429 重试，继续循环（got_429 已在上面 continue）
             if got_429:
                 continue
 
@@ -934,10 +934,10 @@ class GitHubCopilotProvider(LLMProvider):
             )
 
         # 所有重试耗尽
-        raise last_error or RuntimeError("[TokenPool] 所�?stream 重试均失�?)
+        raise last_error or RuntimeError("[TokenPool] 所有 stream 重试均失败")
 
     def _save_session_to_file(self):
-        """兼容旧接口：保存当前 session 到池�?slot 1"""
+        """兼容旧接口：保存当前 session 到池的 slot 1"""
         sess = self.session
         if not sess:
             return
@@ -947,20 +947,20 @@ class GitHubCopilotProvider(LLMProvider):
             github_access_token=sess.github_access_token,
             copilot_token=sess.copilot_token,
             expires_at=sess.expires_at,
-            label="主账�?,
+            label="主账号",
         )
         logger.info("Session saved via TokenPool (slot 1)")
 
     def _load_session_from_file(self):
-        """兼容旧接口：池在 __init__ 中已自动加载，此处为空操�?""
-        pass  # TokenPool.__init__ 已自动加载所�?slot
+        """兼容旧接口：池在 __init__ 中已自动加载，此处为空操作"""
+        pass  # TokenPool.__init__ 已自动加载所有 slot
 
     def _clear_session_file(self):
         """兼容旧接口：清除 slot 1"""
         self._pool.remove_slot(1)
 
     async def close(self):
-        """关闭 HTTP 客户�?""
+        """关闭 HTTP 客户端"""
         if self._http_client and not self._http_client.is_closed:
             await self._http_client.aclose()
             logger.debug("GitHub Copilot HTTP client closed")

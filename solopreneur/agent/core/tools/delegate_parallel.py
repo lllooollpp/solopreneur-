@@ -1,5 +1,5 @@
 """
-Delegate Parallel 工具 - 并行委派多个 Agent 任务�?
+Delegate Parallel 工具 - 并行委派多个 Agent 任务。
 """
 
 from typing import Any, TYPE_CHECKING
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class DelegateParallelTool(Tool):
-    """将多个任务并行委派给不同 Agent，并聚合返回结果�?""
+    """将多个任务并行委派给不同 Agent，并聚合返回结果。"""
 
     def __init__(
         self,
@@ -29,8 +29,8 @@ class DelegateParallelTool(Tool):
     @property
     def description(self) -> str:
         return (
-            "并行委派多个独立任务给不�?Agent�?
-            "适合低耦合任务（如前后端脚手架、文档、测试样例）并行加速�?
+            "并行委派多个独立任务给不同 Agent。"
+            "适合低耦合任务（如前后端脚手架、文档、测试样例）并行加速。"
         )
 
     @property
@@ -52,7 +52,7 @@ class DelegateParallelTool(Tool):
                             },
                             "task": {
                                 "type": "string",
-                                "description": "委派给该 Agent 的任�?,
+                                "description": "委派给该 Agent 的任务",
                             },
                             "context": {
                                 "type": "string",
@@ -60,7 +60,7 @@ class DelegateParallelTool(Tool):
                             },
                             "project_dir": {
                                 "type": "string",
-                                "description": "可选项目目�?,
+                                "description": "可选项目目录",
                             },
                         },
                         "required": ["agent", "task"],
@@ -68,7 +68,7 @@ class DelegateParallelTool(Tool):
                 },
                 "max_parallel": {
                     "type": "integer",
-                    "description": "最大并发数（默�?3�?,
+                    "description": "最大并发数（默认 3）",
                     "minimum": 1,
                     "maximum": 8,
                 },
@@ -95,7 +95,7 @@ class DelegateParallelTool(Tool):
         fail_count = len(results) - ok_count
 
         lines = [
-            f"并行委派完成：成�?{ok_count} / 失败 {fail_count}",
+            f"并行委派完成：成功 {ok_count} / 失败 {fail_count}",
             "",
         ]
 
@@ -103,10 +103,10 @@ class DelegateParallelTool(Tool):
             agent = r.get("agent", "unknown")
             title = r.get("title", agent)
             if r.get("ok"):
-                lines.append(f"## [{idx}] �?{title} ({agent})")
+                lines.append(f"## [{idx}] ✅ {title} ({agent})")
                 lines.append(r.get("result", ""))
             else:
-                lines.append(f"## [{idx}] �?{title} ({agent})")
+                lines.append(f"## [{idx}] ❌ {title} ({agent})")
                 lines.append(f"错误: {r.get('error', 'unknown error')}")
             lines.append("")
 

@@ -1,6 +1,6 @@
-﻿"""
+"""
 聊天 API 端点
-处理用户�?Agent 的对�?
+处理用户与 Agent 的对话
 """
 from loguru import logger
 from typing import Optional
@@ -35,7 +35,7 @@ class ChatRequest(BaseModel):
         default=0.7,
         ge=0.0,
         le=2.0,
-        description="温度参数，范�?.0-2.0"
+        description="温度参数，范围0.0-2.0"
     )
     max_tokens: Optional[int] = Field(
         default=4096,
@@ -57,7 +57,7 @@ class ChatRequest(BaseModel):
     )
     use_tools: Optional[bool] = Field(
         default=False,
-        description="是否启用工具调用（AgentLoop 模式�?
+        description="是否启用工具调用（AgentLoop 模式）"
     )
     max_history: Optional[int] = Field(
         default=20,
@@ -67,7 +67,7 @@ class ChatRequest(BaseModel):
     )
     clear_history: Optional[bool] = Field(
         default=False,
-        description="是否清空会话历史后开始对�?
+        description="是否清空会话历史后开始对话"
     )
 
     @field_validator('content')
@@ -79,9 +79,9 @@ class ChatRequest(BaseModel):
         if not v:
             raise ValueError("消息内容不能为空")
 
-        # 检查是否包含过多重复字符（防止垃圾内容�?
+        # 检查是否包含过多重复字符（防止垃圾内容）
         if len(set(v)) < 3 and len(v) > 10:
-            raise ValueError("消息内容无效：包含过多重复字�?)
+            raise ValueError("消息内容无效：包含过多重复字符")
 
         return v
 
@@ -92,8 +92,8 @@ class ChatResponse(BaseModel):
     session_id: str
 
 
-# 默认系统提示�?
-DEFAULT_SYSTEM_PROMPT = "你是 solopreneur，一个友好、智能的 AI 助手。你可以帮助用户解答问题、编写代码、分析问题等。请用中文回复�?
+# 默认系统提示词
+DEFAULT_SYSTEM_PROMPT = "你是 Solopreneur，一个友好、智能的 AI 助手。你可以帮助用户解答问题、编写代码、分析问题等。请用中文回复。"
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -102,10 +102,10 @@ async def send_message(request: ChatRequest):
     发送消息给 Agent
 
     Args:
-        request: 包含消息内容的请�?
+        request: 包含消息内容的请求
 
     Returns:
-        ChatResponse: Agent 的回�?
+        ChatResponse: Agent 的回复
     """
     logger.info(f"Received chat message: {request.content[:50]}... (session: {request.session_id})")
 
@@ -115,22 +115,22 @@ async def send_message(request: ChatRequest):
         manager = get_component_manager()
         provider = manager.get_llm_provider()
 
-        # 检�?Provider 是否可用
+        # 检查 Provider 是否可用
         if provider is None:
             logger.warning("No LLM provider configured, returning config prompt")
             return ChatResponse(
-                response="⚠️ 请先在「配置」页面配�?LLM Provider 后再使用聊天功能。\n\n"
+                response="⚠️ 请先在「配置」页面配置 LLM Provider 后再使用聊天功能。\n\n"
                          "1. 点击左侧菜单「配置」\n"
-                         "2. 在「LLM Providers」区域选择并配置一�?Provider\n"
+                         "2. 在「LLM Providers」区域选择并配置一个 Provider\n"
                          "   - GitHub Copilot（账号池管理页面登录）\n"
                          "   - 本地 OpenAI 标准接口（vLLM, Ollama 等）\n"
                          "   - 火山引擎\n"
                          "   - 其他 Provider（OpenAI, Anthropic 等）\n"
-                         "3. 点击「保存配置�?,
+                         "3. 点击「保存配置」",
                 session_id=request.session_id
             )
 
-        # 获取或创建会�?
+        # 获取或创建会话
         session_cache = get_session_cache()
         session = session_cache.get_or_create(
             session_id=request.session_id,
@@ -156,7 +156,7 @@ async def send_message(request: ChatRequest):
         except Exception as api_error:
             logger.error(f"LLM API error: {api_error}")
 
-            # 输出可读的消息内容（用于调试编码问题�?
+            # 输出可读的消息内容（用于调试编码问题）
             for i, msg in enumerate(session.to_messages()):
                 logger.error(f"Message {i} ({msg['role']}): {repr(msg['content'][:100])}...")
 
@@ -164,25 +164,25 @@ async def send_message(request: ChatRequest):
 
         # 提取响应内容（统一处理不同 Provider 的返回格式）
         if hasattr(result, 'content'):
-            # LiteLLM 和其他使�?LLMResponse �?Provider
-            response_text = result.content or "抱歉，我无法生成回复�?
+            # LiteLLM 和其他使用 LLMResponse 的 Provider
+            response_text = result.content or "抱歉，我无法生成回复。"
         elif isinstance(result, dict):
             # 旧的 Copilot 返回格式（兼容）
             choices = result.get("choices", [])
             if choices:
                 response_text = choices[0].get("message", {}).get("content", "")
             else:
-                response_text = "抱歉，我无法生成回复�?
+                response_text = "抱歉，我无法生成回复。"
         elif isinstance(result, str):
-            # 直接返回字符�?
+            # 直接返回字符串
             response_text = result
         else:
-            response_text = "抱歉，响应格式异常�?
+            response_text = "抱歉，响应格式异常。"
 
-        # 保存助手回复到历�?
+        # 保存助手回复到历史
         session.add_message("assistant", response_text)
 
-        # 限制历史长度（保留最�?20 条消息）
+        # 限制历史长度（保留最近 20 条消息）
         session.truncate(20)
 
         logger.info(f"Chat response generated successfully")
@@ -208,12 +208,12 @@ async def clear_chat_history(session_id: Optional[str] = "default"):
             logger.info(f"Chat history cleared for session: {session_id}")
             return {"status": "ok", message: f"会话 {session_id} 的对话历史已清空"}
         else:
-            return {"status": "ok", message: f"会话 {session_id} 不存�?}
+            return {"status": "ok", message: f"会话 {session_id} 不存在"}
 
 
 @router.get("/chat/sessions")
 async def list_sessions():
-    """列出所有会�?""
+    """列出所有会话"""
     session_cache = get_session_cache()
     sessions = [
         {

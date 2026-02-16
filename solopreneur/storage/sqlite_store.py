@@ -1,4 +1,4 @@
-﻿"""SQLite storage backend for session and project persistence."""
+"""SQLite storage backend for session and project persistence."""
 
 from __future__ import annotations
 
@@ -123,11 +123,11 @@ class SQLiteStore:
                 """
             )
 
-            # 兼容迁移：旧版本 projects 表没�?env_vars_json 字段
+            # 兼容迁移：旧版本 projects 表没有 env_vars_json 字段
             self._ensure_column(conn, "projects", "env_vars_json", "TEXT")
 
     def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, column_type: str) -> None:
-        """确保指定表存在指定列（幂等）�?""
+        """确保指定表存在指定列（幂等）。"""
         rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
         existing = {row[1] for row in rows}  # row[1] = name
         if column not in existing:

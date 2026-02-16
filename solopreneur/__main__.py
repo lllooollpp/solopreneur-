@@ -1,5 +1,5 @@
-﻿"""
-以模块形式运�?solopreneur 的入口点：python -m solopreneur
+"""
+以模块形式运行 solopreneur 的入口点：python -m solopreneur
 """
 
 from solopreneur.cli.commands import app

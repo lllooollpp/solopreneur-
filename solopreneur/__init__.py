@@ -1,4 +1,4 @@
-﻿"""
+"""
 solopreneur - A lightweight AI agent framework
 """
 

@@ -16,7 +16,7 @@ class AgentDefinitionUpdate(BaseModel):
         ...,
         min_length=1,
         max_length=1_000_000,  # 1MB字符限制
-        description="Agent定义内容，最�?MB"
+        description="Agent定义内容，最大1MB"
     )
     
     @field_validator('content')
@@ -30,7 +30,7 @@ class AgentDefinitionUpdate(BaseModel):
         # 检查字节大小（而非字符数）
         byte_size = len(v.encode('utf-8'))
         if byte_size > 1_000_000:  # 1MB
-            raise ValueError(f"Agent定义文件过大: {byte_size} bytes（最�?MB�?)
+            raise ValueError(f"Agent定义文件过大: {byte_size} bytes（最大1MB）")
         
         return v
 
@@ -44,7 +44,7 @@ async def get_agent_definition():
     soul_path = config.workspace_path / "SOUL.md"
 
     if not soul_path.exists():
-        raise HTTPException(status_code=404, detail="SOUL.md 不存�?)
+        raise HTTPException(status_code=404, detail="SOUL.md 不存在")
 
     try:
         # 尝试多种编码读取
@@ -56,8 +56,8 @@ async def get_agent_definition():
             except UnicodeDecodeError:
                 continue
 
-        # 如果所有编码都失败，返回错�?
-        raise HTTPException(status_code=500, detail="无法解码 SOUL.md 文件，请检查文件编�?)
+        # 如果所有编码都失败，返回错误
+        raise HTTPException(status_code=500, detail="无法解码 SOUL.md 文件，请检查文件编码")
     except Exception as e:
         logger.error(f"读取 SOUL.md 失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -74,11 +74,11 @@ async def update_agent_definition(data: AgentDefinitionUpdate):
     try:
         # 确保使用 UTF-8 编码保存
         soul_path.write_text(data.content, encoding="utf-8")
-        logger.info(f"成功保存 SOUL.md，长�? {len(data.content)} 字符")
-        # 清除配置缓存，确保下次加载最新配�?
+        logger.info(f"成功保存 SOUL.md，长度: {len(data.content)} 字符")
+        # 清除配置缓存，确保下次加载最新配置
         from solopreneur.config.loader import invalidate_config_cache
         invalidate_config_cache()
-        return {"success": True, "message": "Agent 定义已保�?}
+        return {"success": True, "message": "Agent 定义已保存"}
     except Exception as e:
         logger.error(f"保存 SOUL.md 失败: {e}")
         raise HTTPException(status_code=500, detail=f"保存失败: {str(e)}")
