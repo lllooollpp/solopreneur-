@@ -1,4 +1,4 @@
-"""¹¤×÷Á÷ÒýÇæ - ±àÅÅ¶àAgentÐ­×÷µÄ¿ª·¢Á÷Ë®Ïß£¬Ö§³Ö×Ô¶¯/·Ö²½/»ìºÏÄ£Ê½¡£"""
+ï»¿"""ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ï¿½Å¶ï¿½AgentÐ­ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½Ë®ï¿½ß£ï¿½Ö§ï¿½ï¿½ï¿½Ô¶ï¿½/ï¿½Ö²ï¿½/ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½"""
 
 import json
 import re
@@ -20,46 +20,46 @@ from solopreneur.agent.core.tools.base import Tool
 
 @dataclass
 class WorkflowStep:
-    """¹¤×÷Á÷µÄÒ»¸ö²½Öè¡£"""
+    """ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½è¡£"""
 
-    agent: str  # Ö´ÐÐ¸Ã²½ÖèµÄ Agent Ãû³Æ£¨Ô­ role£©
+    agent: str  # Ö´ï¿½Ð¸Ã²ï¿½ï¿½ï¿½ï¿½ Agent ï¿½ï¿½ï¿½Æ£ï¿½Ô­ roleï¿½ï¿½
     
-    # ¼æÈÝÐÔÊôÐÔ£¬role ±ðÃûÖ¸Ïò agent
+    # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô£ï¿½role ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ agent
     @property
     def role(self) -> str:
         return self.agent
-    task_template: str  # ÈÎÎñÃèÊöÄ£°å£¬¿É°üº¬ {description} ºÍ {prev_output} Õ¼Î»·û
-    label: str  # ²½Öè±êÇ©
-    save_as: str = ""  # Êä³ö±£´æµÄÎÄ¼þÃû£¨Ïà¶ÔÓÚÏîÄ¿Ä¿Â¼£©£¬Áô¿Õ²»±£´æ
+    task_template: str  # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½å£¬ï¿½É°ï¿½ï¿½ï¿½ {description} ï¿½ï¿½ {prev_output} Õ¼Î»ï¿½ï¿½
+    label: str  # ï¿½ï¿½ï¿½ï¿½ï¿½Ç©
+    save_as: str = ""  # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Ä¿Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ²ï¿½ï¿½ï¿½ï¿½ï¿½
 
 
 @dataclass
 class Workflow:
-    """Ô¤¶¨ÒåµÄ¿ª·¢¹¤×÷Á÷¡£"""
+    """Ô¤ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"""
 
-    name: str  # ¹¤×÷Á÷±êÊ¶
-    title: str  # ÏÔÊ¾Ãû³Æ
-    description: str  # ¹¤×÷Á÷ÃèÊö
+    name: str  # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶
+    title: str  # ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½
+    description: str  # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     steps: list[WorkflowStep] = field(default_factory=list)
 
 
 @dataclass
 class WorkflowSession:
-    """·Ö²½¹¤×÷Á÷»á»°£¬¸ú×ÙÖ´ÐÐ½ø¶È¡£"""
+    """ï¿½Ö²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á»°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð½ï¿½ï¿½È¡ï¿½"""
 
     session_id: str
     workflow: Workflow
     description: str
     project_name: str
     project_dir: str = ""
-    current_step: int = 0  # ÏÂÒ»¸ö´ýÖ´ÐÐµÄ²½ÖèË÷Òý (0-based)
-    step_outputs: list[str] = field(default_factory=list)  # Ã¿²½µÄÊä³ö
+    current_step: int = 0  # ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ÐµÄ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (0-based)
+    step_outputs: list[str] = field(default_factory=list)  # Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     step_statuses: list[str] = field(default_factory=list)  # "success" | "error" | "skipped" | "injected"
     started_at: float = 0.0
     finished: bool = False
 
     def resolved_project_dir(self, workspace: Path) -> Path:
-        """½âÎö±¾´Î¹¤×÷Á÷Êµ¼ÊÊ¹ÓÃµÄÏîÄ¿Ä¿Â¼¡£"""
+        """ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î¹ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½Ê¹ï¿½Ãµï¿½ï¿½ï¿½Ä¿Ä¿Â¼ï¿½ï¿½"""
         if self.project_dir:
             return Path(self.project_dir).expanduser().resolve()
         if self.project_name:
@@ -72,7 +72,7 @@ class WorkflowSession:
 
     @property
     def prev_output(self) -> str:
-        """×î½üÒ»²½µÄÓÐÐ§Êä³ö¡£"""
+        """ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ï¿½"""
         for output in reversed(self.step_outputs):
             if output:
                 return output
@@ -83,141 +83,141 @@ class WorkflowSession:
         return self.current_step >= self.total_steps or self.finished
 
     def status_summary(self) -> str:
-        """·µ»Ø»á»°×´Ì¬ÕªÒª¡£"""
+        """ï¿½ï¿½ï¿½Ø»á»°×´Ì¬ÕªÒªï¿½ï¿½"""
         lines = [
-            f"?? **¹¤×÷Á÷**: {self.workflow.title} (`{self.workflow.name}`)",
-            f"?? **»á»°**: `{self.session_id}`",
-            f"?? **ÈÎÎñ**: {self.description}",
-            f"?? **½ø¶È**: {self.current_step}/{self.total_steps} ²½",
+            f"?? **ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½**: {self.workflow.title} (`{self.workflow.name}`)",
+            f"?? **ï¿½á»°**: `{self.session_id}`",
+            f"?? **ï¿½ï¿½ï¿½ï¿½**: {self.description}",
+            f"?? **ï¿½ï¿½ï¿½ï¿½**: {self.current_step}/{self.total_steps} ï¿½ï¿½",
         ]
-        # ÒÑÍê³É²½Öè
+        # ï¿½ï¿½ï¿½ï¿½É²ï¿½ï¿½ï¿½
         for i, step in enumerate(self.workflow.steps):
             if i < len(self.step_statuses):
                 emoji = {"success": "?", "error": "?", "skipped": "??", "injected": "??"}.get(
                     self.step_statuses[i], "?"
                 )
-                lines.append(f"  {emoji} ²½Öè {i + 1}: {step.label} ({step.agent})")
+                lines.append(f"  {emoji} ï¿½ï¿½ï¿½ï¿½ {i + 1}: {step.label} ({step.agent})")
             elif i == self.current_step:
-                lines.append(f"  ?? ²½Öè {i + 1}: {step.label} ({step.agent}) ¡ª **µ±Ç°´ý°ì**")
+                lines.append(f"  ?? ï¿½ï¿½ï¿½ï¿½ {i + 1}: {step.label} ({step.agent}) ï¿½ï¿½ **ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½**")
             else:
-                lines.append(f"  ? ²½Öè {i + 1}: {step.label} ({step.agent})")
+                lines.append(f"  ? ï¿½ï¿½ï¿½ï¿½ {i + 1}: {step.label} ({step.agent})")
         
         if self.finished:
-            lines.append("\n?? **×´Ì¬**: ÒÑÍê³É")
+            lines.append("\n?? **×´Ì¬**: ï¿½ï¿½ï¿½ï¿½ï¿½")
         else:
             next_step = self.workflow.steps[self.current_step]
-            lines.append(f"\n?? **Tech Lead ½¨Òé²Ù×÷**:")
-            lines.append(f"1. Éó²éÉÏÊö²ú³ö¡£")
-            lines.append(f"2. Èç¹ûÂúÒâ£¬¼ÌÐøÖ´ÐÐ: `workflow_control(session_id=\"{self.session_id}\", command=\"next\")`¡£")
-            lines.append(f"3. Èç¹ûÐèÒªÐÞ¸Ä£¬¿ÉÒÔÊ¹ÓÃ `delegate` ÖØ×ö»ò `workflow_control(..., command=\"inject\")` ×¢ÈëÐÞÕý¡£")
+            lines.append(f"\n?? **Tech Lead ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½**:")
+            lines.append(f"1. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")
+            lines.append(f"2. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â£¬ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½: `workflow_control(session_id=\"{self.session_id}\", command=\"next\")`ï¿½ï¿½")
+            lines.append(f"3. ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½Þ¸Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ `delegate` ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ `workflow_control(..., command=\"inject\")` ×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")
             
         return "\n".join(lines)
 
 
-# ©¤©¤ Ô¤¶¨Òå¹¤×÷Á÷ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+# ï¿½ï¿½ï¿½ï¿½ Ô¤ï¿½ï¿½ï¿½å¹¤ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 FEATURE_WORKFLOW = Workflow(
     name="feature",
-    title="¹¦ÄÜ¿ª·¢",
-    description="ÍêÕûµÄ¹¦ÄÜ¿ª·¢Á÷³Ì£ºÐèÇó·ÖÎö ¡ú ¼Ü¹¹Éè¼Æ ¡ú ±àÂëÊµÏÖ ¡ú ´úÂëÉó²é ¡ú ²âÊÔ",
+    title="ï¿½ï¿½ï¿½Ü¿ï¿½ï¿½ï¿½",
+    description="ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½Ü¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½",
     steps=[
         WorkflowStep(
             agent="product_manager",
-            label="ÐèÇó·ÖÎö",
+            label="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
             task_template=(
-                "·ÖÎöÒÔÏÂ¹¦ÄÜÐèÇó£¬Êä³ö²úÆ·ÐèÇóÎÄµµ£¨PRD£©¡£\n"
-                "ÏîÄ¿Ãû³Æ: ÏîÄ¿½«±£´æµ½ `{project_dir}`\n\n{description}"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ·ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½ï¿½ï¿½PRDï¿½ï¿½ï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½æµ½ `{project_dir}`\n\n{description}"
             ),
             save_as="docs/requirements.md",
         ),
         WorkflowStep(
             agent="architect",
-            label="¼Ü¹¹Éè¼Æ",
+            label="ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½",
             task_template=(
-                "»ùÓÚÒÔÏÂÐèÇóÎÄµµ£¬Éè¼Æ¼¼Êõ·½°¸¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n"
-                "# Ô­Ê¼ÐèÇó\n{description}\n\n"
-                "# ²úÆ·ÐèÇóÎÄµµ\n{prev_output}"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n"
+                "# Ô­Ê¼ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½ï¿½Æ·ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½\n{prev_output}"
             ),
             save_as="docs/architecture.md",
         ),
         WorkflowStep(
             agent="developer",
-            label="±àÂëÊµÏÖ",
+            label="ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½",
             task_template=(
-                "¸ù¾ÝÒÔÏÂ¼¼ÊõÉè¼Æ·½°¸½øÐÐ±àÂëÊµÏÖ¡£\n\n"
-                "## ÖØÒª£ºÏîÄ¿Ä¿Â¼\n"
-                "ËùÓÐ´úÂëÎÄ¼þ±ØÐë´´½¨ÔÚÏîÄ¿Ä¿Â¼ÏÂ£º`{project_dir}`\n"
-                "Äã±ØÐëÊ¹ÓÃ `write_file` ¹¤¾ßÔÚ¸ÃÄ¿Â¼ÏÂ´´½¨Êµ¼ÊµÄÔ´´úÂëÎÄ¼þ£¨.py, .js, .html, .css µÈ£©£¬"
-                "¶ø²»ÊÇ½ö½öÃèÊö´úÂëÄÚÈÝ¡£\n"
-                "ÇëÏÈÓÃ `list_dir` ²é¿´ÏîÄ¿Ä¿Â¼½á¹¹£¬È»ºó´´½¨±ØÒªµÄÎÄ¼þ¡£\n\n"
-                "## ±ØÐëÍê³ÉµÄ²Ù×÷\n"
-                "1. ÔÚ `{project_dir}` ÏÂ´´½¨ÍêÕûµÄÏîÄ¿½á¹¹£¨Ä¿Â¼ºÍÎÄ¼þ£©\n"
-                "2. Ê¹ÓÃ `write_file` Ð´ÈëÃ¿¸öÔ´´úÂëÎÄ¼þµÄÍêÕûÄÚÈÝ\n"
-                "3. ÈçÐè°²×°ÒÀÀµ£¬Ê¹ÓÃ `exec` ¹¤¾ßÖ´ÐÐ°²×°ÃüÁî\n"
-                "4. ×îºóÊä³ö´´½¨µÄÎÄ¼þÇåµ¥\n\n"
-                "# Ô­Ê¼ÐèÇó\n{description}\n\n"
-                "# ¼¼ÊõÉè¼Æ\n{prev_output}"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Æ·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½ï¿½Êµï¿½Ö¡ï¿½\n\n"
+                "## ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ä¿Ä¿Â¼\n"
+                "ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ë´´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Ä¿Â¼ï¿½Â£ï¿½`{project_dir}`\n"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ `write_file` ï¿½ï¿½ï¿½ï¿½ï¿½Ú¸ï¿½Ä¿Â¼ï¿½Â´ï¿½ï¿½ï¿½Êµï¿½Êµï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½.py, .js, .html, .css ï¿½È£ï¿½ï¿½ï¿½"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½Ç½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½\n"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ `list_dir` ï¿½é¿´ï¿½ï¿½Ä¿Ä¿Â¼ï¿½á¹¹ï¿½ï¿½È»ï¿½ó´´½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½\n\n"
+                "## ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÉµÄ²ï¿½ï¿½ï¿½\n"
+                "1. ï¿½ï¿½ `{project_dir}` ï¿½Â´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½á¹¹ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½\n"
+                "2. Ê¹ï¿½ï¿½ `write_file` Ð´ï¿½ï¿½Ã¿ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                "3. ï¿½ï¿½ï¿½è°²×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ `exec` ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð°ï¿½×°ï¿½ï¿½ï¿½ï¿½\n"
+                "4. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½åµ¥\n\n"
+                "# Ô­Ê¼ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{prev_output}"
             ),
         ),
         WorkflowStep(
             agent="code_reviewer",
-            label="´úÂëÉó²é",
+            label="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
             task_template=(
-                "Éó²é±¾´Î¹¦ÄÜ¿ª·¢µÄ´úÂë±ä¸ü¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n"
-                "ÇëÊ¹ÓÃ `list_dir` ºÍ `read_file` ²é¿´ÏîÄ¿Êµ¼Ê´úÂëÎÄ¼þ½øÐÐÉó²é¡£\n\n"
-                "# ¹¦ÄÜÃèÊö\n{description}\n\n"
-                "# ¿ª·¢Õß±¨¸æ\n{prev_output}"
+                "ï¿½ï¿½é±¾ï¿½Î¹ï¿½ï¿½Ü¿ï¿½ï¿½ï¿½ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n"
+                "ï¿½ï¿½Ê¹ï¿½ï¿½ `list_dir` ï¿½ï¿½ `read_file` ï¿½é¿´ï¿½ï¿½Ä¿Êµï¿½Ê´ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é¡£\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ß±ï¿½ï¿½ï¿½\n{prev_output}"
             ),
             save_as="docs/review.md",
         ),
         WorkflowStep(
             agent="security_engineer",
-            label="°²È«Éó²é",
+            label="ï¿½ï¿½È«ï¿½ï¿½ï¿½",
             task_template=(
-                "»ùÓÚµ±Ç°ÊµÏÖ½øÐÐÓ¦ÓÃ°²È«Éó²é²¢¸ø³ö¿ÉÖ´ÐÐÐÞ¸´½¨Òé¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n"
-                "ÇëÊ¹ÓÃ `list_dir` / `read_file` ½øÐÐÖ¤¾Ý»¯Éó²é¡£\n\n"
-                "# ¹¦ÄÜÃèÊö\n{description}\n\n"
-                "# ´úÂëÉó²é½á¹û\n{prev_output}"
+                "ï¿½ï¿½ï¿½Úµï¿½Ç°Êµï¿½Ö½ï¿½ï¿½ï¿½Ó¦ï¿½Ã°ï¿½È«ï¿½ï¿½é²¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½é¡£\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n"
+                "ï¿½ï¿½Ê¹ï¿½ï¿½ `list_dir` / `read_file` ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½Ý»ï¿½ï¿½ï¿½é¡£\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{prev_output}"
             ),
             save_as="docs/security-review.md",
         ),
         WorkflowStep(
             agent="tester",
-            label="²âÊÔ",
+            label="ï¿½ï¿½ï¿½ï¿½",
             task_template=(
-                "ÎªÒÔÏÂ¹¦ÄÜ±àÐ´ºÍÖ´ÐÐ²âÊÔ¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n"
-                "## ?? Ç¿ÖÆÒªÇó\n"
-                "1. Ê¹ÓÃ `list_dir` ²é¿´ÏîÄ¿Ä¿Â¼£¬ÁË½âÏîÄ¿½á¹¹ºÍ¼¼ÊõÕ»\n"
-                "2. Ê¹ÓÃ `read_file` ÔÄ¶ÁÏÖÓÐ´úÂë£¬Àí½âÊµÏÖÏ¸½Ú\n"
-                "3. Ê¹ÓÃ `write_file` ´´½¨²âÊÔÎÄ¼þ\n"
-                "4. **±ØÐëÊ¹ÓÃ `exec` ¹¤¾ßÊµ¼ÊÔËÐÐ²âÊÔ**£¬²»ÄÜÖ»ÃèÊö²âÊÔÃüÁî\n"
-                "5. Èç¹û²âÊÔÊ§°Ü£¬ÐÞ¸´ÎÊÌâ²¢ÖØÐÂÔËÐÐ\n"
-                "6. ±¨¸æ×îÖÕ²âÊÔ½á¹û£¨Í¨¹ý/Ê§°ÜÊýÁ¿£©\n\n"
-                "## ½ûÖ¹ÐÐÎª\n"
-                "- ? ²»ÒªÖ»Êä³ö'½¨ÒéÖ´ÐÐÒÔÏÂÃüÁî'\n"
-                "- ? ²»ÒªÖ»ÃèÊöÈçºÎÔËÐÐ²âÊÔ\n"
-                "- ? ±ØÐëÊµ¼Êµ÷ÓÃ exec ¹¤¾ßÔËÐÐ²¢²é¿´½á¹û\n\n"
-                "## ?? E2E ²âÊÔ£¨Ç°¶Ë/Web ÏîÄ¿±ØÐë£©\n"
-                "Èç¹ûÏîÄ¿°üº¬ HTML/CSS/JS »òÇ°¶Ë¿ò¼Ü (React/Vue/Svelte µÈ)£¬\n"
-                "Äã±ØÐëÊ¹ÓÃ Playwright ±àÐ´²¢ÔËÐÐ E2E ²âÊÔ£º\n"
+                "Îªï¿½ï¿½ï¿½Â¹ï¿½ï¿½Ü±ï¿½Ð´ï¿½ï¿½Ö´ï¿½Ð²ï¿½ï¿½Ô¡ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n"
+                "## ?? Ç¿ï¿½ï¿½Òªï¿½ï¿½\n"
+                "1. Ê¹ï¿½ï¿½ `list_dir` ï¿½é¿´ï¿½ï¿½Ä¿Ä¿Â¼ï¿½ï¿½ï¿½Ë½ï¿½ï¿½ï¿½Ä¿ï¿½á¹¹ï¿½Í¼ï¿½ï¿½ï¿½Õ»\n"
+                "2. Ê¹ï¿½ï¿½ `read_file` ï¿½Ä¶ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½Êµï¿½ï¿½Ï¸ï¿½ï¿½\n"
+                "3. Ê¹ï¿½ï¿½ `write_file` ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½\n"
+                "4. **ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ `exec` ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½ï¿½**ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                "5. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½â²¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                "6. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ²ï¿½ï¿½Ô½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½/Ê§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n\n"
+                "## ï¿½ï¿½Ö¹ï¿½ï¿½Îª\n"
+                "- ? ï¿½ï¿½ÒªÖ»ï¿½ï¿½ï¿½'ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'\n"
+                "- ? ï¿½ï¿½ÒªÖ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½ï¿½\n"
+                "- ? ï¿½ï¿½ï¿½ï¿½Êµï¿½Êµï¿½ï¿½ï¿½ exec ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½é¿´ï¿½ï¿½ï¿½\n\n"
+                "## ?? E2E ï¿½ï¿½ï¿½Ô£ï¿½Ç°ï¿½ï¿½/Web ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ë£©\n"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ HTML/CSS/JS ï¿½ï¿½Ç°ï¿½Ë¿ï¿½ï¿½ (React/Vue/Svelte ï¿½ï¿½)ï¿½ï¿½\n"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ Playwright ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ E2E ï¿½ï¿½ï¿½Ô£ï¿½\n"
                 "```\n"
                 "exec: npx playwright install --with-deps chromium\n"
-                "write_file: e2e/basic.spec.ts  # »ò e2e/test_basic.py\n"
+                "write_file: e2e/basic.spec.ts  # ï¿½ï¿½ e2e/test_basic.py\n"
                 "exec: npx playwright test --reporter=list\n"
                 "```\n"
-                "ÓÃ Playwright ÏñÓÃ»§Ò»ÑùÑéÖ¤¹¦ÄÜ£º´ò¿ªÒ³Ãæ¡¢²Ù×÷ UI¡¢¼ì²é½á¹û¡£\n\n"
-                "## ?? Git Ìá½»\n"
-                "²âÊÔÍê³Éºó£¬Ê¹ÓÃ `git` ¹¤¾ßÌá½»²âÊÔÎÄ¼þ£º\n"
+                "ï¿½ï¿½ Playwright ï¿½ï¿½ï¿½Ã»ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½Ò³ï¿½æ¡¢ï¿½ï¿½ï¿½ï¿½ UIï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n\n"
+                "## ?? Git ï¿½á½»\n"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éºï¿½Ê¹ï¿½ï¿½ `git` ï¿½ï¿½ï¿½ï¿½ï¿½á½»ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½\n"
                 "```\n"
                 "git: action=add, files=['.']\n"
                 "git: action=commit, message='test: add tests for <feature>'\n"
                 "```\n\n"
-                "# ¹¦ÄÜÃèÊö\n{description}\n\n"
-                "# °²È«Éó²éÓë´úÂëÉó²é·´À¡\n{prev_output}"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é·´ï¿½ï¿½\n{prev_output}"
             ),
         ),
     ],
@@ -225,38 +225,38 @@ FEATURE_WORKFLOW = Workflow(
 
 BUGFIX_WORKFLOW = Workflow(
     name="bugfix",
-    title="Bug ÐÞ¸´",
-    description="Bug ÐÞ¸´Á÷³Ì£ºÎÊÌâ·ÖÎö ¡ú ÐÞ¸´ÊµÏÖ ¡ú ´úÂëÉó²é ¡ú ²âÊÔÑéÖ¤",
+    title="Bug ï¿½Þ¸ï¿½",
+    description="Bug ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½Ì£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Þ¸ï¿½Êµï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤",
     steps=[
         WorkflowStep(
             agent="developer",
-            label="ÎÊÌâ·ÖÎöÓëÐÞ¸´",
+            label="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½",
             task_template=(
-                "·ÖÎö²¢ÐÞ¸´ÒÔÏÂ Bug¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n"
-                "ÇëÊ¹ÓÃ `list_dir` ºÍ `read_file` ²é¿´´úÂë£¬"
-                "Ê¹ÓÃ `write_file` »ò `edit_file` ÐÞ¸´ÎÊÌâ¡£\n\n{description}"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ Bugï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n"
+                "ï¿½ï¿½Ê¹ï¿½ï¿½ `list_dir` ï¿½ï¿½ `read_file` ï¿½é¿´ï¿½ï¿½ï¿½ë£¬"
+                "Ê¹ï¿½ï¿½ `write_file` ï¿½ï¿½ `edit_file` ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½â¡£\n\n{description}"
             ),
         ),
         WorkflowStep(
             agent="code_reviewer",
-            label="ÐÞ¸´Éó²é",
+            label="ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½",
             task_template=(
-                "Éó²éÒÔÏÂ Bug ÐÞ¸´µÄ´úÂë±ä¸ü¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n"
-                "# Bug ÃèÊö\n{description}\n\n"
-                "# ÐÞ¸´±¨¸æ\n{prev_output}"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Bug ï¿½Þ¸ï¿½ï¿½Ä´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n"
+                "# Bug ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½\n{prev_output}"
             ),
             save_as="docs/bugfix-review.md",
         ),
         WorkflowStep(
             agent="tester",
-            label="»Ø¹é²âÊÔ",
+            label="ï¿½Ø¹ï¿½ï¿½ï¿½ï¿½",
             task_template=(
-                "Õë¶ÔÒÔÏÂ Bug ÐÞ¸´±àÐ´»Ø¹é²âÊÔ²¢Ö´ÐÐ¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n"
-                "# Bug ÃèÊö\n{description}\n\n"
-                "# ÐÞ¸´ÓëÉó²é\n{prev_output}"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Bug ï¿½Þ¸ï¿½ï¿½ï¿½Ð´ï¿½Ø¹ï¿½ï¿½ï¿½Ô²ï¿½Ö´ï¿½Ð¡ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n"
+                "# Bug ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{prev_output}"
             ),
         ),
     ],
@@ -264,26 +264,26 @@ BUGFIX_WORKFLOW = Workflow(
 
 REVIEW_WORKFLOW = Workflow(
     name="review",
-    title="´úÂëÉó²é",
-    description="¶ÀÁ¢´úÂëÉó²éÁ÷³Ì£ºÉó²é´úÂë ¡ú °²È«¼ì²é ¡ú ²âÊÔ²¹³ä½¨Òé",
+    title="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
+    description="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½È«ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ä½¨ï¿½ï¿½",
     steps=[
         WorkflowStep(
             agent="code_reviewer",
-            label="´úÂëÉó²é",
+            label="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
             task_template=(
-                "Éó²éÒÔÏÂ´úÂë»ò±ä¸ü¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n{description}"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n{description}"
             ),
             save_as="docs/review.md",
         ),
         WorkflowStep(
             agent="tester",
-            label="²âÊÔ½¨Òé",
+            label="ï¿½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½",
             task_template=(
-                "¸ù¾Ý´úÂëÉó²é½á¹û½¨ÒéÐèÒª²¹³äµÄ²âÊÔ¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n"
-                "# Éó²éÄÚÈÝ\n{description}\n\n"
-                "# Éó²é½á¹û\n{prev_output}"
+                "ï¿½ï¿½ï¿½Ý´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½Ô¡ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½\n{prev_output}"
             ),
         ),
     ],
@@ -291,104 +291,104 @@ REVIEW_WORKFLOW = Workflow(
 
 DEPLOY_WORKFLOW = Workflow(
     name="deploy",
-    title="²¿ÊðÉÏÏß",
-    description="²¿ÊðÁ÷³Ì£º²âÊÔÑéÖ¤ ¡ú ²¿ÊðÅäÖÃ ¡ú ÉÏÏß",
+    title="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
+    description="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½",
     steps=[
         WorkflowStep(
             agent="tester",
-            label="²¿ÊðÇ°²âÊÔ",
+            label="ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½",
             task_template=(
-                "Ö´ÐÐ²¿ÊðÇ°µÄÍêÕû²âÊÔÑéÖ¤¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n{description}"
+                "Ö´ï¿½Ð²ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n{description}"
             ),
         ),
         WorkflowStep(
             agent="release_manager",
-            label="·¢²¼×¼±¸",
+            label="ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½",
             task_template=(
-                "×¼±¸·¢²¼Çåµ¥ÓëÉÏÏß»Ø¹ö·½°¸¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n"
-                "# ·¢²¼Ä¿±ê\n{description}\n\n"
-                "# ²âÊÔ½á¹û\n{prev_output}"
+                "×¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½åµ¥ï¿½ï¿½ï¿½ï¿½ï¿½ß»Ø¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½ï¿½ï¿½Ô½ï¿½ï¿½\n{prev_output}"
             ),
             save_as="docs/release-plan.md",
         ),
         WorkflowStep(
             agent="devops",
-            label="²¿ÊðÅäÖÃÓëÖ´ÐÐ",
+            label="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½",
             task_template=(
-                "ÅäÖÃ²¢Ö´ÐÐ²¿Êð¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n\n"
-                "# ²¿ÊðÐèÇó\n{description}\n\n"
-                "# ·¢²¼×¼±¸\n{prev_output}"
+                "ï¿½ï¿½ï¿½Ã²ï¿½Ö´ï¿½Ð²ï¿½ï¿½ï¿½\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{description}\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½\n{prev_output}"
             ),
             save_as="docs/deployment.md",
         ),
         WorkflowStep(
             agent="sre_engineer",
-            label="·¢²¼ºóÑéÖ¤",
+            label="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤",
             task_template=(
-                "Ö´ÐÐ·¢²¼ºóÎÈ¶¨ÐÔÑéÖ¤Óë¿É¹Û²âÐÔ¼ì²é¡£\n"
-                "ÏîÄ¿Ä¿Â¼: `{project_dir}`\n"
-                "ÇëÊä³ö¸æ¾¯¡¢SLO Óë»Ø¹é·çÏÕ½áÂÛ¡£\n\n"
-                "# ·¢²¼ÐÅÏ¢\n{description}\n\n"
-                "# ²¿Êð½á¹û\n{prev_output}"
+                "Ö´ï¿½Ð·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¶ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½É¹Û²ï¿½ï¿½Ô¼ï¿½é¡£\n"
+                "ï¿½ï¿½Ä¿Ä¿Â¼: `{project_dir}`\n"
+                "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ¾¯ï¿½ï¿½SLO ï¿½ï¿½Ø¹ï¿½ï¿½ï¿½Õ½ï¿½ï¿½Û¡ï¿½\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢\n{description}\n\n"
+                "# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n{prev_output}"
             ),
             save_as="docs/post-deploy-validation.md",
         ),
     ],
 )
 
-# ¹¤×÷Á÷×¢²á±í
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½
 WORKFLOWS: dict[str, Workflow] = {
     w.name: w
     for w in (FEATURE_WORKFLOW, BUGFIX_WORKFLOW, REVIEW_WORKFLOW, DEPLOY_WORKFLOW)
 }
 
 
-# ©¤©¤ ÐèÇó·Ö½âÌáÊ¾´Ê£¨effc.md Initializer Agent£©©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+# ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½Ê¾ï¿½Ê£ï¿½effc.md Initializer Agentï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-_DECOMPOSE_PROMPT = """ÄãÊÇÒ»¸öÐèÇó·Ö½â×¨¼Ò¡£Çë½«ÒÔÏÂÏîÄ¿ÐèÇó·Ö½âÎª¶ÀÁ¢µÄ¡¢¿ÉÔöÁ¿¿ª·¢µÄ¹¦ÄÜµã(Feature)¡£
+_DECOMPOSE_PROMPT = """ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½ï¿½×¨ï¿½Ò¡ï¿½ï¿½ë½«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½Ö½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½Üµï¿½(Feature)ï¿½ï¿½
 
-## ÐèÇóÃèÊö
+## ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 {description}
 
-## Êä³öÒªÇó
-ÇëÊä³ö JSON Êý×é£¬Ã¿¸ö¹¦ÄÜ°üº¬ÒÔÏÂ×Ö¶Î£º
-- id: Î¨Ò»±êÊ¶£¬¸ñÊ½ FEAT-001, FEAT-002, ...
-- category: ·ÖÀà (core / ui / api / infra / test)
-- priority: ÓÅÏÈ¼¶ (P0=ºËÐÄ±ØÐè / P1=ÖØÒª / P2=ÃªÉÏÌí»¨)
-- description: ¹¦ÄÜÃèÊö£¨Ò»¾ä»°£¬¾ßÌåÃ÷È·£©
-- steps: ÊµÏÖ²½Öè£¨×Ö·û´®Êý×é£¬3-5 ²½£©
-- test_criteria: ÑéÊÕ±ê×¼£¨Ò»¾ä»°£©
+## ï¿½ï¿½ï¿½Òªï¿½ï¿½
+ï¿½ï¿½ï¿½ï¿½ï¿½ JSON ï¿½ï¿½ï¿½é£¬Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Ü°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶Î£ï¿½
+- id: Î¨Ò»ï¿½ï¿½Ê¶ï¿½ï¿½ï¿½ï¿½Ê½ FEAT-001, FEAT-002, ...
+- category: ï¿½ï¿½ï¿½ï¿½ (core / ui / api / infra / test)
+- priority: ï¿½ï¿½ï¿½È¼ï¿½ (P0=ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½ / P1=ï¿½ï¿½Òª / P2=Ãªï¿½ï¿½ï¿½ï¿½ï¿½)
+- description: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ä»°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½
+- steps: Êµï¿½Ö²ï¿½ï¿½è£¨ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é£¬3-5 ï¿½ï¿½ï¿½ï¿½
+- test_criteria: ï¿½ï¿½ï¿½Õ±ï¿½×¼ï¿½ï¿½Ò»ï¿½ä»°ï¿½ï¿½
 
-## ·Ö½âÔ­Ôò
-1. Ã¿¸ö Feature Ó¦¸Ã¿ÉÒÔÔÚÒ»´Î workflow Ñ­»·ÄÚÍê³É£¨Ô¼ 15-30 ·ÖÖÓ£©
-2. P0 ¹¦ÄÜÓÅÏÈ£¬È·±£ºËÐÄ¹¦ÄÜÏÈÊµÏÖ
-3. ¹¦ÄÜÖ®¼äµÄÒÀÀµÍ¨¹ýÓÅÏÈ¼¶Òþº¬±í´ï£¨P0 ÏÈ×ö£¬P1 ºó×ö£©
-4. Ã¿¸ö Feature ¶¼±ØÐëÓÐÃ÷È·µÄÑéÊÕ±ê×¼
-5. ÖÐµÈÏîÄ¿Í¨³£ 8-20 ¸ö Feature£¬´óÐÍÏîÄ¿ 20-50 ¸ö
-6. ²»ÒªÒÅÂ©»ù´¡ÉèÊ© Feature£¨ÏîÄ¿³õÊ¼»¯¡¢ÒÀÀµ°²×°¡¢ÅäÖÃµÈ£©
+## ï¿½Ö½ï¿½Ô­ï¿½ï¿½
+1. Ã¿ï¿½ï¿½ Feature Ó¦ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ workflow Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½Ô¼ 15-30 ï¿½ï¿½ï¿½Ó£ï¿½
+2. P0 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È£ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
+3. ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï£¨P0 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½P1 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+4. Ã¿ï¿½ï¿½ Feature ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½Õ±ï¿½×¼
+5. ï¿½Ðµï¿½ï¿½ï¿½Ä¿Í¨ï¿½ï¿½ 8-20 ï¿½ï¿½ Featureï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ 20-50 ï¿½ï¿½
+6. ï¿½ï¿½Òªï¿½ï¿½Â©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê© Featureï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ÃµÈ£ï¿½
 
-½öÊä³ö JSON Êý×é£¬²»Òª°üº¬ markdown ´úÂë¿é»òÆäËûÎÄ±¾¡£
+ï¿½ï¿½ï¿½ï¿½ï¿½ JSON ï¿½ï¿½ï¿½é£¬ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ markdown ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½
 """
 
 
-# ©¤©¤ ¹¤×÷Á÷ÒýÇæ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+# ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 
 class WorkflowEngine:
     """
-    Ö´ÐÐÔ¤¶¨ÒåµÄ¿ª·¢¹¤×÷Á÷¡£
+    Ö´ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-    Öð²½µ÷ÓÃ²»Í¬AgentµÄ×Ó Agent£¬½«Ã¿²½²ú³ö´«µÝ¸øÏÂÒ»²½£¬
-    ²¢±£´æÖÐ¼ä²úÎïµ½ÏîÄ¿Ä¿Â¼¡£
-    Ö§³Ö×Ô¶¯Á÷Ë®ÏßÄ£Ê½ºÍ·Ö²½½»»¥Ä£Ê½¡£
+    ï¿½ð²½µï¿½ï¿½Ã²ï¿½Í¬Agentï¿½ï¿½ï¿½ï¿½ Agentï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½
+    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½ï¿½ïµ½ï¿½ï¿½Ä¿Ä¿Â¼ï¿½ï¿½
+    Ö§ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½Ë®ï¿½ï¿½Ä£Ê½ï¿½Í·Ö²ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½
 
-    ¼¯³É LongRunningHarness£¨effc.md Ä£Ê½£©£º
-    - Ã¿²½Íê³Éºó×Ô¶¯¼ÇÂ¼½ø¶Èµ½ progress.md
-    - ×îÖÕ²½Öè½ÓÈë²âÊÔÃÅ½û
-    - Ö§³Ö¿ç»á»°ÔöÁ¿¿ª·¢
+    ï¿½ï¿½ï¿½ï¿½ LongRunningHarnessï¿½ï¿½effc.md Ä£Ê½ï¿½ï¿½ï¿½ï¿½
+    - Ã¿ï¿½ï¿½ï¿½ï¿½Éºï¿½ï¿½Ô¶ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½Èµï¿½ progress.md
+    - ï¿½ï¿½ï¿½Õ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å½ï¿½
+    - Ö§ï¿½Ö¿ï¿½á»°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     """
 
     def __init__(
@@ -401,16 +401,16 @@ class WorkflowEngine:
         self.agent_manager = agent_manager
         self.workspace = workspace
         self.sessions: dict[str, WorkflowSession] = {}
-        self._harness = None  # LongRunningHarness£¬ÓÉÍâ²¿ÉèÖÃ
+        self._harness = None  # LongRunningHarnessï¿½ï¿½ï¿½ï¿½ï¿½â²¿ï¿½ï¿½ï¿½ï¿½
 
     def set_harness(self, harness) -> None:
-        """×¢Èë LongRunningHarness ÒÔÆôÓÃ effc.md ÔöÁ¿Ä£Ê½¡£"""
+        """×¢ï¿½ï¿½ LongRunningHarness ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ effc.md ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½"""
         self._harness = harness
 
-    # ©¤©¤ Git Óë»·¾³¹ÜÀí ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+    # ï¿½ï¿½ï¿½ï¿½ Git ï¿½ë»·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     def _ensure_git_repo(self, project_dir: Path) -> None:
-        """È·±£ÏîÄ¿Ä¿Â¼ÊÇÒ»¸ö Git ²Ö¿â£¨effc.md: ³õÊ¼ git Ìá½»£©¡£"""
+        """È·ï¿½ï¿½ï¿½ï¿½Ä¿Ä¿Â¼ï¿½ï¿½Ò»ï¿½ï¿½ Git ï¿½Ö¿â£¨effc.md: ï¿½ï¿½Ê¼ git ï¿½á½»ï¿½ï¿½ï¿½ï¿½"""
         project_dir.mkdir(parents=True, exist_ok=True)
         git_dir = project_dir / ".git"
         if git_dir.exists():
@@ -421,23 +421,23 @@ class WorkflowEngine:
                 cwd=str(project_dir),
                 capture_output=True, timeout=15,
             )
-            # ÅäÖÃÄ¬ÈÏÓÃ»§£¨±ÜÃâÊ×´Î commit ±¨´í£©
+            # ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´ï¿½ commit ï¿½ï¿½ï¿½ï¿½ï¿½
             subprocess.run(
-                ["git", "config", "user.email", "nanobot@local"],
+                ["git", "config", "user.email", "solopreneur@local"],
                 cwd=str(project_dir),
                 capture_output=True, timeout=5,
             )
             subprocess.run(
-                ["git", "config", "user.name", "Nanobot"],
+                ["git", "config", "user.name", "solopreneur"],
                 cwd=str(project_dir),
                 capture_output=True, timeout=5,
             )
-            logger.info(f"Git ²Ö¿âÒÑ³õÊ¼»¯: {project_dir}")
+            logger.info(f"Git ï¿½Ö¿ï¿½ï¿½Ñ³ï¿½Ê¼ï¿½ï¿½: {project_dir}")
         except Exception as e:
-            logger.warning(f"Git init Ê§°Ü£¨²»×èÈû¹¤×÷Á÷£©: {e}")
+            logger.warning(f"Git init Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {e}")
 
     def _git_commit(self, project_dir: Path, message: str) -> bool:
-        """ÔÚÏîÄ¿Ä¿Â¼Ö´ÐÐ git add + commit£¨effc.md: Ã¿¸ö feature Ìá½»£©¡£"""
+        """ï¿½ï¿½ï¿½ï¿½Ä¿Ä¿Â¼Ö´ï¿½ï¿½ git add + commitï¿½ï¿½effc.md: Ã¿ï¿½ï¿½ feature ï¿½á½»ï¿½ï¿½ï¿½ï¿½"""
         try:
             subprocess.run(
                 ["git", "add", "-A"],
@@ -455,16 +455,16 @@ class WorkflowEngine:
             # nothing to commit is OK
             return True
         except Exception as e:
-            logger.warning(f"Git commit Ê§°Ü£¨²»×èÈû£©: {e}")
+            logger.warning(f"Git commit Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {e}")
             return False
 
     def _generate_init_sh(self, project_dir: Path) -> None:
-        """ÎªÄ¿±êÏîÄ¿Éú³É init.sh Æô¶¯½Å±¾£¨effc.md: Initializer Agent ¹¦ÄÜ£©¡£"""
+        """ÎªÄ¿ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ init.sh ï¿½ï¿½ï¿½ï¿½Å±ï¿½ï¿½ï¿½effc.md: Initializer Agent ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½"""
         init_sh = project_dir / "init.sh"
         if init_sh.exists():
             return
         content = """#!/bin/bash
-# Auto-generated by nanobot workflow engine (effc.md pattern)
+# Auto-generated by solopreneur workflow engine (effc.md pattern)
 set -e
 
 echo "=== Project Init ==="
@@ -500,7 +500,7 @@ echo "=== Init complete ==="
             init_sh.write_text(content, encoding="utf-8")
             logger.info(f"Generated init.sh: {init_sh}")
         except Exception as e:
-            logger.warning(f"Éú³É init.sh Ê§°Ü: {e}")
+            logger.warning(f"ï¿½ï¿½ï¿½ï¿½ init.sh Ê§ï¿½ï¿½: {e}")
 
     def get_session(self, session_id: str) -> WorkflowSession | None:
         return self.sessions.get(session_id)
@@ -515,18 +515,18 @@ echo "=== Init complete ==="
         on_progress: Any = None,
     ) -> str:
         """
-        Ö´ÐÐÖ¸¶¨µÄ¹¤×÷Á÷¡£
+        Ö´ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
         Args:
-            workflow_name: ¹¤×÷Á÷Ãû³Æ¡£
-            description: ÈÎÎñÃèÊö¡£
-            project_name: ÏîÄ¿Ãû³Æ¡£
-            mode: "auto" (È«×Ô¶¯) »ò "step" (Ö»Ö´ÐÐµÚÒ»²½ºóÔÝÍ£)¡£
-            on_progress: ½ø¶È»Øµ÷¡£
+            workflow_name: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¡ï¿½
+            description: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            project_name: ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½Æ¡ï¿½
+            mode: "auto" (È«ï¿½Ô¶ï¿½) ï¿½ï¿½ "step" (Ö»Ö´ï¿½Ðµï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£)ï¿½ï¿½
+            on_progress: ï¿½ï¿½ï¿½È»Øµï¿½ï¿½ï¿½
         """
         workflow = WORKFLOWS.get(workflow_name)
         if not workflow:
-            return f"´íÎó: Î´Öª¹¤×÷Á÷ '{workflow_name}'¡£¿ÉÓÃ: {', '.join(WORKFLOWS.keys())}"
+            return f"ï¿½ï¿½ï¿½ï¿½: Î´Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ '{workflow_name}'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {', '.join(WORKFLOWS.keys())}"
 
         session_id = str(uuid.uuid4())[:8]
         session = WorkflowSession(
@@ -542,15 +542,15 @@ echo "=== Init complete ==="
         if mode == "auto":
             return await self._run_all(session, on_progress)
         else:
-            # ·Ö²½Ä£Ê½£ºÖ´ÐÐµÚÒ»²½
+            # ï¿½Ö²ï¿½Ä£Ê½ï¿½ï¿½Ö´ï¿½Ðµï¿½Ò»ï¿½ï¿½
             result = await self.next_step(session_id, on_progress=on_progress)
             return (
-                f"?? **¹¤×÷Á÷»á»°ÒÑ¿ªÆô (·Ö²½Ä£Ê½)**\nID: `{session_id}`\n\n"
+                f"?? **ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á»°ï¿½Ñ¿ï¿½ï¿½ï¿½ (ï¿½Ö²ï¿½Ä£Ê½)**\nID: `{session_id}`\n\n"
                 f"{session.status_summary()}\n\n"
                 f"--- \n"
-                f"### ²½Öè 1 ²ú³ö:\n{result}\n\n"
+                f"### ï¿½ï¿½ï¿½ï¿½ 1 ï¿½ï¿½ï¿½ï¿½:\n{result}\n\n"
                 f"--- \n"
-                f"?? Äã¿ÉÒÔÊ¹ÓÃ `workflow_control` ¹¤¾ßÀ´¿ØÖÆºóÐø²½Öè£º¼ÌÐø¡¢Ìø¹ý¡¢×¢ÈëÄÚÈÝ»ò½áÊø¡£"
+                f"?? ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ `workflow_control` ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½è£ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ï¿½Ý»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
             )
 
     async def next_step(
@@ -558,43 +558,43 @@ echo "=== Init complete ==="
         session_id: str,
         on_progress: Any = None,
     ) -> str:
-        """Ö´ÐÐ»á»°µÄÏÂÒ»¸ö²½Öè¡£"""
+        """Ö´ï¿½Ð»á»°ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½è¡£"""
         session = self.get_session(session_id)
         if not session:
-            return f"´íÎó: Î´ÕÒµ½»á»° `{session_id}`"
+            return f"ï¿½ï¿½ï¿½ï¿½: Î´ï¿½Òµï¿½ï¿½á»° `{session_id}`"
         
         if session.is_complete:
-            return "´íÎó: ¸Ã¹¤×÷Á÷ÒÑÍê³É"
+            return "ï¿½ï¿½ï¿½ï¿½: ï¿½Ã¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
 
         step_idx = session.current_step
         step = session.workflow.steps[step_idx]
         agent_def = self.agent_manager.get_agent(step.agent)
         
         if not agent_def:
-            error = f"´íÎó: Agent '{step.agent}' ²»´æÔÚ"
+            error = f"ï¿½ï¿½ï¿½ï¿½: Agent '{step.agent}' ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
             session.step_outputs.append(error)
             session.step_statuses.append("error")
             session.current_step += 1
             return error
 
-        # Í¨Öª½ø¶È
+        # Í¨Öªï¿½ï¿½ï¿½ï¿½
         if on_progress:
             await on_progress(step_idx + 1, session.total_steps, step.agent, step.label, "running")
 
-        logger.info(f"»á»° {session_id} ²½Öè {step_idx + 1}/{session.total_steps}: "
+        logger.info(f"ï¿½á»° {session_id} ï¿½ï¿½ï¿½ï¿½ {step_idx + 1}/{session.total_steps}: "
                 f"{agent_def.emoji} {agent_def.title} - {step.label}")
 
-        # ¼ÆËãÏîÄ¿Ä¿Â¼
+        # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Ä¿Â¼
         project_dir = str(session.resolved_project_dir(self.workspace))
 
-        # ¹¹½¨ÈÎÎñ
+        # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         task = step.task_template.format(
             description=session.description,
             prev_output=session.prev_output,
             project_dir=project_dir,
         )
 
-        # Harness ÉÏÏÂÎÄ×¢Èë£ºÈÃ Subagent ÁË½âÏîÄ¿ÕûÌå½ø¶È
+        # Harness ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ë£ºï¿½ï¿½ Subagent ï¿½Ë½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         context_for_agent = session.prev_output
         harness_ctx = self._get_harness_context_for_subagent()
         if harness_ctx:
@@ -613,34 +613,34 @@ echo "=== Init complete ==="
             )
             status = "success"
 
-            # ©¤©¤ Harness ½ø¶È¼ÇÂ¼£¨effc.md Ä£Ê½£©©¤©¤
+            # ï¿½ï¿½ï¿½ï¿½ Harness ï¿½ï¿½ï¿½È¼ï¿½Â¼ï¿½ï¿½effc.md Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             if self._harness:
                 try:
                     self._harness.record_progress(
-                        f"?? ¹¤×÷Á÷²½Öè {step_idx + 1}/{session.total_steps} "
-                        f"[{step.label}] ({step.agent}) Íê³É"
+                        f"?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ {step_idx + 1}/{session.total_steps} "
+                        f"[{step.label}] ({step.agent}) ï¿½ï¿½ï¿½"
                     )
                 except Exception as he:
-                    logger.warning(f"Harness ¼ÇÂ¼½ø¶ÈÊ§°Ü: {he}")
+                    logger.warning(f"Harness ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½: {he}")
 
         except Exception as e:
-            # ±£ÁôÍêÕûµÄÒì³£ÐÅÏ¢£¨±ÜÃâ str(e) Îª¿Õ£©
+            # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ì³£ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ str(e) Îªï¿½Õ£ï¿½
             err_desc = f"{type(e).__name__}: {e}" if str(e) else repr(e)
-            result = f"Ö´ÐÐÊ§°Ü: {err_desc}"
+            result = f"Ö´ï¿½ï¿½Ê§ï¿½ï¿½: {err_desc}"
             status = "error"
-            logger.error(f"²½Öè {step_idx + 1} Ê§°Ü: {err_desc}")
+            logger.error(f"ï¿½ï¿½ï¿½ï¿½ {step_idx + 1} Ê§ï¿½ï¿½: {err_desc}")
 
-            # Harness ¼ÇÂ¼Ê§°Ü²½Öè
+            # Harness ï¿½ï¿½Â¼Ê§ï¿½Ü²ï¿½ï¿½ï¿½
             if self._harness:
                 try:
                     self._harness.record_progress(
-                        f"? ¹¤×÷Á÷²½Öè {step_idx + 1}/{session.total_steps} "
-                        f"[{step.label}] ({step.agent}) Ê§°Ü: {err_desc[:200]}"
+                        f"? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ {step_idx + 1}/{session.total_steps} "
+                        f"[{step.label}] ({step.agent}) Ê§ï¿½ï¿½: {err_desc[:200]}"
                     )
                 except Exception:
                     pass
 
-            # ¼ì²âÊÇ·ñÓÐ²¿·ÖÎÄ¼þÒÑÐ´Èë£¨Developer ¿ÉÄÜÔÚ±ÀÀ£Ç°ÒÑ´´½¨ÁËÎÄ¼þ£©
+            # ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ð²ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ð´ï¿½ë£¨Developer ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½Ç°ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
             if project_dir:
                 import os
                 try:
@@ -651,13 +651,13 @@ echo "=== Init complete ==="
                                 rel = os.path.relpath(os.path.join(root, f), project_dir)
                                 written_files.append(rel)
                     if written_files:
-                        result += f"\n\n?? ²¿·ÖÎÄ¼þÒÑÐ´Èë ({len(written_files)} ¸ö):\n"
+                        result += f"\n\n?? ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ ({len(written_files)} ï¿½ï¿½):\n"
                         result += "\n".join(f"  - {f}" for f in sorted(written_files)[:20])
-                        logger.info(f"²½Öè {step_idx + 1} Ê§°Üµ«ÒÑÐ´Èë {len(written_files)} ¸öÎÄ¼þ")
+                        logger.info(f"ï¿½ï¿½ï¿½ï¿½ {step_idx + 1} Ê§ï¿½Üµï¿½ï¿½ï¿½Ð´ï¿½ï¿½ {len(written_files)} ï¿½ï¿½ï¿½Ä¼ï¿½")
                 except Exception:
-                    pass  # ²»Ó°ÏìÖ÷Á÷³Ì
+                    pass  # ï¿½ï¿½Ó°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-        # ±£´æ²ú³öÎï£¨×îµÍÖÊÁ¿ÃÅ½û£ºÄÚÈÝ³¬¹ý 100 ×Ö·û²Å±£´æ£©
+        # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý³ï¿½ï¿½ï¿½ 100 ï¿½Ö·ï¿½ï¿½Å±ï¿½ï¿½æ£©
         min_save_length = 100
         if step.save_as and status == "success" and len(result) >= min_save_length:
             project_dir_path = session.resolved_project_dir(self.workspace)
@@ -667,8 +667,8 @@ echo "=== Init complete ==="
             output_path.write_text(result, encoding="utf-8")
         elif step.save_as and status == "success" and len(result) < min_save_length:
             logger.warning(
-                f"²½Öè {step_idx + 1} ²ú³öÄÚÈÝ¹ý¶Ì ({len(result)} ×Ö·û)£¬"
-                f"Ìø¹ý±£´æ {step.save_as}"
+                f"ï¿½ï¿½ï¿½ï¿½ {step_idx + 1} ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¹ï¿½ï¿½ï¿½ ({len(result)} ï¿½Ö·ï¿½)ï¿½ï¿½"
+                f"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ {step.save_as}"
             )
 
         session.step_outputs.append(result)
@@ -684,28 +684,28 @@ echo "=== Init complete ==="
         return result
 
     async def skip_step(self, session_id: str) -> str:
-        """Ìø¹ýµ±Ç°²½Öè¡£"""
+        """ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½è¡£"""
         session = self.get_session(session_id)
-        if not session: return f"´íÎó: Î´ÕÒµ½»á»° `{session_id}`"
-        if session.is_complete: return "´íÎó: ¹¤×÷Á÷ÒÑÍê³É"
+        if not session: return f"ï¿½ï¿½ï¿½ï¿½: Î´ï¿½Òµï¿½ï¿½á»° `{session_id}`"
+        if session.is_complete: return "ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
 
         step_idx = session.current_step
         step = session.workflow.steps[step_idx]
         session.step_outputs.append("")
         session.step_statuses.append("skipped")
         session.current_step += 1
-        return f"ÒÑÌø¹ý²½Öè {step_idx + 1}: {step.label} ({step.agent})"
+        return f"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ {step_idx + 1}: {step.label} ({step.agent})"
 
     async def inject_step(self, session_id: str, content: str) -> str:
-        """ÔÚµ±Ç°²½Öè×¢ÈëÊÖ¶¯½á¹û£¬²¢×÷ÎªÏÂÒ»²½µÄÊäÈë¡£"""
+        """ï¿½Úµï¿½Ç°ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¡£"""
         session = self.get_session(session_id)
-        if not session: return f"´íÎó: Î´ÕÒµ½»á»° `{session_id}`"
-        if session.is_complete: return "´íÎó: ¹¤×÷Á÷ÒÑÍê³É"
+        if not session: return f"ï¿½ï¿½ï¿½ï¿½: Î´ï¿½Òµï¿½ï¿½á»° `{session_id}`"
+        if session.is_complete: return "ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
 
         step_idx = session.current_step
         step = session.workflow.steps[step_idx]
         
-        # Èç¹û¸Ã²½ÖèÐèÒª±£´æÎÄ¼þ£¬Ò²±£´æ×¢ÈëµÄÄÚÈÝ
+        # ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         if step.save_as:
             project_dir = session.resolved_project_dir(self.workspace)
             project_dir.mkdir(parents=True, exist_ok=True)
@@ -715,16 +715,16 @@ echo "=== Init complete ==="
         session.step_outputs.append(content)
         session.step_statuses.append("injected")
         session.current_step += 1
-        return f"³É¹¦Îª²½Öè {step_idx + 1}: {step.label} ×¢ÈëÊÖ¶¯³É¹ûÄÚÈÝ¡£"
+        return f"ï¿½É¹ï¿½Îªï¿½ï¿½ï¿½ï¿½ {step_idx + 1}: {step.label} ×¢ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½É¹ï¿½ï¿½ï¿½ï¿½Ý¡ï¿½"
 
     async def _post_workflow_validation(self, session: WorkflowSession) -> None:
         """
-        ¹¤×÷Á÷Íê³ÉºóµÄÖÊÁ¿ÑéÖ¤£¨effc.md ÔöÁ¿Ä£Ê½£©¡£
+        ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½effc.md ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½
 
-        ¼ì²é£º
-        1. ×îºóÒ»²½£¨tester£©µÄÊä³öÊÇ·ñ°üº¬Êµ¼Ê²âÊÔÖ´ÐÐ
-        2. ÊÇ·ñËùÓÐ²½Öè¶¼³É¹¦
-        3. ¼ÇÂ¼Íê³É×´Ì¬µ½ Harness
+        ï¿½ï¿½é£º
+        1. ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½testerï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Êµï¿½Ê²ï¿½ï¿½ï¿½Ö´ï¿½ï¿½
+        2. ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ð²ï¿½ï¿½è¶¼ï¿½É¹ï¿½
+        3. ï¿½ï¿½Â¼ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½ Harness
         """
         if not self._harness:
             return
@@ -734,23 +734,23 @@ echo "=== Init complete ==="
             total_steps = session.total_steps
             all_success = success_count == total_steps
 
-            # ¼ì²é×îºóÒ»²½£¨Í¨³£ÊÇ tester£©ÊÇ·ñÖ»Êä³öÁË½¨Òé¶øÃ»ÓÐÊµ¼ÊÖ´ÐÐ
+            # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ testerï¿½ï¿½ï¿½Ç·ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ë½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Êµï¿½ï¿½Ö´ï¿½ï¿½
             last_output = session.step_outputs[-1] if session.step_outputs else ""
             tester_warning = ""
             if session.workflow.steps and session.workflow.steps[-1].agent == "tester":
                 no_exec_indicators = [
-                    "½¨ÒéÄúÔÚ±¾µØÖ´ÐÐ",
-                    "ÇëÊÖ¶¯ÔËÐÐ",
-                    "½¨ÒéÖ´ÐÐÒÔÏÂÃüÁî",
+                    "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½Ö´ï¿½ï¿½",
+                    "ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½",
+                    "ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
                     "recommend running",
                     "please run",
                 ]
                 if any(ind in last_output for ind in no_exec_indicators):
-                    tester_warning = " ?? Tester Î´Êµ¼ÊÖ´ÐÐ²âÊÔ£¬½öÊä³öÁË½¨Òé"
+                    tester_warning = " ?? Tester Î´Êµï¿½ï¿½Ö´ï¿½Ð²ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë½ï¿½ï¿½ï¿½"
 
             self._harness.record_progress(
-                f"?? ¹¤×÷Á÷ [{session.workflow.title}] Íê³É "
-                f"({success_count}/{total_steps} ³É¹¦)"
+                f"?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ [{session.workflow.title}] ï¿½ï¿½ï¿½ "
+                f"({success_count}/{total_steps} ï¿½É¹ï¿½)"
                 f"{tester_warning}"
             )
 
@@ -761,19 +761,19 @@ echo "=== Init complete ==="
                     if s == "error"
                 ]
                 self._harness.record_progress(
-                    f"?? Ê§°Ü²½Öè: {', '.join(failed_steps)} ¡ª ÐèÒªÐÞ¸´ºóÖØÊÔ"
+                    f"?? Ê§ï¿½Ü²ï¿½ï¿½ï¿½: {', '.join(failed_steps)} ï¿½ï¿½ ï¿½ï¿½Òªï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
                 )
         except Exception as e:
-            logger.warning(f"¹¤×÷Á÷ºóÑéÖ¤Ê§°Ü: {e}")
+            logger.warning(f"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤Ê§ï¿½ï¿½: {e}")
 
     def _get_next_feature_directive(self, session: WorkflowSession) -> str:
         """
-        Éú³ÉÔöÁ¿Ñ­»·Ö¸Áî¡£
+        ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½Ö¸ï¿½î¡£
         
-        Èç¹û Harness ÖÐ»¹ÓÐÎ´Íê³ÉµÄ feature£¬Éú³ÉÒ»¶ÎÃ÷È·µÄÖ¸Áî
-        ¸æËßÖ÷¿Ø Agent Á¢¼´µ÷ÓÃ run_workflow ¼ÌÐø¿ª·¢ÏÂÒ»¸ö feature¡£
+        ï¿½ï¿½ï¿½ Harness ï¿½Ð»ï¿½ï¿½ï¿½Î´ï¿½ï¿½Éµï¿½ featureï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½Ö¸ï¿½ï¿½
+        ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Agent ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ run_workflow ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ featureï¿½ï¿½
         
-        ÕâÊÇ effc.md ÔöÁ¿Ä£Ê½µÄºËÐÄ£ºÒ»¸ö feature Íê³Éºó×Ô¶¯ÏÎ½ÓÏÂÒ»¸ö¡£
+        ï¿½ï¿½ï¿½ï¿½ effc.md ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½Äºï¿½ï¿½Ä£ï¿½Ò»ï¿½ï¿½ feature ï¿½ï¿½Éºï¿½ï¿½Ô¶ï¿½ï¿½Î½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½
         """
         if not self._harness:
             return ""
@@ -785,8 +785,8 @@ echo "=== Init complete ==="
             remaining = pending + in_progress
             if not remaining:
                 return (
-                    "\n## ?? ËùÓÐ Feature ÒÑÍê³É\n\n"
-                    "Harness ÖÐÃ»ÓÐ¸ü¶à´ý´¦ÀíµÄ Feature¡£ÏîÄ¿¿ª·¢Íê³É¡£\n"
+                    "\n## ?? ï¿½ï¿½ï¿½ï¿½ Feature ï¿½ï¿½ï¿½ï¿½ï¿½\n\n"
+                    "Harness ï¿½ï¿½Ã»ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Featureï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¡ï¿½\n"
                 )
 
             next_feat = remaining[0]
@@ -798,31 +798,31 @@ echo "=== Init complete ==="
             total = len(completed) + len(remaining)
 
             return (
-                f"\n## ? ÔöÁ¿¿ª·¢ - ÏÂÒ»¸ö Feature\n\n"
-                f"**½ø¶È**: {len(completed)}/{total} ÒÑÍê³É£¬"
-                f"Ê£Óà {len(remaining)} ¸ö\n\n"
-                f"**ÏÂÒ»¸ö Feature**:\n"
+                f"\n## ? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½Ò»ï¿½ï¿½ Feature\n\n"
+                f"**ï¿½ï¿½ï¿½ï¿½**: {len(completed)}/{total} ï¿½ï¿½ï¿½ï¿½É£ï¿½"
+                f"Ê£ï¿½ï¿½ {len(remaining)} ï¿½ï¿½\n\n"
+                f"**ï¿½ï¿½Ò»ï¿½ï¿½ Feature**:\n"
                 f"- ID: `{feat_id}`\n"
-                f"- ÓÅÏÈ¼¶: {feat_priority}\n"
-                f"- ÃèÊö: {feat_desc}\n\n"
-                f"**?? ±ØÐëÁ¢¼´ÐÐ¶¯**: ÇëÁ¢¼´µ÷ÓÃ `run_workflow` ¹¤¾ß£¬"
-                f"ÒÔ `{feat_desc}` ×÷Îª description ¼ÌÐø¿ª·¢¡£\n"
-                f"²»ÒªÍ£ÏÂÀ´×Ü½á»òÊä³ö'ÏÂÒ»²½¼Æ»®'£¬Ö±½Óµ÷ÓÃ¹¤¾ß¼ÌÐø¡£\n"
+                f"- ï¿½ï¿½ï¿½È¼ï¿½: {feat_priority}\n"
+                f"- ï¿½ï¿½ï¿½ï¿½: {feat_desc}\n\n"
+                f"**?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½**: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ `run_workflow` ï¿½ï¿½ï¿½ß£ï¿½"
+                f"ï¿½ï¿½ `{feat_desc}` ï¿½ï¿½Îª description ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+                f"ï¿½ï¿½ÒªÍ£ï¿½ï¿½ï¿½ï¿½ï¿½Ü½ï¿½ï¿½ï¿½ï¿½ï¿½'ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Æ»ï¿½'ï¿½ï¿½Ö±ï¿½Óµï¿½ï¿½Ã¹ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½\n"
             )
         except Exception as e:
-            logger.warning(f"»ñÈ¡ÏÂÒ»¸ö Feature Ö¸ÁîÊ§°Ü: {e}")
+            logger.warning(f"ï¿½ï¿½È¡ï¿½ï¿½Ò»ï¿½ï¿½ Feature Ö¸ï¿½ï¿½Ê§ï¿½ï¿½: {e}")
             return ""
 
     async def _run_all(self, session: WorkflowSession, on_progress: Any = None) -> str:
-        """ÄÚ²¿È«×Ô¶¯Á¬ÅÜ£¨¼¯³É effc.md ÔöÁ¿ÑéÖ¤£©¡£"""
+        """ï¿½Ú²ï¿½È«ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ effc.md ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½"""
         start_time = time.time()
 
-        # ©¤©¤ effc.md »·¾³×¼±¸ ©¤©¤
+        # ï¿½ï¿½ï¿½ï¿½ effc.md ï¿½ï¿½ï¿½ï¿½×¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         project_dir = session.resolved_project_dir(self.workspace)
         self._ensure_git_repo(project_dir)
         self._generate_init_sh(project_dir)
 
-        # ©¤©¤ effc.md ÔöÁ¿Ñ­»·£º×Ô¶¯·Ö½âÐèÇó²¢Öð Feature ¿ª·¢ ©¤©¤
+        # ï¿½ï¿½ï¿½ï¿½ effc.md ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Feature ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if self._harness:
             try:
                 incremental = await self._try_incremental(
@@ -832,63 +832,63 @@ echo "=== Init complete ==="
                     return incremental
             except Exception as e:
                 logger.warning(
-                    f"ÔöÁ¿Ä£Ê½Òì³££¬»ØÍËµ½ÆÕÍ¨Ä£Ê½: {e}", exc_info=True
+                    f"ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ì³£ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½Í¨Ä£Ê½: {e}", exc_info=True
                 )
 
-        # ©¤©¤ ÒÔÏÂÎªÆÕÍ¨µ¥´Î¹¤×÷Á÷Ä£Ê½£¨»ØÍËÂ·¾¶£©©¤©¤
-        # Harness£º¼ÇÂ¼¹¤×÷Á÷¿ªÊ¼
+        # ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Í¨ï¿½ï¿½ï¿½Î¹ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        # Harnessï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼
         if self._harness:
             try:
                 self._harness.record_progress(
-                    f"?? ¹¤×÷Á÷ [{session.workflow.title}] ¿ªÊ¼Ö´ÐÐ "
-                    f"({session.total_steps} ²½Öè)"
+                    f"?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ [{session.workflow.title}] ï¿½ï¿½Ê¼Ö´ï¿½ï¿½ "
+                    f"({session.total_steps} ï¿½ï¿½ï¿½ï¿½)"
                 )
             except Exception as he:
-                logger.warning(f"Harness ¼ÇÂ¼¿ªÊ¼Ê§°Ü: {he}")
+                logger.warning(f"Harness ï¿½ï¿½Â¼ï¿½ï¿½Ê¼Ê§ï¿½ï¿½: {he}")
 
         while not session.is_complete:
             await self.next_step(session.session_id, on_progress=on_progress)
 
-        # ©¤©¤ ¹¤×÷Á÷Íê³ÉºóµÄÖÊÁ¿ÑéÖ¤£¨effc.md ÔöÁ¿Ä£Ê½£©©¤©¤
+        # ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Éºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½effc.md ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         await self._post_workflow_validation(session)
 
         total_duration = time.time() - start_time
         success_count = sum(1 for s in session.step_statuses if s in ("success", "injected"))
         total_steps = session.total_steps
 
-        # ¹¹½¨±¨¸æ
+        # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         workflow = session.workflow
         report_lines = [
-            f"# ?? ¹¤×÷Á÷±¨¸æ: {workflow.title} ({session.session_id})",
-            f"\n**ÈÎÎñ**: {session.description}",
-            f"**×´Ì¬**: Íê³É",
-            f"**ºÄÊ±**: {total_duration:.1f}s",
-            f"**³É¹¦²½Öè**: {success_count}/{total_steps}\n",
+            f"# ?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {workflow.title} ({session.session_id})",
+            f"\n**ï¿½ï¿½ï¿½ï¿½**: {session.description}",
+            f"**×´Ì¬**: ï¿½ï¿½ï¿½",
+            f"**ï¿½ï¿½Ê±**: {total_duration:.1f}s",
+            f"**ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½**: {success_count}/{total_steps}\n",
             "---\n",
         ]
 
         for i, step in enumerate(workflow.steps):
             status = session.step_statuses[i] if i < len(session.step_statuses) else "pending"
             status_emoji = {"success": "?", "error": "?", "skipped": "??", "injected": "??"}.get(status, "?")
-            report_lines.append(f"## {status_emoji} ²½Öè {i + 1}: {step.label} ({step.agent})\n")
+            report_lines.append(f"## {status_emoji} ï¿½ï¿½ï¿½ï¿½ {i + 1}: {step.label} ({step.agent})\n")
             if i < len(session.step_outputs):
                 output = session.step_outputs[i]
-                # ½Ø¶Ï¹ý³¤µÄ²½ÖèÊä³öÒÔ¿ØÖÆ±¨¸æ×Ü³¤¶È
-                # ÍêÕûÄÚÈÝÒÑÍ¨¹ý save_as ±£´æµ½ÎÄ¼þ
+                # ï¿½Ø¶Ï¹ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½Æ±ï¿½ï¿½ï¿½ï¿½Ü³ï¿½ï¿½ï¿½
+                # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ save_as ï¿½ï¿½ï¿½æµ½ï¿½Ä¼ï¿½
                 if len(output) > 3000:
-                    output = output[:3000] + "\n\n... [Êä³öÒÑ½Ø¶Ï£¬ÍêÕûÄÚÈÝÒÑ±£´æµ½ÏîÄ¿Ä¿Â¼]"
+                    output = output[:3000] + "\n\n... [ï¿½ï¿½ï¿½ï¿½Ñ½Ø¶Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ±ï¿½ï¿½æµ½ï¿½ï¿½Ä¿Ä¿Â¼]"
                 report_lines.append(output)
             report_lines.append("\n---\n")
 
-        # ©¤©¤ ÔöÁ¿Ñ­»·Ö¸Áî£¨effc.md Ä£Ê½£©©¤©¤
-        # Èç¹û Harness ÖÐ»¹ÓÐÎ´Íê³ÉµÄ feature£¬Ã÷È·¸æËß Agent ¼ÌÐø
+        # ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½Ö¸ï¿½î£¨effc.md Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        # ï¿½ï¿½ï¿½ Harness ï¿½Ð»ï¿½ï¿½ï¿½Î´ï¿½ï¿½Éµï¿½ featureï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ Agent ï¿½ï¿½ï¿½ï¿½
         next_feature_directive = self._get_next_feature_directive(session)
         if next_feature_directive:
             report_lines.append(next_feature_directive)
 
         report = "\n".join(report_lines)
 
-        # ±£´æ±¨¸æ
+        # ï¿½ï¿½ï¿½æ±¨ï¿½ï¿½
         if session.project_name or session.project_dir:
             project_dir = session.resolved_project_dir(self.workspace)
             project_dir.mkdir(parents=True, exist_ok=True)
@@ -897,7 +897,7 @@ echo "=== Init complete ==="
 
         return report
 
-    # ©¤©¤ effc.md ÔöÁ¿Ñ­»··½·¨ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+    # ï¿½ï¿½ï¿½ï¿½ effc.md ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     async def _try_incremental(
         self,
@@ -906,27 +906,27 @@ echo "=== Init complete ==="
         start_time: float,
     ) -> str | None:
         """
-        ³¢ÊÔ effc.md ÔöÁ¿Ä£Ê½Ö´ÐÐ¡£
+        ï¿½ï¿½ï¿½ï¿½ effc.md ï¿½ï¿½ï¿½ï¿½Ä£Ê½Ö´ï¿½Ð¡ï¿½
 
-        1. Èç¹û Harness Ã»ÓÐ feature_list£¬ÏÈÍ¨¹ý LLM ·Ö½âÐèÇó
-        2. Öð¸ö Feature Ö´ÐÐ¹¤×÷Á÷ pipeline
-        3. Ã¿¸ö Feature Íê³ÉºóÍ¨¹ý Harness ÃÅ½û
+        1. ï¿½ï¿½ï¿½ Harness Ã»ï¿½ï¿½ feature_listï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ LLM ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½
+        2. ï¿½ï¿½ï¿½ Feature Ö´ï¿½Ð¹ï¿½ï¿½ï¿½ï¿½ï¿½ pipeline
+        3. Ã¿ï¿½ï¿½ Feature ï¿½ï¿½Éºï¿½Í¨ï¿½ï¿½ Harness ï¿½Å½ï¿½
 
         Returns:
-            ÔöÁ¿±¨¸æ×Ö·û´®£»Èç¹û²»ÊÊÓÃÔöÁ¿Ä£Ê½Ôò·µ»Ø None£¨»ØÍËµ½ÆÕÍ¨Ä£Ê½£©¡£
+            ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ï¿½ò·µ»ï¿½ Noneï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½Í¨Ä£Ê½ï¿½ï¿½ï¿½ï¿½
         """
         if not self._harness:
             return None
 
-        # È·±£ harness ÒÑ³õÊ¼»¯£¨º¬ÐèÇó·Ö½â£©
+        # È·ï¿½ï¿½ harness ï¿½Ñ³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½â£©
         if not self._harness.is_initialized():
             try:
                 await self._decompose_requirements(session)
             except Exception as e:
-                logger.warning(f"ÐèÇó·Ö½âÊ§°Ü£¬»ØÍËÆÕÍ¨Ä£Ê½: {e}")
+                logger.warning(f"ï¿½ï¿½ï¿½ï¿½Ö½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨Ä£Ê½: {e}")
                 return None
 
-        # ¼ì²éÊÇ·ñÓÐ´ý´¦ÀíµÄ Feature
+        # ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Feature
         pending = self._harness.list_features(status="pending")
         in_progress = self._harness.list_features(status="in_progress")
         remaining = in_progress + pending
@@ -935,19 +935,19 @@ echo "=== Init complete ==="
             completed = self._harness.list_features(status="completed")
             if completed:
                 return (
-                    "# ?? ËùÓÐ Feature ÒÑÍê³É\n\n"
-                    f"¹² {len(completed)} ¸ö Feature È«²¿Íê³É¡£ÏîÄ¿¿ª·¢Íê±Ï¡£"
+                    "# ?? ï¿½ï¿½ï¿½ï¿½ Feature ï¿½ï¿½ï¿½ï¿½ï¿½\n\n"
+                    f"ï¿½ï¿½ {len(completed)} ï¿½ï¿½ Feature È«ï¿½ï¿½ï¿½ï¿½É¡ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¡ï¿½"
                 )
-            return None  # Ã»ÓÐ Feature Êý¾Ý£¬»ØÍËµ½ÆÕÍ¨Ä£Ê½
+            return None  # Ã»ï¿½ï¿½ Feature ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½Í¨Ä£Ê½
 
-        # ©¤©¤ »á»°Æô¶¯²âÊÔ£¨effc.md: getting up to speed£© ©¤©¤
+        # ï¿½ï¿½ï¿½ï¿½ ï¿½á»°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô£ï¿½effc.md: getting up to speedï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         try:
             startup_result = self._harness.run_session_startup_tests()
             if startup_result and not startup_result.get("all_passed", True):
                 failed = startup_result.get("failed", [])
                 self._harness.record_progress(
-                    f"?? »á»°Æô¶¯²âÊÔÊ§°Ü ({len(failed)} Ïî)£¬"
-                    f"ÓÅÏÈÐÞ¸´ÏÖÓÐÎÊÌâ"
+                    f"?? ï¿½á»°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½ ({len(failed)} ï¿½ï¿½)ï¿½ï¿½"
+                    f"ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
                 )
                 logger.warning(
                     f"Session startup tests failed: {failed}"
@@ -955,19 +955,19 @@ echo "=== Init complete ==="
         except Exception as e:
             logger.debug(f"Session startup tests skipped: {e}")
 
-        # ©¤©¤ ÔöÁ¿Ñ­»·ºËÐÄ ©¤©¤
+        # ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         MAX_FEATURES_PER_RUN = 10
-        MAX_TIME_PER_RUN = 3600  # 1 Ð¡Ê±°²È«ÏÞÖÆ
+        MAX_TIME_PER_RUN = 3600  # 1 Ð¡Ê±ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½
         all_reports: list[str] = []
         features_attempted = 0
 
         self._harness.record_progress(
-            f"?? ÔöÁ¿Ñ­»·¿ªÊ¼ (´ý´¦Àí: {len(remaining)} ¸ö Feature)"
+            f"?? ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½Ê¼ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {len(remaining)} ï¿½ï¿½ Feature)"
         )
 
         for _ in range(MAX_FEATURES_PER_RUN):
             if time.time() - start_time > MAX_TIME_PER_RUN:
-                self._harness.record_progress("? ÔöÁ¿Ñ­»·Ê±¼äÏÞÖÆµ½´ï")
+                self._harness.record_progress("? ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½")
                 break
 
             current = self._harness.get_enforced_current_feature()
@@ -976,20 +976,20 @@ echo "=== Init complete ==="
 
             feat_id = current.get("id", f"FEAT-{features_attempted + 1:03d}")
             feat_desc = current.get("description", session.description)
-            logger.info(f"¨T¨T¨T ÔöÁ¿Ñ­»·: Feature {feat_id} - {feat_desc} ¨T¨T¨T")
+            logger.info(f"ï¿½Tï¿½Tï¿½T ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½: Feature {feat_id} - {feat_desc} ï¿½Tï¿½Tï¿½T")
 
-            # ¿ªÊ¼ Feature£¨Harness ÃÅ½ûÈë¿Ú£©
+            # ï¿½ï¿½Ê¼ Featureï¿½ï¿½Harness ï¿½Å½ï¿½ï¿½ï¿½Ú£ï¿½
             if current.get("status") == "pending":
                 self._harness.start_feature(feat_id)
 
-            # Ö´ÐÐÍêÕû¹¤×÷Á÷ pipeline
+            # Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ pipeline
             report = await self._run_single_feature(
                 session, feat_id, feat_desc, on_progress
             )
             all_reports.append(report)
             features_attempted += 1
 
-            # ÃÅ½û³ö¿Ú£º³¢ÊÔÍê³É Feature
+            # ï¿½Å½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Feature
             try:
                 result = self._harness.complete_feature(
                     feat_id,
@@ -999,24 +999,24 @@ echo "=== Init complete ==="
                 )
                 if result.get("success"):
                     self._harness.record_progress(
-                        f"? Feature {feat_id} Íê³É"
+                        f"? Feature {feat_id} ï¿½ï¿½ï¿½"
                     )
                 else:
                     self._harness.record_progress(
-                        f"?? Feature {feat_id} ÃÅ½ûÎ´Í¨¹ý: "
+                        f"?? Feature {feat_id} ï¿½Å½ï¿½Î´Í¨ï¿½ï¿½: "
                         f"{result.get('message', '')[:200]}"
                     )
             except Exception as e:
-                logger.warning(f"Feature {feat_id} Íê³É´¦ÀíÒì³£: {e}")
+                logger.warning(f"Feature {feat_id} ï¿½ï¿½É´ï¿½ï¿½ï¿½ï¿½ì³£: {e}")
                 try:
                     self._harness.transition_feature_status(
                         feat_id, "completed",
-                        reason=f"¹¤×÷Á÷ÒÑÖ´ÐÐ£¬ÃÅ½ûÒì³£: {e}",
+                        reason=f"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð£ï¿½ï¿½Å½ï¿½ï¿½ì³£: {e}",
                     )
                 except Exception:
                     pass
 
-        # ©¤©¤ »ã×Ü±¨¸æ ©¤©¤
+        # ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ü±ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         total_duration = time.time() - start_time
         all_features = self._harness.list_features()
         completed_total = len(
@@ -1028,32 +1028,32 @@ echo "=== Init complete ==="
         )
 
         report_lines = [
-            "# ?? ÔöÁ¿¿ª·¢±¨¸æ",
-            f"\n**ÈÎÎñ**: {session.description}",
-            f"**Ä£Ê½**: effc.md ÔöÁ¿Ñ­»·",
-            f"**½ø¶È**: {completed_total}/{len(all_features)} Feature ÒÑÍê³É",
-            f"**±¾ÂÖ**: {features_attempted} ¸ö Feature",
-            f"**Ê£Óà**: {remaining_count} ¸ö",
-            f"**ºÄÊ±**: {total_duration:.1f}s\n",
+            "# ?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
+            f"\n**ï¿½ï¿½ï¿½ï¿½**: {session.description}",
+            f"**Ä£Ê½**: effc.md ï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½",
+            f"**ï¿½ï¿½ï¿½ï¿½**: {completed_total}/{len(all_features)} Feature ï¿½ï¿½ï¿½ï¿½ï¿½",
+            f"**ï¿½ï¿½ï¿½ï¿½**: {features_attempted} ï¿½ï¿½ Feature",
+            f"**Ê£ï¿½ï¿½**: {remaining_count} ï¿½ï¿½",
+            f"**ï¿½ï¿½Ê±**: {total_duration:.1f}s\n",
             "---\n",
         ]
 
         for i, fr in enumerate(all_reports):
             report_lines.append(f"## Feature {i + 1}\n")
             if len(fr) > 2000:
-                fr = fr[:2000] + "\n... [ÒÑ½Ø¶Ï]"
+                fr = fr[:2000] + "\n... [ï¿½Ñ½Ø¶ï¿½]"
             report_lines.append(fr)
             report_lines.append("\n---\n")
 
         if remaining_count > 0:
             report_lines.append(
-                f"\n## ?? Ê£Óà {remaining_count} ¸ö Feature\n\n"
-                "ÔÙ´Îµ÷ÓÃ `run_workflow` ¼´¿É×Ô¶¯¼ÌÐø¡£\n"
+                f"\n## ?? Ê£ï¿½ï¿½ {remaining_count} ï¿½ï¿½ Feature\n\n"
+                "ï¿½Ù´Îµï¿½ï¿½ï¿½ `run_workflow` ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
             )
 
         report = "\n".join(report_lines)
 
-        # ±£´æ±¨¸æ
+        # ï¿½ï¿½ï¿½æ±¨ï¿½ï¿½
         if session.project_name or session.project_dir:
             project_dir = session.resolved_project_dir(self.workspace)
             project_dir.mkdir(parents=True, exist_ok=True)
@@ -1070,7 +1070,7 @@ echo "=== Init complete ==="
         feat_desc: str,
         on_progress: Any = None,
     ) -> str:
-        """Îªµ¥¸ö Feature ÔËÐÐÍêÕûµÄ¹¤×÷Á÷ pipeline¡£"""
+        """Îªï¿½ï¿½ï¿½ï¿½ Feature ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½ pipelineï¿½ï¿½"""
         session_id = f"{parent_session.session_id}-{feat_id}"
         feature_session = WorkflowSession(
             session_id=session_id,
@@ -1084,7 +1084,7 @@ echo "=== Init complete ==="
 
         if self._harness:
             self._harness.record_progress(
-                f"?? Feature [{feat_id}] ¹¤×÷Á÷¿ªÊ¼: {feat_desc}"
+                f"?? Feature [{feat_id}] ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼: {feat_desc}"
             )
 
         while not feature_session.is_complete:
@@ -1092,21 +1092,21 @@ echo "=== Init complete ==="
 
         await self._post_workflow_validation(feature_session)
 
-        # effc.md: Ã¿¸ö Feature Íê³Éºó×Ô¶¯ git commit
+        # effc.md: Ã¿ï¿½ï¿½ Feature ï¿½ï¿½Éºï¿½ï¿½Ô¶ï¿½ git commit
         project_dir = feature_session.resolved_project_dir(self.workspace)
         self._git_commit(
             project_dir,
             f"feat({feat_id}): {feat_desc[:60]}"
         )
 
-        # ¹¹½¨ Feature ±¨¸æ
+        # ï¿½ï¿½ï¿½ï¿½ Feature ï¿½ï¿½ï¿½ï¿½
         success_count = sum(
             1 for s in feature_session.step_statuses
             if s in ("success", "injected")
         )
         lines = [
             f"**Feature**: {feat_id} - {feat_desc}",
-            f"**½á¹û**: {success_count}/{feature_session.total_steps} ²½Öè³É¹¦",
+            f"**ï¿½ï¿½ï¿½**: {success_count}/{feature_session.total_steps} ï¿½ï¿½ï¿½ï¿½É¹ï¿½",
         ]
         for i, step in enumerate(feature_session.workflow.steps):
             if i < len(feature_session.step_statuses):
@@ -1120,7 +1120,7 @@ echo "=== Init complete ==="
             last = feature_session.step_outputs[-1]
             if len(last) > 500:
                 last = last[:500] + "..."
-            lines.append(f"\n**×îºó²½ÖèÊä³öÕªÒª**:\n{last}")
+            lines.append(f"\n**ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÕªÒª**:\n{last}")
 
         return "\n".join(lines)
 
@@ -1128,12 +1128,12 @@ echo "=== Init complete ==="
         self, session: WorkflowSession
     ) -> None:
         """
-        Ê¹ÓÃ LLM ½«ÐèÇó·Ö½âÎª Feature ÁÐ±í²¢Ð´Èë Harness¡£
+        Ê¹ï¿½ï¿½ LLM ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö½ï¿½Îª Feature ï¿½Ð±ï¿½ï¿½Ð´ï¿½ï¿½ Harnessï¿½ï¿½
 
-        ¶ÔÓ¦ effc.md ÖÐµÄ Initializer Agent£ºÔÚµÚÒ»¸ö session
-        ½«¸ß²ãÐèÇó²ð³É¿ÉÔöÁ¿¿ª·¢µÄ Feature Çåµ¥¡£
+        ï¿½ï¿½Ó¦ effc.md ï¿½Ðµï¿½ Initializer Agentï¿½ï¿½ï¿½Úµï¿½Ò»ï¿½ï¿½ session
+        ï¿½ï¿½ï¿½ß²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Feature ï¿½åµ¥ï¿½ï¿½
         """
-        logger.info(f"¿ªÊ¼·Ö½âÐèÇó: {session.description[:100]}")
+        logger.info(f"ï¿½ï¿½Ê¼ï¿½Ö½ï¿½ï¿½ï¿½ï¿½ï¿½: {session.description[:100]}")
 
         prompt = _DECOMPOSE_PROMPT.format(description=session.description)
         messages: list[dict[str, Any]] = [
@@ -1149,7 +1149,7 @@ echo "=== Init complete ==="
 
         if not features:
             logger.warning(
-                "ÐèÇó·Ö½âÎ´²úÉú Feature£¬Ê¹ÓÃÔ­Ê¼ÃèÊö×÷Îªµ¥Ò» Feature"
+                "ï¿½ï¿½ï¿½ï¿½Ö½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ Featureï¿½ï¿½Ê¹ï¿½ï¿½Ô­Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ò» Feature"
             )
             features = [
                 {
@@ -1157,8 +1157,8 @@ echo "=== Init complete ==="
                     "category": "core",
                     "priority": "P0",
                     "description": session.description,
-                    "steps": ["ÊµÏÖÍêÕû¹¦ÄÜ"],
-                    "test_criteria": "¹¦ÄÜ¿ÉÕý³£ÔËÐÐ",
+                    "steps": ["Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"],
+                    "test_criteria": "ï¿½ï¿½ï¿½Ü¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
                     "status": "pending",
                 }
             ]
@@ -1166,7 +1166,7 @@ echo "=== Init complete ==="
         project_name = session.project_name or "project"
         self._harness.initialize(project_name, features)
 
-        # effc.md: ³õÊ¼ git Ìá½»£¨°üº¬ feature_list.json ºÍ init.sh£©
+        # effc.md: ï¿½ï¿½Ê¼ git ï¿½á½»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ feature_list.json ï¿½ï¿½ init.shï¿½ï¿½
         project_dir = session.resolved_project_dir(self.workspace)
         self._ensure_git_repo(project_dir)
         self._generate_init_sh(project_dir)
@@ -1175,14 +1175,14 @@ echo "=== Init complete ==="
             f"chore: initialize project with {len(features)} features"
         )
 
-        logger.info(f"ÐèÇóÒÑ·Ö½âÎª {len(features)} ¸ö Feature")
+        logger.info(f"ï¿½ï¿½ï¿½ï¿½ï¿½Ñ·Ö½ï¿½Îª {len(features)} ï¿½ï¿½ Feature")
         self._harness.record_progress(
-            f"?? ÐèÇó·Ö½âÍê³É: {len(features)} ¸ö Feature"
+            f"?? ï¿½ï¿½ï¿½ï¿½Ö½ï¿½ï¿½ï¿½ï¿½: {len(features)} ï¿½ï¿½ Feature"
         )
 
     def _parse_feature_json(self, content: str) -> list[dict]:
-        """´Ó LLM ÏìÓ¦ÖÐ½âÎö Feature JSON¡£"""
-        # Ö±½Ó½âÎö
+        """ï¿½ï¿½ LLM ï¿½ï¿½Ó¦ï¿½Ð½ï¿½ï¿½ï¿½ Feature JSONï¿½ï¿½"""
+        # Ö±ï¿½Ó½ï¿½ï¿½ï¿½
         try:
             data = json.loads(content.strip())
             if isinstance(data, list):
@@ -1192,7 +1192,7 @@ echo "=== Init complete ==="
         except json.JSONDecodeError:
             pass
 
-        # ÌáÈ¡ JSON ´úÂë¿é
+        # ï¿½ï¿½È¡ JSON ï¿½ï¿½ï¿½ï¿½ï¿½
         for pattern in [
             r'```json\s*\n(.*?)```',
             r'```\s*\n(.*?)```',
@@ -1206,7 +1206,7 @@ echo "=== Init complete ==="
                 except (json.JSONDecodeError, IndexError):
                     continue
 
-        # ×îºó³¢ÊÔ£ºÌáÈ¡×îÍâ²ã [...]
+        # ï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ [...]
         match = re.search(r'\[.*\]', content, re.DOTALL)
         if match:
             try:
@@ -1216,11 +1216,11 @@ echo "=== Init complete ==="
             except json.JSONDecodeError:
                 pass
 
-        logger.warning(f"ÎÞ·¨½âÎö Feature JSON: {content[:200]}")
+        logger.warning(f"ï¿½Þ·ï¿½ï¿½ï¿½ï¿½ï¿½ Feature JSON: {content[:200]}")
         return []
 
     def _normalize_features(self, features: list[dict]) -> list[dict]:
-        """±ê×¼»¯ Feature Êý¾Ý£¬È·±£±ØÒª×Ö¶Î´æÔÚ¡£"""
+        """ï¿½ï¿½×¼ï¿½ï¿½ Feature ï¿½ï¿½ï¿½Ý£ï¿½È·ï¿½ï¿½ï¿½ï¿½Òªï¿½Ö¶Î´ï¿½ï¿½Ú¡ï¿½"""
         normalized = []
         for i, f in enumerate(features):
             feat = {
@@ -1238,10 +1238,10 @@ echo "=== Init complete ==="
 
     def _get_harness_context_for_subagent(self) -> str:
         """
-        Îª Subagent ¹¹½¨ Harness ÉÏÏÂÎÄÕªÒª¡£
+        Îª Subagent ï¿½ï¿½ï¿½ï¿½ Harness ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÕªÒªï¿½ï¿½
 
-        ÈÃÃ¿¸ö Subagent ÁË½âÏîÄ¿ÕûÌå½ø¶ÈºÍµ±Ç° Feature ×´Ì¬£¬
-        ±ÜÃâÖØ¸´ÊµÏÖÒÑÍê³ÉµÄ¹¦ÄÜ¡£
+        ï¿½ï¿½Ã¿ï¿½ï¿½ Subagent ï¿½Ë½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÈºÍµï¿½Ç° Feature ×´Ì¬ï¿½ï¿½
+        ï¿½ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÉµÄ¹ï¿½ï¿½Ü¡ï¿½
         """
         if not self._harness or not self._harness.is_initialized():
             return ""
@@ -1252,31 +1252,31 @@ echo "=== Init complete ==="
             current = ctx.get("current_feature")
 
             lines = [
-                "# ÏîÄ¿½ø¶ÈÉÏÏÂÎÄ",
-                f"- ×Ü½ø¶È: {stats.get('completed', 0)}/{stats.get('total', 0)} Feature ÒÑÍê³É",
-                f"- ½øÐÐÖÐ: {stats.get('in_progress', 0)}",
-                f"- ´ý´¦Àí: {stats.get('pending', 0)}",
+                "# ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
+                f"- ï¿½Ü½ï¿½ï¿½ï¿½: {stats.get('completed', 0)}/{stats.get('total', 0)} Feature ï¿½ï¿½ï¿½ï¿½ï¿½",
+                f"- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {stats.get('in_progress', 0)}",
+                f"- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½: {stats.get('pending', 0)}",
             ]
 
             if current:
                 lines.extend([
-                    "\n## µ±Ç° Feature",
+                    "\n## ï¿½ï¿½Ç° Feature",
                     f"- ID: {current.get('id', '?')}",
-                    f"- ÃèÊö: {current.get('description', '')}",
-                    f"- ÑéÊÕ±ê×¼: {current.get('test_criteria', 'Î´¶¨Òå')}",
+                    f"- ï¿½ï¿½ï¿½ï¿½: {current.get('description', '')}",
+                    f"- ï¿½ï¿½ï¿½Õ±ï¿½×¼: {current.get('test_criteria', 'Î´ï¿½ï¿½ï¿½ï¿½')}",
                 ])
 
             return "\n".join(lines)
         except Exception as e:
-            logger.debug(f"»ñÈ¡ Harness ÉÏÏÂÎÄÊ§°Ü: {e}")
+            logger.debug(f"ï¿½ï¿½È¡ Harness ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½: {e}")
             return ""
 
 
-# ©¤©¤ ¹¤×÷Á÷¹¤¾ß ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+# ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 
 class RunWorkflowTool(Tool):
-    """Í¨¹ý¹¤¾ßµ÷ÓÃÖ´ÐÐÔ¤¶¨ÒåµÄ¿ª·¢¹¤×÷Á÷¡£"""
+    """Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ßµï¿½ï¿½ï¿½Ö´ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"""
 
     def __init__(self, engine: WorkflowEngine):
         self._engine = engine
@@ -1291,9 +1291,9 @@ class RunWorkflowTool(Tool):
             f"{w.title}({w.name})" for w in WORKFLOWS.values()
         )
         return (
-            f"Æô¶¯Ô¤¶¨ÒåµÄ¿ª·¢Á÷Ë®Ïß¡£Ö§³ÖÈ«×Ô¶¯Ä£Ê½(auto)ºÍ·Ö²½½»»¥Ä£Ê½(step)¡£\n"
-            f"¿ÉÓÃ¹¤×÷Á÷: {flows}¡£\n"
-            f"·Ö²½Ä£Ê½ÔÊÐíÄãÔÚÃ¿²½Ö®ºó½éÈë¡¢ÐÞ¸Ä²ú³ö»òÊÖ¶¯Î¯ÅÉÆäËûÈÎÎñ¡£"
+            f"ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½Ë®ï¿½ß¡ï¿½Ö§ï¿½ï¿½È«ï¿½Ô¶ï¿½Ä£Ê½(auto)ï¿½Í·Ö²ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½(step)ï¿½ï¿½\n"
+            f"ï¿½ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½ï¿½ï¿½: {flows}ï¿½ï¿½\n"
+            f"ï¿½Ö²ï¿½Ä£Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Ö®ï¿½ï¿½ï¿½ï¿½ë¡¢ï¿½Þ¸Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½Î¯ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
         )
 
     @property
@@ -1303,24 +1303,24 @@ class RunWorkflowTool(Tool):
             "properties": {
                 "workflow": {
                     "type": "string",
-                    "description": "¹¤×÷Á÷Ãû³Æ",
+                    "description": "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
                     "enum": list(WORKFLOWS.keys()),
                 },
                 "description": {
                     "type": "string",
-                    "description": "ÈÎÎñÃèÊö£¬»á´«µÝ¸ø¹¤×÷Á÷ÖÐµÄÃ¿¸öAgent",
+                    "description": "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á´«ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½Ã¿ï¿½ï¿½Agent",
                 },
                 "project_name": {
                     "type": "string",
-                    "description": "£¨¿ÉÑ¡£©ÏîÄ¿Ãû³Æ£¬ÓÃÓÚ±£´æ²ú³öÎï",
+                    "description": "ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½",
                 },
                 "project_dir": {
                     "type": "string",
-                    "description": "£¨¿ÉÑ¡£©ÏîÄ¿¾ø¶ÔÂ·¾¶¡£Ìá¹©ºóÓÅÏÈÊ¹ÓÃ¸ÃÂ·¾¶±£´æÓëÉú³ÉÎÄ¼þ¡£",
+                    "description": "ï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½á¹©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ã¸ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½",
                 },
                 "mode": {
                     "type": "string",
-                    "description": "Ö´ÐÐÄ£Ê½£º'auto' (Á¬ÅÜÖ±µ½Íê³É) »ò 'step' (Ö´ÐÐÒ»²½ºóÔÝÍ£²¢µÈ´ýÖ¸Áî)",
+                    "description": "Ö´ï¿½ï¿½Ä£Ê½ï¿½ï¿½'auto' (ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½) ï¿½ï¿½ 'step' (Ö´ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½È´ï¿½Ö¸ï¿½ï¿½)",
                     "enum": ["auto", "step"],
                     "default": "auto",
                 },
@@ -1337,7 +1337,7 @@ class RunWorkflowTool(Tool):
         mode: str = "auto",
         **kwargs: Any,
     ) -> str:
-        """Ö´ÐÐ¹¤×÷Á÷¡£"""
+        """Ö´ï¿½Ð¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"""
         return await self._engine.run(
             workflow_name=workflow,
             description=description,
@@ -1348,7 +1348,7 @@ class RunWorkflowTool(Tool):
 
 
 class WorkflowControlTool(Tool):
-    """ÓÃÓÚ¿ØÖÆµ±Ç°½øÐÐÖÐµÄ·Ö²½¹¤×÷Á÷»á»°¡£"""
+    """ï¿½ï¿½ï¿½Ú¿ï¿½ï¿½Æµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÄ·Ö²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á»°ï¿½ï¿½"""
 
     def __init__(self, engine: WorkflowEngine):
         self._engine = engine
@@ -1360,12 +1360,12 @@ class WorkflowControlTool(Tool):
     @property
     def description(self) -> str:
         return (
-            "¿ØÖÆ·Ö²½Ö´ÐÐµÄ¹¤×÷Á÷»á»°¡£Ö§³Ö: \n"
-            "- next: Ö´ÐÐÏÂÒ»¸öÔ¤¶¨²½Öè\n"
-            "- skip: Ìø¹ýµ±Ç°Ô¤¶¨²½Öè\n"
-            "- inject: ×¢ÈëÊÖ¶¯Ìá¹©µÄÄÚÈÝ×÷Îªµ±Ç°²½ÖèµÄ½á¹û£¨½«´«¸øÏÂÒ»²½£©\n"
-            "- status: ²é¿´»á»°½ø¶È×´Ì¬\n"
-            "- abort: Ç¿ÖÆ½áÊø»á»°"
+            "ï¿½ï¿½ï¿½Æ·Ö²ï¿½Ö´ï¿½ÐµÄ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á»°ï¿½ï¿½Ö§ï¿½ï¿½: \n"
+            "- next: Ö´ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+            "- skip: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\n"
+            "- inject: ×¢ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½á¹©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½\n"
+            "- status: ï¿½é¿´ï¿½á»°ï¿½ï¿½ï¿½ï¿½×´Ì¬\n"
+            "- abort: Ç¿ï¿½Æ½ï¿½ï¿½ï¿½ï¿½á»°"
         )
 
     @property
@@ -1375,16 +1375,16 @@ class WorkflowControlTool(Tool):
             "properties": {
                 "session_id": {
                     "type": "string",
-                    "description": "¹¤×÷Á÷»á»° ID (´Ó run_workflow Êä³öÖÐ»ñµÃ)",
+                    "description": "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á»° ID (ï¿½ï¿½ run_workflow ï¿½ï¿½ï¿½ï¿½Ð»ï¿½ï¿½)",
                 },
                 "command": {
                     "type": "string",
-                    "description": "¿ØÖÆÖ¸Áî",
+                    "description": "ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½",
                     "enum": ["next", "skip", "inject", "status", "abort"],
                 },
                 "content": {
                     "type": "string",
-                    "description": "×¢ÈëµÄÄÚÈÝ£¨½öµ± command='inject' Ê±ÐèÒª£©",
+                    "description": "×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ command='inject' Ê±ï¿½ï¿½Òªï¿½ï¿½",
                 },
             },
             "required": ["session_id", "command"],
@@ -1397,41 +1397,41 @@ class WorkflowControlTool(Tool):
         content: str = "",
         **kwargs: Any,
     ) -> str:
-        """Ö´ÐÐ¿ØÖÆÖ¸Áî¡£"""
+        """Ö´ï¿½Ð¿ï¿½ï¿½ï¿½Ö¸ï¿½î¡£"""
         session = self._engine.get_session(session_id)
         if not session:
-            return f"´íÎó: Î´ÕÒµ½»á»° `{session_id}`"
+            return f"ï¿½ï¿½ï¿½ï¿½: Î´ï¿½Òµï¿½ï¿½á»° `{session_id}`"
 
         if command == "status":
             return session.status_summary()
 
         if command == "abort":
             session.finished = True
-            return f"? »á»° `{session_id}` ÒÑÇ¿ÖÆÖÕÖ¹¡£"
+            return f"? ï¿½á»° `{session_id}` ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½"
 
         if command == "next":
             result = await self._engine.next_step(session_id)
             if session.is_complete:
-                return f"?? ¹¤×÷Á÷²½ÖèÍê³É (×îºóÒ»²½)¡£\n\n{result}"
+                return f"?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½Ò»ï¿½ï¿½)ï¿½ï¿½\n\n{result}"
             return (
-                f"? ²½Öè {session.current_step} Íê³É¡£\n\n"
+                f"? ï¿½ï¿½ï¿½ï¿½ {session.current_step} ï¿½ï¿½É¡ï¿½\n\n"
                 f"{session.status_summary()}\n\n"
                 f"--- \n"
-                f"### ²½Öè²ú³ö:\n{result}"
+                f"### ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½:\n{result}"
             )
 
         if command == "skip":
             msg = await self._engine.skip_step(session_id)
             if session.is_complete:
-                return f"?? ²½ÖèÒÑÌø¹ý¡£¹¤×÷Á÷Íê³É¡£\n\n{msg}"
+                return f"?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¡ï¿½\n\n{msg}"
             return f"? {msg}\n\n{session.status_summary()}"
 
         if command == "inject":
             if not content:
-                return "´íÎó: Ê¹ÓÃ 'inject' Ö¸ÁîÊ±±ØÐëÌá¹© 'content' ²ÎÊý¡£"
+                return "ï¿½ï¿½ï¿½ï¿½: Ê¹ï¿½ï¿½ 'inject' Ö¸ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½á¹© 'content' ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
             msg = await self._engine.inject_step(session_id, content)
             if session.is_complete:
-                return f"?? ÄÚÈÝÒÑ×¢Èë¡£¹¤×÷Á÷Íê³É¡£\n\n{msg}"
+                return f"?? ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ë¡£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¡ï¿½\n\n{msg}"
             return f"? {msg}\n\n{session.status_summary()}"
 
-        return f"Î´ÖªÖ¸Áî: {command}"
+        return f"Î´ÖªÖ¸ï¿½ï¿½: {command}"

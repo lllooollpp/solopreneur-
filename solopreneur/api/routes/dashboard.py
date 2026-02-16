@@ -1,6 +1,6 @@
-"""
-仪表盘统�?API 端点
-提供全面的系统统计数�?"""
+﻿"""
+仪表盘统�?API 端点
+提供全面的系统统计数�?"""
 import platform
 import sqlite3
 import sys
@@ -46,7 +46,7 @@ class AgentDistribution(BaseModel):
 
 
 class SkillStats(BaseModel):
-    """技能统�?""
+    """技能统�?""
     total: int
     enabled: int
     list: List[Dict[str, Any]]
@@ -61,7 +61,7 @@ class TokenStats(BaseModel):
 
 
 class ActivityItem(BaseModel):
-    """活动�?""
+    """活动�?""
     time: str
     type: str  # task, message, error, etc.
     title: str
@@ -70,7 +70,7 @@ class ActivityItem(BaseModel):
 
 
 class RecentActivity(BaseModel):
-    """最近活�?""
+    """最近活�?""
     tasks: List[ActivityItem]
     messages: List[ActivityItem]
     errors: List[ActivityItem]
@@ -86,7 +86,7 @@ class SystemInfo(BaseModel):
 
 
 class DashboardStats(BaseModel):
-    """仪表盘统计响�?""
+    """仪表盘统计响�?""
     agent: AgentStats
     projects: ProjectStats
     agents: AgentDistribution
@@ -97,7 +97,7 @@ class DashboardStats(BaseModel):
 
 
 def format_uptime(seconds: int) -> str:
-    """格式化运行时�?""
+    """格式化运行时�?""
     days = seconds // 86400
     hours = (seconds % 86400) // 3600
     minutes = (seconds % 3600) // 60
@@ -105,25 +105,25 @@ def format_uptime(seconds: int) -> str:
     
     parts = []
     if days > 0:
-        parts.append(f"{days}�?)
+        parts.append(f"{days}�?)
     if hours > 0:
-        parts.append(f"{hours}�?)
+        parts.append(f"{hours}�?)
     if minutes > 0:
-        parts.append(f"{minutes}�?)
-    parts.append(f"{secs}�?)
+        parts.append(f"{minutes}�?)
+    parts.append(f"{secs}�?)
     return " ".join(parts)
 
 
 @router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats():
     """
-    获取仪表盘统计数�?    
+    获取仪表盘统计数�?    
     Returns:
-        DashboardStats: 全面的系统统计数�?    """
+        DashboardStats: 全面的系统统计数�?    """
     try:
         comp = get_component_manager()
         
-        # === Agent 状�?===
+        # === Agent 状�?===
         runtime_file = get_data_path() / "runtime.txt"
         uptime_seconds = 0
         if runtime_file.exists():
@@ -144,7 +144,7 @@ async def get_dashboard_stats():
         except:
             pass
         
-        # 获取消息数（�?token pool 或其他来源）
+        # 获取消息数（�?token pool 或其他来源）
         total_messages = 0
         try:
             provider = comp.get_copilot_provider()
@@ -204,17 +204,17 @@ async def get_dashboard_stats():
                 else:
                     agents_data["custom"] += 1
                 
-                # 按领域统�?                domain = agent.metadata.get("domain", "general")
+                # 按领域统�?                domain = agent.metadata.get("domain", "general")
                 agents_data["by_domain"][domain] = agents_data["by_domain"].get(domain, 0) + 1
                 
-                # 按类型统�?                agent_type = agent.type.value if hasattr(agent.type, "value") else str(agent.type)
+                # 按类型统�?                agent_type = agent.type.value if hasattr(agent.type, "value") else str(agent.type)
                 agents_data["by_type"][agent_type] = agents_data["by_type"].get(agent_type, 0) + 1
         except Exception as e:
             logger.warning(f"获取 Agent 统计失败: {e}")
         
         agent_dist = AgentDistribution(**agents_data)
         
-        # === 技能统计（�?/api/config/skills 同源�?===
+        # === 技能统计（�?/api/config/skills 同源�?===
         skills_data = {"total": 0, "enabled": 0, "list": []}
         try:
             skills_loader = comp.get_agent_manager().skills
@@ -222,7 +222,7 @@ async def get_dashboard_stats():
 
             for s in discovered:
                 name = s["name"]
-                description = "技�?
+                description = "技�?
                 meta = skills_loader.get_skill_metadata(name) or {}
                 if meta.get("description"):
                     description = meta["description"]
@@ -235,7 +235,7 @@ async def get_dashboard_stats():
                     "enabled": True
                 })
         except Exception as e:
-            logger.warning(f"获取技能统计失�? {e}")
+            logger.warning(f"获取技能统计失�? {e}")
         
         skill_stats = SkillStats(**skills_data)
         
@@ -253,7 +253,7 @@ async def get_dashboard_stats():
                 tokens_data["requests_today"] = provider._request_count
 
             # 优先使用 SQLite 聚合（更准确，跨进程/重启可持续）
-            db_path = get_data_path() / "nanobot.db"
+            db_path = get_data_path() / "solopreneur.db"
             if db_path.exists():
                 with sqlite3.connect(str(db_path)) as conn:
                     row_all = conn.execute(
@@ -272,10 +272,10 @@ async def get_dashboard_stats():
         
         token_stats = TokenStats(**tokens_data)
         
-        # === 最近活�?===
+        # === 最近活�?===
         activity_data = {"tasks": [], "messages": [], "errors": []}
         
-        # 尝试从工作流引擎获取最近任�?        try:
+        # 尝试从工作流引擎获取最近任�?        try:
             workflow_engine = comp.get_workflow_engine()
             if hasattr(workflow_engine, 'get_recent_tasks'):
                 recent_tasks = workflow_engine.get_recent_tasks(limit=5)
@@ -290,8 +290,8 @@ async def get_dashboard_stats():
         except:
             pass
         
-        # 从日志获取最近活�?        try:
-            log_file = get_data_path() / "logs" / "nanobot.log"
+        # 从日志获取最近活�?        try:
+            log_file = get_data_path() / "logs" / "solopreneur.log"
             if log_file.exists():
                 lines = log_file.read_text(encoding='utf-8').split('\n')[-100:]
                 for line in lines:
@@ -327,20 +327,20 @@ async def get_dashboard_stats():
         )
         
     except Exception as e:
-        logger.error(f"获取仪表盘统计失�? {e}")
+        logger.error(f"获取仪表盘统计失�? {e}")
         raise
 
 
 @router.get("/dashboard/health")
 async def health_check():
     """
-    健康检查端�?    
+    健康检查端�?    
     Returns:
-        系统健康状�?    """
+        系统健康状�?    """
     try:
         comp = get_component_manager()
         
-        # 检查各个组�?        health = {
+        # 检查各个组�?        health = {
             "status": "healthy",
             "components": {
                 "agent_loop": "unknown",
@@ -350,7 +350,7 @@ async def health_check():
             "timestamp": datetime.now().isoformat()
         }
         
-        # 检�?provider
+        # 检�?provider
         try:
             provider = comp.get_copilot_provider()
             health["components"]["provider"] = "ok"
@@ -362,14 +362,14 @@ async def health_check():
         except:
             health["components"]["provider"] = "error"
         
-        # 检�?agent loop
+        # 检�?agent loop
         try:
             await comp.get_agent_loop()
             health["components"]["agent_loop"] = "ok"
         except:
             health["components"]["agent_loop"] = "not_started"
         
-        # 计算整体状�?        if "error" in health["components"].values():
+        # 计算整体状�?        if "error" in health["components"].values():
             health["status"] = "degraded"
         if health["components"]["provider"] == "error":
             health["status"] = "unhealthy"

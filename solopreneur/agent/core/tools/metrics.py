@@ -1,4 +1,4 @@
-"""Metrics inspection tool for SQLite persistence dashboards."""
+﻿"""Metrics inspection tool for SQLite persistence dashboards."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ class MetricsInspectTool(Tool):
     """Aggregate llm_usage/subagent_tasks metrics for quick diagnostics."""
 
     def __init__(self, db_path: Path | None = None):
-        self.db_path = db_path or (Path.home() / ".nanobot" / "nanobot.db")
+        self.db_path = db_path or (Path.home() / ".solopreneur" / "solopreneur.db")
 
     @property
     def name(self) -> str:

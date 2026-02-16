@@ -1,4 +1,4 @@
-"""Agent 能力的技能加载器（单一路径模式）�?""
+﻿"""Agent 能力的技能加载器（单一路径模式）�?""
 
 import json
 import os
@@ -6,18 +6,18 @@ import re
 import shutil
 from pathlib import Path
 
-# 默认内置技能目录（相对于此文件�?
-# 当前文件: nanobot/agent/core/skills.py
-# 内置技�? nanobot/skills/
+# 默认内置技能目录（相对于此文件�?
+# 当前文件: solopreneur/agent/core/skills.py
+# 内置技�? solopreneur/skills/
 BUILTIN_SKILLS_DIR = Path(__file__).parent.parent.parent / "skills"
 
 
 class SkillsLoader:
     """
-    Agent 技能加载器�?
+    Agent 技能加载器�?
     
-    技能是 Markdown 文件 (SKILL.md)，用于教�?Agent 如何使用
-    特定的工具或执行某些任务�?
+    技能是 Markdown 文件 (SKILL.md)，用于教�?Agent 如何使用
+    特定的工具或执行某些任务�?
     """
     
     def __init__(self, workspace: Path, builtin_skills_dir: Path | None = None):
@@ -29,17 +29,17 @@ class SkillsLoader:
     
     def list_skills(self, filter_unavailable: bool = True) -> list[dict[str, str]]:
         """
-        列出所有可用技能�?
+        列出所有可用技能�?
         
         参数:
-            filter_unavailable: 如果�?True，则过滤掉未满足要求的技能�?
+            filter_unavailable: 如果�?True，则过滤掉未满足要求的技能�?
         
         返回:
-            包含技能信息的字典列表，键包括 'name'�?path'�?source'�?
+            包含技能信息的字典列表，键包括 'name'�?path'�?source'�?
         """
         skills = []
 
-        # 单一路径：只�?workspace/skills 加载
+        # 单一路径：只�?workspace/skills 加载
         if self.workspace_skills.exists():
             for skill_dir in self.workspace_skills.iterdir():
                 if skill_dir.is_dir():
@@ -47,20 +47,20 @@ class SkillsLoader:
                     if skill_file.exists():
                         skills.append({"name": skill_dir.name, "path": str(skill_file), "source": "workspace"})
         
-        # 按要求过�?
+        # 按要求过�?
         if filter_unavailable:
             return [s for s in skills if self._check_requirements(self._get_skill_meta(s["name"]))]
         return skills
     
     def load_skill(self, name: str) -> str | None:
         """
-        通过名称加载技能�?
+        通过名称加载技能�?
         
         参数:
-            name: 技能名称（目录名）�?
+            name: 技能名称（目录名）�?
         
         返回:
-            技能内容，如果未找到则返回 None�?
+            技能内容，如果未找到则返回 None�?
         """
         # 单一路径：只检查工作区
         workspace_skill = self.workspace_skills / name / "SKILL.md"
@@ -94,13 +94,13 @@ class SkillsLoader:
     
     def load_skills_for_context(self, skill_names: list[str]) -> str:
         """
-        加载特定技能，以便包含�?Agent 上下文中�?
+        加载特定技能，以便包含�?Agent 上下文中�?
         
         参数:
-            skill_names: 要加载的技能名称列表�?
+            skill_names: 要加载的技能名称列表�?
         
         返回:
-            格式化后的技能内容�?
+            格式化后的技能内容�?
         """
         parts = []
         for name in skill_names:
@@ -113,12 +113,12 @@ class SkillsLoader:
     
     def build_skills_summary(self) -> str:
         """
-        构建所有技能的摘要（名称、描述、路径、可用性）�?
+        构建所有技能的摘要（名称、描述、路径、可用性）�?
         
-        这用于渐进式加载——Agent 在需要时可以使用 read_file 读取完整的技能内容�?
+        这用于渐进式加载——Agent 在需要时可以使用 read_file 读取完整的技能内容�?
         
         返回:
-            XML 格式的技能摘要�?
+            XML 格式的技能摘要�?
         """
         all_skills = self.list_skills(filter_unavailable=False)
         if not all_skills:
@@ -152,7 +152,7 @@ class SkillsLoader:
         return "\n".join(lines)
     
     def _get_missing_requirements(self, skill_meta: dict) -> str:
-        """获取缺失要求的描述�?""
+        """获取缺失要求的描述�?""
         missing = []
         requires = skill_meta.get("requires", {})
         for b in requires.get("bins", []):
@@ -164,30 +164,30 @@ class SkillsLoader:
         return ", ".join(missing)
     
     def _get_skill_description(self, name: str) -> str:
-        """从技能的 frontmatter 中获取描述�?""
+        """从技能的 frontmatter 中获取描述�?""
         meta = self.get_skill_metadata(name)
         if meta and meta.get("description"):
             return meta["description"]
-        return name  # 回退到技能名�?
+        return name  # 回退到技能名�?
     
     def _strip_frontmatter(self, content: str) -> str:
-        """�?Markdown 内容中移�?YAML frontmatter�?""
+        """�?Markdown 内容中移�?YAML frontmatter�?""
         if content.startswith("---"):
             match = re.match(r"^---\n.*?\n---\n", content, re.DOTALL)
             if match:
                 return content[match.end():].strip()
         return content
     
-    def _parse_nanobot_metadata(self, raw: str) -> dict:
-        """�?frontmatter 中解�?nanobot 元数�?JSON�?""
+    def _parse_SOLOPRENEUR_metadata(self, raw: str) -> dict:
+        """�?frontmatter 中解�?solopreneur 元数�?JSON�?""
         try:
             data = json.loads(raw)
-            return data.get("nanobot", {}) if isinstance(data, dict) else {}
+            return data.get("solopreneur", {}) if isinstance(data, dict) else {}
         except (json.JSONDecodeError, TypeError):
             return {}
     
     def _check_requirements(self, skill_meta: dict) -> bool:
-        """检查是否满足技能要求（二进制文件、环境变量）�?""
+        """检查是否满足技能要求（二进制文件、环境变量）�?""
         requires = skill_meta.get("requires", {})
         for b in requires.get("bins", []):
             if not shutil.which(b):
@@ -198,29 +198,29 @@ class SkillsLoader:
         return True
     
     def _get_skill_meta(self, name: str) -> dict:
-        """获取技能的 nanobot 元数据（缓存�?frontmatter 中）�?""
+        """获取技能的 solopreneur 元数据（缓存�?frontmatter 中）�?""
         meta = self.get_skill_metadata(name) or {}
-        return self._parse_nanobot_metadata(meta.get("metadata", ""))
+        return self._parse_SOLOPRENEUR_metadata(meta.get("metadata", ""))
     
     def get_always_skills(self) -> list[str]:
-        """获取标记�?always=true 且满足要求的技能�?""
+        """获取标记�?always=true 且满足要求的技能�?""
         result = []
         for s in self.list_skills(filter_unavailable=True):
             meta = self.get_skill_metadata(s["name"]) or {}
-            skill_meta = self._parse_nanobot_metadata(meta.get("metadata", ""))
+            skill_meta = self._parse_SOLOPRENEUR_metadata(meta.get("metadata", ""))
             if skill_meta.get("always") or meta.get("always"):
                 result.append(s["name"])
         return result
     
     def get_skill_metadata(self, name: str) -> dict | None:
         """
-        从技能的 frontmatter 中获取元数据�?
+        从技能的 frontmatter 中获取元数据�?
         
         参数:
-            name: 技能名称�?
+            name: 技能名称�?
         
         返回:
-            元数据字典，如果未找到则返回 None�?
+            元数据字典，如果未找到则返回 None�?
         """
         content = self.load_skill(name)
         if not content:

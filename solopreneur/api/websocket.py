@@ -1,6 +1,6 @@
-"""
+﻿"""
 WebSocket 服务
-实时推�?Agent 事件、聊天流式输出、工作流状态到前端
+实时推�?Agent 事件、聊天流式输出、工作流状态到前端
 """
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from loguru import logger
@@ -12,17 +12,17 @@ from datetime import datetime
 router = APIRouter()
 
 
-# ==================== 连接管理�?====================
+# ==================== 连接管理�?====================
 
 class ConnectionManager:
-    """WebSocket 连接管理�?""
+    """WebSocket 连接管理�?""
     
     def __init__(self):
         # 事件广播连接
         self.event_connections: List[WebSocket] = []
         # 聊天连接
         self.chat_connections: List[WebSocket] = []
-        # 工作流连�?
+        # 工作流连�?
         self.flow_connections: List[WebSocket] = []
     
     async def connect_event(self, websocket: WebSocket):
@@ -56,7 +56,7 @@ class ConnectionManager:
         logger.info(f"Flow WebSocket disconnected, remaining: {len(self.flow_connections)}")
     
     async def broadcast_event(self, message: dict):
-        """向所有事件连接广播消�?""
+        """向所有事件连接广播消�?""
         disconnected = []
         for connection in self.event_connections:
             try:
@@ -83,7 +83,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-# ==================== Agent 实例（保持原�?agent 调用�?===================
+# ==================== Agent 实例（保持原�?agent 调用�?===================
 
 _agent_loop = None
 _agent_loop_lock = asyncio.Lock()
@@ -91,7 +91,7 @@ _agent_loop_lock = asyncio.Lock()
 
 async def get_agent_loop():
     """
-    获取或创�?AgentLoop 实例（支持工具调用），线程安全�?
+    获取或创�?AgentLoop 实例（支持工具调用），线程安全�?
 
     使用组件管理器统一管理
     """
@@ -100,10 +100,10 @@ async def get_agent_loop():
     return await manager.get_agent_loop()
 
 
-# ==================== 工作流状态管�?====================
+# ==================== 工作流状态管�?====================
 
 class WorkflowState:
-    """工作流状�?""
+    """工作流状�?""
     
     def __init__(self):
         self.task_stack: list[dict] = []
@@ -122,14 +122,14 @@ class WorkflowState:
         return task
     
     def update_task_status(self, index: int, status: str):
-        """更新任务状�?""
+        """更新任务状�?""
         if 0 <= index < len(self.task_stack):
             self.task_stack[index]["status"] = status
             return self.task_stack[index]
         return None
     
     def pop_task(self):
-        """完成并移除栈顶任�?""
+        """完成并移除栈顶任�?""
         if self.task_stack:
             task = self.task_stack.pop()
             task["status"] = "completed"
@@ -150,32 +150,32 @@ class WorkflowState:
             self.snapshots = self.snapshots[:50]
     
     def get_state(self) -> dict:
-        """获取当前状�?""
+        """获取当前状�?""
         return {
             "taskStack": self.task_stack,
             "snapshots": self.snapshots
         }
     
     def clear(self):
-        """清空状�?""
+        """清空状�?""
         self.task_stack = []
         self.snapshots = []
 
 
-# 全局工作流状�?
+# 全局工作流状�?
 workflow_state = WorkflowState()
 
 
 # ==================== WebSocket 认证 ====================
 
 def _get_ws_token_from_env() -> str | None:
-    """从环境变量获取WebSocket token�?""
+    """从环境变量获取WebSocket token�?""
     import os
-    return os.getenv("NANOBOT_WS_TOKEN")
+    return os.getenv("SOLOPRENEUR_WS_TOKEN")
 
 
 async def _verify_websocket_token(websocket: WebSocket, token: str | None = None) -> bool:
-    """验证WebSocket token。如果未设置环境变量则跳过验证�?""
+    """验证WebSocket token。如果未设置环境变量则跳过验证�?""
     env_token = _get_ws_token_from_env()
     
     # 如果没有设置环境变量，则不需要验证（开发模式）
@@ -197,8 +197,8 @@ async def _verify_websocket_token(websocket: WebSocket, token: str | None = None
 @router.websocket("/ws/events")
 async def websocket_endpoint(websocket: WebSocket, token: str | None = Query(None)):
     """
-    事件 WebSocket 端点，用于实时推�?Agent 事件
-    需要提�?token 参数（如果设置了 NANOBOT_WS_TOKEN 环境变量�?
+    事件 WebSocket 端点，用于实时推�?Agent 事件
+    需要提�?token 参数（如果设置了 SOLOPRENEUR_WS_TOKEN 环境变量�?
     """
     # 先接受连接，然后验证
     await websocket.accept()
@@ -229,14 +229,14 @@ async def websocket_endpoint(websocket: WebSocket, token: str | None = Query(Non
 async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
     """
     聊天 WebSocket 端点 - 流式输出
-    需要提�?token 参数（如果设置了 NANOBOT_WS_TOKEN 环境变量�?
+    需要提�?token 参数（如果设置了 SOLOPRENEUR_WS_TOKEN 环境变量�?
     
     消息格式:
-    - 客户�? {"type": "message", "content": "消息", "model": "gpt-4o"}
-    - 客户�? {"type": "clear"} - 清空历史
-    - 服务�? {"type": "chunk", "content": "片段"}
-    - 服务�? {"type": "done", "content": "完整回复"}
-    - 服务�? {"type": "error", "content": "错误"}
+    - 客户�? {"type": "message", "content": "消息", "model": "gpt-4o"}
+    - 客户�? {"type": "clear"} - 清空历史
+    - 服务�? {"type": "chunk", "content": "片段"}
+    - 服务�? {"type": "done", "content": "完整回复"}
+    - 服务�? {"type": "error", "content": "错误"}
     """
     # 先接受连接，然后验证
     await websocket.accept()
@@ -263,7 +263,7 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                     logger.warning(f"Failed to clear session {session_key}: {e}")
                 await websocket.send_json({
                     "type": "system",
-                    "content": "对话历史已清�?
+                    "content": "对话历史已清�?
                 })
                 continue
             
@@ -298,7 +298,7 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                     # 前端传了项目信息但后端找不到，使用前端传来的基本信息
                     project_info = {
                         "id": project_id,
-                        "name": data.get("project_name", "未命名项�?),
+                        "name": data.get("project_name", "未命名项�?),
                         "path": project_path,
                         "source": "unknown",
                         "env_vars": data.get("env_vars", []),
@@ -315,7 +315,7 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                 try:
                     if model:
                         agent_loop.model = model
-                        # 保持�?Agent 与主控本次请求模型一致，避免 trace 中模型显示为旧�?
+                        # 保持�?Agent 与主控本次请求模型一致，避免 trace 中模型显示为旧�?
                         agent_loop.subagents.model = model
 
                     async def send_chunk(text: str):
@@ -325,12 +325,12 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                         })
 
                     async def send_trace(event: dict):
-                        # �?trace 事件转发到前�?
+                        # �?trace 事件转发到前�?
                         await websocket.send_json({
                             "type": "trace",
                             **event
                         })
-                        # 工具调用和角色委派事件同时作�?activity 发送到聊天�?
+                        # 工具调用和角色委派事件同时作�?activity 发送到聊天�?
                         evt = event.get("event", "")
                         if evt in ("tool_start", "tool_end"):
                             await websocket.send_json({
@@ -403,20 +403,20 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
 @router.websocket("/ws/flow")
 async def flow_websocket(websocket: WebSocket):
     """
-    工作�?WebSocket 端点
+    工作�?WebSocket 端点
     
     消息格式:
-    - 客户�? {"type": "subscribe"} - 订阅更新
-    - 客户�? {"type": "add_task", "name": "任务�?, "description": "描述"}
-    - 客户�? {"type": "update_task", "index": 0, "status": "running"}
-    - 客户�? {"type": "pop_task"} - 完成任务
-    - 客户�? {"type": "clear"} - 清空
-    - 服务�? {"type": "state", "data": {...}}
+    - 客户�? {"type": "subscribe"} - 订阅更新
+    - 客户�? {"type": "add_task", "name": "任务�?, "description": "描述"}
+    - 客户�? {"type": "update_task", "index": 0, "status": "running"}
+    - 客户�? {"type": "pop_task"} - 完成任务
+    - 客户�? {"type": "clear"} - 清空
+    - 服务�? {"type": "state", "data": {...}}
     """
     await manager.connect_flow(websocket)
     
     try:
-        # 发送初始状�?
+        # 发送初始状�?
         await websocket.send_json({
             "type": "state",
             "data": workflow_state.get_state()
@@ -433,7 +433,7 @@ async def flow_websocket(websocket: WebSocket):
                 })
             
             elif msg_type == "add_task":
-                name = data.get("name", "未命名任�?)
+                name = data.get("name", "未命名任�?)
                 description = data.get("description", "")
                 task = workflow_state.add_task(name, description)
                 
@@ -493,7 +493,7 @@ async def broadcast_event(event_type: str, payload: dict, trace_id: str):
 
 
 async def notify_workflow_update(event_type: str, data: dict):
-    """通知工作流更新（�?Agent 等模块调用）"""
+    """通知工作流更新（�?Agent 等模块调用）"""
     await manager.broadcast_flow({
         "type": event_type,
         "data": data,
@@ -507,7 +507,7 @@ def get_workflow_manager():
 
 
 def get_connection_manager():
-    """获取连接管理�?""
+    """获取连接管理�?""
     return manager
 
 

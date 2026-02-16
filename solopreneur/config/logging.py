@@ -1,4 +1,4 @@
-"""
+﻿"""
 日志配置模块
 
 配置 loguru 将日志输出到控制台和文件
@@ -18,15 +18,15 @@ def setup_logging(
     retention: str = "7 days"
 ):
     """
-    配置 nanobot 日志系统
+    配置 solopreneur 日志系统
     
     Args:
         log_level: 日志级别 (DEBUG, INFO, WARNING, ERROR)
-        log_to_file: 是否输出到文�?
-        log_dir: 日志目录，默认为 ~/.nanobot/logs
+        log_to_file: 是否输出到文�?
+        log_dir: 日志目录，默认为 ~/.solopreneur/logs
         retention: 日志保留时间
     """
-    # 移除默认处理�?
+    # 移除默认处理�?
     logger.remove()
     
     # 添加控制台处理器
@@ -39,16 +39,16 @@ def setup_logging(
                "<level>{message}</level>",
     )
     
-    # 添加文件处理�?
+    # 添加文件处理�?
     if log_to_file:
         if log_dir is None:
             log_dir = get_data_path() / "logs"
         log_dir = Path(log_dir)
         log_dir.mkdir(parents=True, exist_ok=True)
         
-        # 主日志文�?
+        # 主日志文�?
         logger.add(
-            log_dir / "nanobot_{time:YYYY-MM-DD}.log",
+            log_dir / "SOLOPRENEUR_{time:YYYY-MM-DD}.log",
             level=log_level,
             format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
             rotation="00:00",  # 每天轮换

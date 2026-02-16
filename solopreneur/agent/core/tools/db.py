@@ -1,4 +1,4 @@
-"""SQLite read-only inspection tool for persistence diagnostics."""
+﻿"""SQLite read-only inspection tool for persistence diagnostics."""
 
 from __future__ import annotations
 
@@ -10,10 +10,10 @@ from solopreneur.agent.core.tools.base import Tool
 
 
 class DBInspectTool(Tool):
-    """Read-only database inspect tool for nanobot SQLite."""
+    """Read-only database inspect tool for solopreneur SQLite."""
 
     def __init__(self, db_path: Path | None = None, default_limit: int = 100):
-        self.db_path = db_path or (Path.home() / ".nanobot" / "nanobot.db")
+        self.db_path = db_path or (Path.home() / ".solopreneur" / "solopreneur.db")
         self.default_limit = max(1, min(default_limit, 500))
 
     @property
@@ -23,7 +23,7 @@ class DBInspectTool(Tool):
     @property
     def description(self) -> str:
         return (
-            "Inspect nanobot SQLite in read-only mode. "
+            "Inspect solopreneur SQLite in read-only mode. "
             "Actions: list_tables, schema, count, sample, query(select only)."
         )
 

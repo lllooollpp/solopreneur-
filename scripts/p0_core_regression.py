@@ -1,4 +1,4 @@
-"""P0 核心回归检查脚本（聚焦持久化主链路）�?""
+﻿"""P0 核心回归检查脚本（聚焦持久化主链路）�?""
 
 from __future__ import annotations
 
@@ -60,7 +60,7 @@ def check_usage_and_task_flow() -> tuple[bool, str]:
         result_text="ok",
     )
 
-    db = Path.home() / ".nanobot" / "nanobot.db"
+    db = Path.home() / ".solopreneur" / "solopreneur.db"
     conn = sqlite3.connect(str(db))
     c = conn.cursor()
     c.execute(

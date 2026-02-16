@@ -1,4 +1,4 @@
-"""Utility functions for nanobot."""
+﻿"""Utility functions for solopreneur."""
 
 from pathlib import Path
 from datetime import datetime
@@ -20,8 +20,8 @@ def get_project_root(start: Path | None = None) -> Path:
 
 
 def get_data_path() -> Path:
-    """Get the nanobot data directory under current project root (./.nanobot)."""
-    return ensure_dir(get_project_root() / ".nanobot")
+    """Get the solopreneur data directory under current project root (./.solopreneur)."""
+    return ensure_dir(get_project_root() / ".solopreneur")
 
 
 def get_workspace_path(workspace: str | None = None) -> Path:

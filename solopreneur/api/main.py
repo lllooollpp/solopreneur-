@@ -1,6 +1,6 @@
-"""
-Nanobot API 入口
-FastAPI 应用，为前端提供 REST API �?WebSocket 服务
+﻿"""
+solopreneur API 入口
+FastAPI 应用，为前端提供 REST API �?WebSocket 服务
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,16 +22,16 @@ _app_start_time = datetime.now()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期管理�?""
-    # 启动�?
-    logger.info("Nanobot API starting up...")
+    """应用生命周期管理�?""
+    # 启动�?
+    logger.info("solopreneur API starting up...")
 
     yield
 
-    # 关闭�?
-    logger.info("Nanobot API shutting down...")
+    # 关闭�?
+    logger.info("solopreneur API shutting down...")
 
-    # 使用组件管理器清理所有资�?
+    # 使用组件管理器清理所有资�?
     from solopreneur.core.dependencies import get_component_manager
     try:
         manager = get_component_manager()
@@ -49,16 +49,16 @@ logger.add(
 
 # 创建 FastAPI 应用
 app = FastAPI(
-    title="Nanobot API",
-    description="Nanobot 前端管理界面后端 API",
+    title="solopreneur API",
+    description="solopreneur 前端管理界面后端 API",
     version="0.1.0",
     lifespan=lifespan
 )
 
-# CORS 中间件配�?
-# 从环境变量读取允许的来源（生产环境应配置�?
-# 默认允许所有来�?(开发环�?，生产环境应配置具体域名
-default_origins = os.getenv("NANOBOT_CORS_ORIGINS", "*")
+# CORS 中间件配�?
+# 从环境变量读取允许的来源（生产环境应配置�?
+# 默认允许所有来�?(开发环�?，生产环境应配置具体域名
+default_origins = os.getenv("SOLOPRENEUR_CORS_ORIGINS", "*")
 allowed_origins = ["*"] if default_origins == "*" else default_origins.split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -68,9 +68,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 速率限制中间�?
-# 从环境变量读取速率限制（默�?0�?分钟�?
-rate_limit = int(os.getenv("NANOBOT_RATE_LIMIT", "60"))
+# 速率限制中间�?
+# 从环境变量读取速率限制（默�?0�?分钟�?
+rate_limit = int(os.getenv("SOLOPRENEUR_RATE_LIMIT", "60"))
 app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
 
 # 注册路由
@@ -91,16 +91,16 @@ app.include_router(ws_router, tags=["websocket"])
 
 @app.get("/")
 async def root():
-    """根路�?""
-    return {"message": "Nanobot API 正在运行", "version": "0.1.0"}
+    """根路�?""
+    return {"message": "solopreneur API 正在运行", "version": "0.1.0"}
 
 
 @app.get("/health")
 async def health_check():
-    """健康检查端�?""
+    """健康检查端�?""
     uptime = (datetime.now() - _app_start_time).total_seconds()
     
-    # 检查GitHub Copilot认证状�?
+    # 检查GitHub Copilot认证状�?
     from solopreneur.api.routes.auth import get_copilot_provider
     copilot_authenticated = False
     try:
@@ -118,7 +118,7 @@ async def health_check():
 
 
 def start_api_server(host: str = "0.0.0.0", port: int = 8000):
-    """启动 API 服务�?""
+    """启动 API 服务�?""
     uvicorn.run(app, host=host, port=port)
 
 

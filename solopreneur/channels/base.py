@@ -1,4 +1,4 @@
-"""Base channel interface for chat platforms."""
+﻿"""Base channel interface for chat platforms."""
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -12,7 +12,7 @@ class BaseChannel(ABC):
     Abstract base class for chat channel implementations.
     
     Each channel (Telegram, Discord, etc.) should implement this interface
-    to integrate with the nanobot message bus.
+    to integrate with the solopreneur message bus.
     """
     
     name: str = "base"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Nanobot 开发环境初始化脚本
+# Solopreneur 开发环境初始化脚本
 # 用于快速启动开发环境并进行基本测试
 #
 # 基于 Anthropic "Effective harnesses for long-running agents"
@@ -7,7 +7,7 @@
 
 set -e
 
-echo "🚀 Initializing Nanobot development environment..."
+echo "🚀 Initializing Solopreneur development environment..."
 echo ""
 
 # 颜色定义
@@ -95,7 +95,7 @@ else:
 if [ "$IN_PROGRESS_COUNT" -gt 1 ]; then
     echo "   ${YELLOW}⚠${NC} Multiple in_progress features detected: $IN_PROGRESS_COUNT"
     echo "   ${YELLOW}⚠${NC} This violates single-task constraint!"
-    echo "   Run harness to fix: python -c \"from nanobot.agent.core.harness import LongRunningHarness; h = LongRunningHarness(Path('.')); h.get_enforced_current_feature()\""
+    echo "   Run harness to fix: python -c \"from solopreneur.agent.core.harness import LongRunningHarness; h = LongRunningHarness(Path('.')); h.get_enforced_current_feature()\""
 else
     echo "   ${GREEN}✓${NC} Single-task constraint satisfied (in_progress: $IN_PROGRESS_COUNT)"
 fi
@@ -110,7 +110,7 @@ if [ -f ".agent/feature_list.json" ]; then
     IN_PROGRESS=$(python -c "import json; d=json.load(open('.agent/feature_list.json')); print(sum(1 for f in d['features'] if f['status']=='in_progress'))")
     echo "   📊 Features: $FEATURES_COUNT total, $COMPLETED completed, $IN_PROGRESS in_progress"
 else
-    echo "   ${YELLOW}!${NC} Feature list not initialized. Run: python -c \"from nanobot.agent.core.harness import LongRunningHarness; LongRunningHarness('.').initialize('nanobot', [])\""
+    echo "   ${YELLOW}!${NC} Feature list not initialized. Run: python -c \"from solopreneur.agent.core.harness import LongRunningHarness; LongRunningHarness('.').initialize('solopreneur', [])\""
 fi
 
 # 8. Git 状态检查 (新增)
@@ -135,7 +135,7 @@ echo "To start development servers:"
 echo "  python start.py"
 echo ""
 echo "To start backend only:"
-echo "  python -m uvicorn nanobot.api.main:app --host 0.0.0.0 --port 8000 --reload"
+echo "  python -m uvicorn solopreneur.api.main:app --host 0.0.0.0 --port 8000 --reload"
 echo ""
 echo "To start frontend only:"
 echo "  cd ui && npm run dev"

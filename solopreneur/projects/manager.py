@@ -1,4 +1,4 @@
-"""项目管理器：项目与凭证均使用 SQLite 持久化�?""
+﻿"""项目管理器：项目与凭证均使用 SQLite 持久化�?""
 
 import shutil
 import subprocess
@@ -15,11 +15,11 @@ from .models import Project, ProjectCreate, ProjectUpdate, ProjectSource, Projec
 
 class ProjectManager:
     """
-    项目管理�?
+    项目管理�?
     
-    管理项目配置存储�?SQLite
-    项目代码存储在各自指定的 path �?
-    Git 凭证存储�?SQLite git_credentials �?
+    管理项目配置存储�?SQLite
+    项目代码存储在各自指定的 path �?
+    Git 凭证存储�?SQLite git_credentials �?
     """
     
     def __init__(self, data_dir: Optional[Path] = None):
@@ -27,23 +27,23 @@ class ProjectManager:
         初始化项目管理器
         
         Args:
-            data_dir: 数据存储目录，默认为 ~/.nanobot
+            data_dir: 数据存储目录，默认为 ~/.solopreneur
         """
         if data_dir is None:
-            data_dir = Path.home() / ".nanobot"
+            data_dir = Path.home() / ".solopreneur"
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-        self.storage = ProjectPersistence(db_path=self.data_dir / "nanobot.db")
-        self.credential_store = GitCredentialPersistence(db_path=self.data_dir / "nanobot.db")
+        self.storage = ProjectPersistence(db_path=self.data_dir / "solopreneur.db")
+        self.credential_store = GitCredentialPersistence(db_path=self.data_dir / "solopreneur.db")
         self._projects: dict[str, Project] = {}
         self._load_projects()
     
     def _load_projects(self):
-        """�?SQLite 加载项目列表�?""
+        """�?SQLite 加载项目列表�?""
         self._projects = {}
 
-        # 优先�?SQLite 加载
+        # 优先�?SQLite 加载
         try:
             rows = self.storage.load_all()
             for item in rows:
@@ -62,7 +62,7 @@ class ProjectManager:
             logger.info(f"Loaded {len(self._projects)} projects")
     
     def _save_projects(self):
-        """保存项目列表�?SQLite�?""
+        """保存项目列表�?SQLite�?""
         try:
             for project in self._projects.values():
                 self.storage.save(project.to_dict())
@@ -78,7 +78,7 @@ class ProjectManager:
         project = Project(
             id="default",
             name="默认项目",
-            description="系统默认项目，用于一般性对�?,
+            description="系统默认项目，用于一般性对�?,
             source=ProjectSource.LOCAL,
             path=str(default_workspace),
             session_id="default",
@@ -100,7 +100,7 @@ class ProjectManager:
     # ==================== Git 凭证管理 ====================
     
     def _save_git_credentials(self, project_id: str, username: Optional[str], token: Optional[str]):
-        """保存 Git 凭证�?SQLite�?""
+        """保存 Git 凭证�?SQLite�?""
         try:
             if username or token:
                 self.credential_store.set(project_id, username, token)
@@ -126,8 +126,8 @@ class ProjectManager:
         """
         构建带认证信息的 Git URL
         
-        �?https://github.com/user/repo.git
-        转换�?https://username:token@github.com/user/repo.git
+        �?https://github.com/user/repo.git
+        转换�?https://username:token@github.com/user/repo.git
         """
         if not token:
             return url
@@ -156,7 +156,7 @@ class ProjectManager:
     
     def _mask_url(self, url: str) -> str:
         """
-        脱敏 URL，移除认证信�?
+        脱敏 URL，移除认证信�?
         
         https://username:token@github.com/repo -> https://github.com/repo
         """
@@ -178,7 +178,7 @@ class ProjectManager:
     # ==================== CRUD 操作 ====================
     
     def list_projects(self) -> List[Project]:
-        """获取所有项目列�?""
+        """获取所有项目列�?""
         return sorted(self._projects.values(), key=lambda p: p.created_at, reverse=True)
     
     def get_project(self, project_id: str) -> Optional[Project]:
@@ -186,7 +186,7 @@ class ProjectManager:
         return self._projects.get(project_id)
 
     def get_project_by_path(self, project_path: str | Path) -> Optional[Project]:
-        """按路径获取项目（用于基于工作目录的上下文工具）�?""
+        """按路径获取项目（用于基于工作目录的上下文工具）�?""
         try:
             target = Path(project_path).expanduser().resolve()
         except Exception:
@@ -203,13 +203,13 @@ class ProjectManager:
     
     def create_project(self, data: ProjectCreate) -> Project:
         """
-        创建新项�?
+        创建新项�?
         
         Args:
             data: 项目创建数据
             
         Returns:
-            创建的项目对�?
+            创建的项目对�?
             
         Raises:
             ValueError: 参数验证失败
@@ -227,11 +227,11 @@ class ProjectManager:
             git_info = None
             
         else:
-            # Git 项目，需要克�?
+            # Git 项目，需要克�?
             if not data.git_url:
                 raise ValueError("Git 项目必须提供仓库 URL")
             
-            # 在项目目录下创建子目�?
+            # 在项目目录下创建子目�?
             projects_dir = self.data_dir / "projects"
             projects_dir.mkdir(parents=True, exist_ok=True)
             project_path = projects_dir / project_id
@@ -247,7 +247,7 @@ class ProjectManager:
                 data.git_token
             )
             
-            # 克隆仓库（带代理�?
+            # 克隆仓库（带代理�?
             proxy = data.proxy_url if data.use_proxy else None
             self._clone_repository(auth_url, data.git_branch, project_path, proxy)
             
@@ -315,7 +315,7 @@ class ProjectManager:
         return project
 
     def set_project_env_vars(self, project_id: str, env_vars: list[ProjectEnvVar]) -> Optional[Project]:
-        """覆盖设置项目环境变量�?""
+        """覆盖设置项目环境变量�?""
         project = self._projects.get(project_id)
         if not project:
             return None
@@ -327,7 +327,7 @@ class ProjectManager:
         return project
 
     def get_project_env_vars(self, project_id: str) -> Optional[list[ProjectEnvVar]]:
-        """获取项目环境变量列表�?""
+        """获取项目环境变量列表�?""
         project = self._projects.get(project_id)
         if not project:
             return None
@@ -335,7 +335,7 @@ class ProjectManager:
 
     def delete_project_env_var(self, project_id: str, key: str) -> tuple[bool, Optional[Project]]:
         """
-        删除项目中的单个环境变量�?
+        删除项目中的单个环境变量�?
 
         Returns:
             (是否删除成功, 项目对象或None)
@@ -445,10 +445,10 @@ class ProjectManager:
             if result.returncode != 0:
                 # 检查是否是认证失败
                 if "Authentication failed" in result.stderr or "403" in result.stderr:
-                    raise RuntimeError(f"Git 认证失败，请检�?Token/密码是否正确: {result.stderr}")
+                    raise RuntimeError(f"Git 认证失败，请检�?Token/密码是否正确: {result.stderr}")
                 # 检查是否是代理问题
                 if "proxy" in result.stderr.lower() or "timed out" in result.stderr.lower():
-                    raise RuntimeError(f"网络连接失败，请检查代理设�? {result.stderr}")
+                    raise RuntimeError(f"网络连接失败，请检查代理设�? {result.stderr}")
                 raise RuntimeError(f"Git clone failed: {result.stderr}")
             
             logger.info(f"Successfully cloned to: {target_path}")
@@ -477,7 +477,7 @@ class ProjectManager:
             raise ValueError(f"Project not found: {project_id}")
         
         if project.source == ProjectSource.LOCAL:
-            raise ValueError("本地项目不支持拉取操�?)
+            raise ValueError("本地项目不支持拉取操�?)
         
         if not project.git_info:
             raise ValueError("项目没有Git信息")
@@ -492,11 +492,11 @@ class ProjectManager:
             # 获取凭证
             username, token = self._get_git_credentials(project_id)
             
-            # 构建远程 URL（带认证�?
+            # 构建远程 URL（带认证�?
             remote_url = project.git_info.original_url or project.git_info.url
             if token:
                 remote_url = self._build_authenticated_url(remote_url, username, token)
-                # 临时设置远程 URL（带认证�?
+                # 临时设置远程 URL（带认证�?
                 subprocess.run(
                     ["git", "-C", project.path, "remote", "set-url", "origin", remote_url],
                     capture_output=True,
@@ -525,13 +525,13 @@ class ProjectManager:
                     stderr = (result.stderr or '').strip()
                     logger.error(f"Git pull failed for {project_id}: {stderr}")
                     if "proxy" in stderr.lower() or "timed out" in stderr.lower():
-                        raise RuntimeError(f"网络连接失败，请检查代理设�? {stderr}")
+                        raise RuntimeError(f"网络连接失败，请检查代理设�? {stderr}")
                     raise RuntimeError(f"Git pull failed: {stderr}")
 
-                # 更新最后同步时�?
+                # 更新最后同步时�?
                 project.git_info.last_sync = datetime.now()
 
-                # 获取最新提�?
+                # 获取最新提�?
                 cmd = ["git", "-C", project.path, "rev-parse", "HEAD"]
                 commit_result = subprocess.run(cmd, capture_output=True, text=True)
                 if commit_result.returncode == 0:
@@ -570,7 +570,7 @@ class ProjectManager:
             project_id: 项目ID
             
         Returns:
-            状态信息字�?
+            状态信息字�?
         """
         project = self._projects.get(project_id)
         if not project:
@@ -589,11 +589,11 @@ class ProjectManager:
         username, token = self._get_git_credentials(project_id)
         status["has_credentials"] = bool(token)
         
-        # 检�?Git 状�?
+        # 检�?Git 状�?
         if (Path(project.path) / ".git").exists():
             status["is_git_repo"] = True
             try:
-                # 获取状�?
+                # 获取状�?
                 result = subprocess.run(
                     ["git", "-C", project.path, "status", "--porcelain"],
                     capture_output=True,

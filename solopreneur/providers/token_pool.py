@@ -1,6 +1,6 @@
-"""
-GitHub Copilot 多账�?Token 池管理器
-支持多账号负载均衡、熔断冷却、自动恢�?
+﻿"""
+GitHub Copilot 多账�?Token 池管理器
+支持多账号负载均衡、熔断冷却、自动恢�?
 """
 import asyncio
 import json
@@ -19,7 +19,7 @@ except ImportError:
 
 
 class SlotState(str, Enum):
-    """Token 槽位状�?""
+    """Token 槽位状�?""
     ACTIVE = "active"        # 正常可用
     COOLING = "cooling"      # 触发 429，冷却中
     EXPIRED = "expired"      # Copilot Token 过期，需刷新
@@ -28,7 +28,7 @@ class SlotState(str, Enum):
 
 @dataclass
 class TokenSlot:
-    """单个账号�?Token 槽位"""
+    """单个账号�?Token 槽位"""
     slot_id: int
     github_access_token: str
     copilot_token: str
@@ -36,27 +36,27 @@ class TokenSlot:
     state: SlotState = SlotState.ACTIVE
     cooling_until: float = 0.0          # 冷却截止时间 (unix timestamp)
     consecutive_errors: int = 0          # 连续错误计数
-    total_requests: int = 0              # 总请求计�?
-    total_429s: int = 0                  # �?429 计数
+    total_requests: int = 0              # 总请求计�?
+    total_429s: int = 0                  # �?429 计数
     last_used_at: float = 0.0           # 上次使用时间
-    label: str = ""                      # 可选标签（�?"账号A"�?
+    label: str = ""                      # 可选标签（�?"账号A"�?
 
     # Token 限制配置
-    max_tokens_per_day: int = 0           # 每日最�?Token 限制�?=无限制）
+    max_tokens_per_day: int = 0           # 每日最�?Token 限制�?=无限制）
     max_requests_per_day: int = 0         # 每日最大请求次数限制（0=无限制）
     max_requests_per_hour: int = 0        # 每小时最大请求次数限制（0=无限制）
 
     # 使用统计
-    tokens_used_today: int = 0           # 今日已使�?Token
+    tokens_used_today: int = 0           # 今日已使�?Token
     tokens_used_history: list[dict] = field(default_factory=list)  # 历史使用记录
-    requests_today: int = 0               # 今日请求�?
-    requests_hour: int = 0                # 当前小时请求�?
+    requests_today: int = 0               # 今日请求�?
+    requests_hour: int = 0                # 当前小时请求�?
     last_reset_date: str = ""             # 上次重置日期
     last_reset_hour: int = -1             # 上次重置小时
 
     @property
     def is_available(self) -> bool:
-        """当前是否可用于请�?""
+        """当前是否可用于请�?""
         if self.state == SlotState.ACTIVE:
             return True
         if self.state == SlotState.COOLING:
@@ -79,17 +79,17 @@ class TokenSlot:
         """
         self._reset_counters_if_needed()
 
-        # 检查每�?Token 限制
+        # 检查每�?Token 限制
         if self.max_tokens_per_day > 0 and self.tokens_used_today >= self.max_tokens_per_day:
             return False, f"达到每日 Token 限制 ({self.tokens_used_today}/{self.max_tokens_per_day})"
 
-        # 检查每日请求限�?
+        # 检查每日请求限�?
         if self.max_requests_per_day > 0 and self.requests_today >= self.max_requests_per_day:
             return False, f"达到每日请求限制 ({self.requests_today}/{self.max_requests_per_day})"
 
         # 检查每小时请求限制
         if self.max_requests_per_hour > 0 and self.requests_hour >= self.max_requests_per_hour:
-            return False, f"达到每小时请求限�?({self.requests_hour}/{self.max_requests_per_hour})"
+            return False, f"达到每小时请求限�?({self.requests_hour}/{self.max_requests_per_hour})"
 
         return True, None
 
@@ -105,7 +105,7 @@ class TokenSlot:
                 "timestamp": datetime.now().isoformat(),
                 "tokens": tokens_used,
             })
-            # 保留最�?7 天的记录
+            # 保留最�?7 天的记录
             cutoff = datetime.now() - timedelta(days=7)
             self.tokens_used_history = [
                 h for h in self.tokens_used_history
@@ -122,18 +122,18 @@ class TokenSlot:
             "tokens_used_today": self.tokens_used_today,
             "requests_today": self.requests_today,
             "requests_hour": self.requests_hour,
-            "tokens_limit": self.max_tokens_per_day or "无限�?,
-            "requests_day_limit": self.max_requests_per_day or "无限�?,
-            "requests_hour_limit": self.max_requests_per_hour or "无限�?,
+            "tokens_limit": self.max_tokens_per_day or "无限�?,
+            "requests_day_limit": self.max_requests_per_day or "无限�?,
+            "requests_hour_limit": self.max_requests_per_hour or "无限�?,
         }
 
     def _reset_counters_if_needed(self):
-        """重置计数器（按日期和小时�?""
+        """重置计数器（按日期和小时�?""
         now = datetime.now()
         today = now.strftime("%Y-%m-%d")
         current_hour = now.hour
 
-        # 日重�?
+        # 日重�?
         if self.last_reset_date != today:
             self.last_reset_date = today
             self.requests_today = 0
@@ -144,24 +144,24 @@ class TokenSlot:
         if self.last_reset_hour != current_hour:
             self.last_reset_hour = current_hour
             self.requests_hour = 0
-            logger.debug(f"[TokenPool] Slot {self.slot_id} 计数器小时重�?)
+            logger.debug(f"[TokenPool] Slot {self.slot_id} 计数器小时重�?)
 
 
 class TokenPool:
     """
-    多账�?Token 池管理器
+    多账�?Token 池管理器
 
     特性：
     - 轮询 (Round-Robin) 负载均衡
-    - 熔断�?(Circuit Breaker)�?29 �?自动冷却
-    - 指数退避冷却时间：30s �?60s �?120s �?最�?300s
+    - 熔断�?(Circuit Breaker)�?29 �?自动冷却
+    - 指数退避冷却时间：30s �?60s �?120s �?最�?300s
     - 自动 Token 刷新
-    - 全部冷却时智能等�?
-    - 支持从配置文件读取全局默认�?
+    - 全部冷却时智能等�?
+    - 支持从配置文件读取全局默认�?
     """
 
     # 默认冷却策略常量（可被配置覆盖）
-    BASE_COOLDOWN_S = 30           # 基础冷却时间（秒�?
+    BASE_COOLDOWN_S = 30           # 基础冷却时间（秒�?
     MAX_COOLDOWN_S = 300           # 最大冷却时间（秒）
     DEAD_THRESHOLD = 10            # 连续错误次数达到此值标记为 DEAD
 
@@ -171,13 +171,13 @@ class TokenPool:
     DEFAULT_MAX_REQUESTS_PER_HOUR = 0
 
     def __init__(self, pool_dir: Path | None = None, config=None):
-        self._pool_dir = pool_dir or (Path.home() / ".nanobot" / "pool")
+        self._pool_dir = pool_dir or (Path.home() / ".solopreneur" / "pool")
         self._pool_dir.mkdir(parents=True, exist_ok=True)
         self._slots: dict[int, TokenSlot] = {}
         self._current_index = 0  # 轮询指针
         self._lock = asyncio.Lock()
 
-        # 从配置文件加载全局默认�?
+        # 从配置文件加载全局默认�?
         if config and hasattr(config, 'token_pool'):
             tp = config.token_pool
             self.BASE_COOLDOWN_S = tp.base_cooldown_seconds
@@ -186,11 +186,11 @@ class TokenPool:
             self.DEFAULT_MAX_TOKENS_PER_DAY = tp.max_tokens_per_day
             self.DEFAULT_MAX_REQUESTS_PER_DAY = tp.max_requests_per_day
             self.DEFAULT_MAX_REQUESTS_PER_HOUR = tp.max_requests_per_hour
-            logger.info(f"[TokenPool] 从配置加�? max_tokens/day={self.DEFAULT_MAX_TOKENS_PER_DAY or '无限�?}, "
-                       f"max_requests/day={self.DEFAULT_MAX_REQUESTS_PER_DAY or '无限�?}, "
-                       f"max_requests/hour={self.DEFAULT_MAX_REQUESTS_PER_HOUR or '无限�?}")
+            logger.info(f"[TokenPool] 从配置加�? max_tokens/day={self.DEFAULT_MAX_TOKENS_PER_DAY or '无限�?}, "
+                       f"max_requests/day={self.DEFAULT_MAX_REQUESTS_PER_DAY or '无限�?}, "
+                       f"max_requests/hour={self.DEFAULT_MAX_REQUESTS_PER_HOUR or '无限�?}")
 
-        # 启动时加载所有已保存�?slot
+        # 启动时加载所有已保存�?slot
         self._load_all_slots()
 
     # ========================================================================
@@ -209,7 +209,7 @@ class TokenPool:
 
     @property
     def all_slots(self) -> list[TokenSlot]:
-        """返回所�?slot（按 id 排序�?""
+        """返回所�?slot（按 id 排序�?""
         return sorted(self._slots.values(), key=lambda s: s.slot_id)
 
     def add_slot(
@@ -224,17 +224,17 @@ class TokenPool:
         max_requests_per_hour: int | None = None,
     ) -> TokenSlot:
         """
-        添加或更新一�?Token 槽位
+        添加或更新一�?Token 槽位
 
         Args:
-            slot_id: 槽位编号�?-based�?
+            slot_id: 槽位编号�?-based�?
             github_access_token: GitHub OAuth Token
             copilot_token: Copilot API Token
             expires_at: Token 过期时间
-            label: 可选的标签�?
-            max_tokens_per_day: 每日最�?Token 限制（None=使用配置默认�? 0=无限制）
-            max_requests_per_day: 每日最大请求次数限制（None=使用配置默认�? 0=无限制）
-            max_requests_per_hour: 每小时最大请求次数限制（None=使用配置默认�? 0=无限制）
+            label: 可选的标签�?
+            max_tokens_per_day: 每日最�?Token 限制（None=使用配置默认�? 0=无限制）
+            max_requests_per_day: 每日最大请求次数限制（None=使用配置默认�? 0=无限制）
+            max_requests_per_hour: 每小时最大请求次数限制（None=使用配置默认�? 0=无限制）
 
         Returns:
             创建/更新后的 TokenSlot
@@ -269,17 +269,17 @@ class TokenPool:
         )
         self._slots[slot_id] = slot
         self._save_slot(slot)
-        logger.info(f"[TokenPool] Slot {slot_id} ({slot.label}) 已添�?更新")
+        logger.info(f"[TokenPool] Slot {slot_id} ({slot.label}) 已添�?更新")
         return slot
 
     def remove_slot(self, slot_id: int) -> bool:
-        """移除一�?slot"""
+        """移除一�?slot"""
         if slot_id in self._slots:
             del self._slots[slot_id]
             slot_file = self._pool_dir / f"slot_{slot_id}.json"
             if slot_file.exists():
                 slot_file.unlink()
-            logger.info(f"[TokenPool] Slot {slot_id} 已移�?)
+            logger.info(f"[TokenPool] Slot {slot_id} 已移�?)
             return True
         return False
 
@@ -287,14 +287,14 @@ class TokenPool:
         """
         获取一个可用的 Token 槽位（核心调度方法）
 
-        策略�?
-        1. 从上次位置开始轮询，找到第一�?available �?slot
-        2. 检�?slot 的自定义速率限制
+        策略�?
+        1. 从上次位置开始轮询，找到第一�?available �?slot
+        2. 检�?slot 的自定义速率限制
         3. 如果冷却中的 slot 已过冷却期，自动恢复
-        4. 如果所�?slot 都在冷却或限制，等待最早恢复的那个
+        4. 如果所�?slot 都在冷却或限制，等待最早恢复的那个
 
         Returns:
-            TokenSlot: 选中的槽�?
+            TokenSlot: 选中的槽�?
 
         Raises:
             RuntimeError: 池中没有任何 slot
@@ -302,8 +302,8 @@ class TokenPool:
         async with self._lock:
             if not self._slots:
                 raise RuntimeError(
-                    "[TokenPool] 没有可用的账号。请先运�?"
-                    "`nanobot login --slot 1` 添加至少一个账号�?
+                    "[TokenPool] 没有可用的账号。请先运�?"
+                    "`solopreneur login --slot 1` 添加至少一个账号�?
                 )
 
             slot_ids = sorted(self._slots.keys())
@@ -314,7 +314,7 @@ class TokenPool:
                 idx = (self._current_index + i) % n
                 slot = self._slots[slot_ids[idx]]
 
-                # 如果冷却期已过，恢复�?ACTIVE
+                # 如果冷却期已过，恢复�?ACTIVE
                 if slot.state == SlotState.COOLING and time.time() >= slot.cooling_until:
                     slot.state = SlotState.ACTIVE
                     slot.consecutive_errors = 0
@@ -336,7 +336,7 @@ class TokenPool:
                     )
                     return slot
 
-        # 所�?slot 都不可用 �?等待最早恢复的
+        # 所�?slot 都不可用 �?等待最早恢复的
         return await self._wait_for_recovery()
 
     def report_success(self, slot_id: int, tokens_used: int = 0):
@@ -352,11 +352,11 @@ class TokenPool:
 
     def report_rate_limit(self, slot_id: int, retry_after: int | None = None):
         """
-        报告 429 Rate Limit 错误，触发熔断冷�?
+        报告 429 Rate Limit 错误，触发熔断冷�?
 
         Args:
-            slot_id: 触发错误的槽�?ID
-            retry_after: 服务器建议的重试等待时间（秒�?
+            slot_id: 触发错误的槽�?ID
+            retry_after: 服务器建议的重试等待时间（秒�?
         """
         if slot_id not in self._slots:
             return
@@ -370,11 +370,11 @@ class TokenPool:
             slot.state = SlotState.DEAD
             logger.error(
                 f"[TokenPool] Slot {slot.slot_id} 连续 {slot.consecutive_errors} 次错误，"
-                f"标记�?DEAD。需要重�?`nanobot login --slot {slot.slot_id}` 恢复�?
+                f"标记�?DEAD。需要重�?`solopreneur login --slot {slot.slot_id}` 恢复�?
             )
             return
 
-        # 计算冷却时间：指数退�?
+        # 计算冷却时间：指数退�?
         if retry_after and retry_after > 0:
             cooldown = min(retry_after, self.MAX_COOLDOWN_S)
         else:
@@ -388,28 +388,28 @@ class TokenPool:
         slot.cooling_until = time.time() + cooldown
 
         # ⚠️ GitHub 对同一 IP 有全局速率限制
-        # 当一个账号触�?429 时，其他账号（同 IP）也会被限制
+        # 当一个账号触�?429 时，其他账号（同 IP）也会被限制
         logger.warning(
-            f"[TokenPool] Slot {slot.slot_id} 触发 429 (第{slot.consecutive_errors}�?�?
-            f"冷却 {cooldown:.0f}s�?
-            f"剩余可用 slot: {self.active_count}/{self.size}�?
-            f"注意：GitHub 对同一 IP 有全局速率限制，其他账号也可能被拒绝�?
+            f"[TokenPool] Slot {slot.slot_id} 触发 429 (第{slot.consecutive_errors}�?�?
+            f"冷却 {cooldown:.0f}s�?
+            f"剩余可用 slot: {self.active_count}/{self.size}�?
+            f"注意：GitHub 对同一 IP 有全局速率限制，其他账号也可能被拒绝�?
         )
 
     def report_auth_error(self, slot_id: int):
-        """报告认证错误�?01/403），标记为需要刷新或重新登录"""
+        """报告认证错误�?01/403），标记为需要刷新或重新登录"""
         if slot_id in self._slots:
             slot = self._slots[slot_id]
             slot.state = SlotState.DEAD
             logger.error(
-                f"[TokenPool] Slot {slot.slot_id} 认证失败，标记为 DEAD�?
-                f"请运�?`nanobot login --slot {slot.slot_id}` 重新认证�?
+                f"[TokenPool] Slot {slot.slot_id} 认证失败，标记为 DEAD�?
+                f"请运�?`solopreneur login --slot {slot.slot_id}` 重新认证�?
             )
 
     def update_copilot_token(
         self, slot_id: int, copilot_token: str, expires_at: datetime
     ):
-        """更新某个 slot �?Copilot Token（刷新后调用�?""
+        """更新某个 slot �?Copilot Token（刷新后调用�?""
         if slot_id in self._slots:
             slot = self._slots[slot_id]
             slot.copilot_token = copilot_token
@@ -420,7 +420,7 @@ class TokenPool:
             logger.info(f"[TokenPool] Slot {slot_id} Copilot Token 已刷新，有效期至 {expires_at}")
 
     def get_status(self) -> list[dict]:
-        """获取所�?slot 的状态摘�?""
+        """获取所�?slot 的状态摘�?""
         result = []
         for slot in self.all_slots:
             remaining = ""
@@ -440,22 +440,22 @@ class TokenPool:
                 "total_429s": slot.total_429s,
                 "token_expires": slot.expires_at.isoformat(),
                 "limits": {
-                    "max_tokens_per_day": slot.max_tokens_per_day or "无限�?,
-                    "max_requests_per_day": slot.max_requests_per_day or "无限�?,
-                    "max_requests_per_hour": slot.max_requests_per_hour or "无限�?,
+                    "max_tokens_per_day": slot.max_tokens_per_day or "无限�?,
+                    "max_requests_per_day": slot.max_requests_per_day or "无限�?,
+                    "max_requests_per_hour": slot.max_requests_per_hour or "无限�?,
                 },
                 "usage": usage,
             })
         return result
 
     # ========================================================================
-    # 兼容旧接口：提供�?session 视图
+    # 兼容旧接口：提供�?session 视图
     # ========================================================================
 
     def get_legacy_session(self):
         """
-        兼容旧代码：返回第一个可�?slot 对应�?CopilotSession�?
-        使现有的 provider.session 检查仍然有效�?
+        兼容旧代码：返回第一个可�?slot 对应�?CopilotSession�?
+        使现有的 provider.session 检查仍然有效�?
         """
         from solopreneur.providers.github_copilot import CopilotSession
 
@@ -473,16 +473,16 @@ class TokenPool:
     # ========================================================================
 
     async def _wait_for_recovery(self) -> TokenSlot:
-        """所�?slot 都在冷却时，等待最早恢复的"""
+        """所�?slot 都在冷却时，等待最早恢复的"""
         cooldown_slots = [
             s for s in self._slots.values() if s.state == SlotState.COOLING
         ]
 
         if not cooldown_slots:
-            # 所�?slot 都是 DEAD，无法恢�?
+            # 所�?slot 都是 DEAD，无法恢�?
             raise RuntimeError(
-                "[TokenPool] 所有账号均已失�?(DEAD)。请运行 "
-                "`nanobot login --slot N` 重新认证�?
+                "[TokenPool] 所有账号均已失�?(DEAD)。请运行 "
+                "`solopreneur login --slot N` 重新认证�?
             )
 
         # 找到最早恢复的 slot
@@ -490,8 +490,8 @@ class TokenPool:
         wait_time = max(0, earliest.cooling_until - time.time())
 
         logger.warning(
-            f"[TokenPool] 全部 slot 冷却中，等待 {wait_time:.1f}s �?"
-            f"Slot {earliest.slot_id} 将恢�?.."
+            f"[TokenPool] 全部 slot 冷却中，等待 {wait_time:.1f}s �?"
+            f"Slot {earliest.slot_id} 将恢�?.."
         )
 
         await asyncio.sleep(wait_time + 0.5)  # 多等 0.5s 余量
@@ -505,7 +505,7 @@ class TokenPool:
         return earliest
 
     def _save_slot(self, slot: TokenSlot):
-        """将单�?slot 持久化到文件"""
+        """将单�?slot 持久化到文件"""
         slot_file = self._pool_dir / f"slot_{slot.slot_id}.json"
         try:
             data = {
@@ -535,13 +535,13 @@ class TokenPool:
             try:
                 slot_file.chmod(0o600)
             except OSError:
-                pass  # Windows 可能不支�?
+                pass  # Windows 可能不支�?
             logger.debug(f"[TokenPool] Slot {slot.slot_id} 已保存到 {slot_file}")
         except Exception as e:
             logger.error(f"[TokenPool] 保存 Slot {slot.slot_id} 失败: {e}")
 
     def _load_all_slots(self):
-        """从磁盘加载所�?slot 文件"""
+        """从磁盘加载所�?slot 文件"""
         slot_files = sorted(self._pool_dir.glob("slot_*.json"))
         for sf in slot_files:
             try:
@@ -559,7 +559,7 @@ class TokenPool:
                 expires_at = datetime.fromisoformat(data["expires_at"])
                 slot_id = data["slot_id"]
 
-                # 判断初始状�?
+                # 判断初始状�?
                 if datetime.now() + timedelta(minutes=5) >= expires_at:
                     state = SlotState.EXPIRED
                 else:
@@ -588,30 +588,30 @@ class TokenPool:
                 )
                 self._slots[slot_id] = slot
                 logger.info(
-                    f"[TokenPool] 已加�?Slot {slot_id} ({slot.label}), "
-                    f"状�? {state.value}, 过期: {expires_at}"
+                    f"[TokenPool] 已加�?Slot {slot_id} ({slot.label}), "
+                    f"状�? {state.value}, 过期: {expires_at}"
                 )
             except Exception as e:
                 logger.error(f"[TokenPool] 加载 {sf.name} 失败: {e}")
 
         if self._slots:
             logger.info(
-                f"[TokenPool] 池初始化完成: {len(self._slots)} 个账�? "
-                f"{self.active_count} 个可�?
+                f"[TokenPool] 池初始化完成: {len(self._slots)} 个账�? "
+                f"{self.active_count} 个可�?
             )
         else:
-            logger.info("[TokenPool] 池为空，请运�?`nanobot login --slot 1` 添加账号")
+            logger.info("[TokenPool] 池为空，请运�?`solopreneur login --slot 1` 添加账号")
 
     # ========================================================================
-    # 迁移辅助：从旧的�?token 文件迁移
+    # 迁移辅助：从旧的�?token 文件迁移
     # ========================================================================
 
     def migrate_from_legacy(self, legacy_token_file: Path | None = None):
         """
-        从旧的单文件 token 迁移�?slot 1
-        如果 slot 1 已存在，不会覆盖�?
+        从旧的单文件 token 迁移�?slot 1
+        如果 slot 1 已存在，不会覆盖�?
         """
-        legacy = legacy_token_file or (Path.home() / ".nanobot" / ".copilot_token.json")
+        legacy = legacy_token_file or (Path.home() / ".solopreneur" / ".copilot_token.json")
         if not legacy.exists():
             return False
 
@@ -638,7 +638,7 @@ class TokenPool:
                 github_access_token=github_token,
                 copilot_token=copilot_token,
                 expires_at=expires_at,
-                label="主账�?迁移)",
+                label="主账�?迁移)",
             )
             logger.info("[TokenPool] 已从旧格式迁移到 Slot 1")
             return True

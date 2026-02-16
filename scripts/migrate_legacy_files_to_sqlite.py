@@ -1,4 +1,4 @@
-"""One-time migration from legacy file storage to SQLite-only storage."""
+﻿"""One-time migration from legacy file storage to SQLite-only storage."""
 
 from __future__ import annotations
 
@@ -116,8 +116,8 @@ def migrate_session_secret(data_dir: Path, store: SQLiteStore) -> bool:
 
 
 def main() -> int:
-    data_dir = Path.home() / ".nanobot"
-    store = SQLiteStore(data_dir / "nanobot.db")
+    data_dir = Path.home() / ".solopreneur"
+    store = SQLiteStore(data_dir / "solopreneur.db")
 
     print(f"[INFO] migrating legacy files from: {data_dir}")
     session_count = migrate_sessions(data_dir, store)

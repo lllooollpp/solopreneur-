@@ -1,6 +1,6 @@
-"""
+﻿"""
 指标查询 API 端点
-提供 llm_usage �?subagent_tasks 的聚合统�?
+提供 llm_usage �?subagent_tasks 的聚合统�?
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 def _db_path() -> Path:
-    return Path.home() / ".nanobot" / "nanobot.db"
+    return Path.home() / ".solopreneur" / "solopreneur.db"
 
 
 class UsageSummary(BaseModel):

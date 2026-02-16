@@ -1,5 +1,5 @@
-"""
-以模块形式运�?nanobot 的入口点：python -m nanobot
+﻿"""
+以模块形式运�?solopreneur 的入口点：python -m solopreneur
 """
 
 from solopreneur.cli.commands import app

@@ -1,4 +1,4 @@
-"""Configuration schema using Pydantic."""
+﻿"""Configuration schema using Pydantic."""
 
 from pathlib import Path
 from typing import Literal
@@ -26,7 +26,7 @@ class WeComConfig(BaseModel):
     agent_id: str = ""  # 应用 ID
     secret: str = ""  # 应用密钥（用于发送消息）
     token: str = ""  # 接口验证 Token（用于接收消息）
-    aes_key: str = ""  # 消息加密密钥（Base64 编码�?3位）
+    aes_key: str = ""  # 消息加密密钥（Base64 编码�?3位）
 
 
 class ChannelsConfig(BaseModel):
@@ -37,31 +37,31 @@ class ChannelsConfig(BaseModel):
 
 
 class TaskValidatorConfig(BaseModel):
-    """任务完成验证器配�?""
-    enabled: bool = True  # 是否启用验证�?
+    """任务完成验证器配�?""
+    enabled: bool = True  # 是否启用验证�?
     min_iterations: int = 2  # 最小迭代次数（防止过早退出）
-    check_feature_status: bool = True  # 检�?feature_list 状�?
-    check_git_clean: bool = True  # 检�?working tree
-    check_tests_passed: bool = False  # 检查测试通过（可选，较耗时�?
-    max_continuation_prompts: int = 3  # 最大继续提示次�?
+    check_feature_status: bool = True  # 检�?feature_list 状�?
+    check_git_clean: bool = True  # 检�?working tree
+    check_tests_passed: bool = False  # 检查测试通过（可选，较耗时�?
+    max_continuation_prompts: int = 3  # 最大继续提示次�?
     # AI 驱动验证配置
     use_ai_validation: bool = True  # 是否使用 AI 验证（推荐）
-    ai_validation_threshold: int = 80  # AI 认为完成的阈值分数（0-100�?
+    ai_validation_threshold: int = 80  # AI 认为完成的阈值分数（0-100�?
 
 
 class AgentDefaults(BaseModel):
     """Default agent configuration."""
-    workspace: str = "~/.nanobot/workspace"
+    workspace: str = "~/.solopreneur/workspace"
     model: str = "claude-sonnet-4"
     max_tokens: int = 8192
     temperature: float = 0.7
     max_tool_iterations: int = 20
-    max_subagents: int = 5  # 最大并发子Agent�?
-    review_mode: Literal["auto", "manual"] = "auto"  # 审批模式：自�?人工
+    max_subagents: int = 5  # 最大并发子Agent�?
+    review_mode: Literal["auto", "manual"] = "auto"  # 审批模式：自�?人工
     session_cache_size: int = 100  # Session LRU缓存大小
-    agent_timeout: int = 1800  # Agent执行总超时（秒）�?0分钟
-    max_tokens_per_session: int = 500000  # 每个会话最大Token消耗（超限后自动压缩上下文继续执行�?
-    task_validator: TaskValidatorConfig = Field(default_factory=TaskValidatorConfig)  # 任务完成验证�?
+    agent_timeout: int = 1800  # Agent执行总超时（秒）�?0分钟
+    max_tokens_per_session: int = 500000  # 每个会话最大Token消耗（超限后自动压缩上下文继续执行�?
+    task_validator: TaskValidatorConfig = Field(default_factory=TaskValidatorConfig)  # 任务完成验证�?
 
 
 class AgentsConfig(BaseModel):
@@ -97,8 +97,8 @@ class WebSearchConfig(BaseModel):
     """Web search tool configuration."""
     api_key: str = ""  # Brave Search API key
     max_results: int = 5
-    timeout: int = 10  # HTTP请求超时（秒�?
-    max_query_length: int = 500  # 最大查询长�?
+    timeout: int = 10  # HTTP请求超时（秒�?
+    max_query_length: int = 500  # 最大查询长�?
 
 
 class WebToolsConfig(BaseModel):
@@ -110,8 +110,8 @@ class ExecToolConfig(BaseModel):
     """Shell exec tool configuration."""
     timeout: int = 60
     restrict_to_workspace: bool = False  # If true, block commands accessing paths outside workspace
-    whitelist_mode: bool = False  # 如果为True，只允许白名单中的命�?
-    max_output_size: int = 10000  # 最大输出大小（字符�?
+    whitelist_mode: bool = False  # 如果为True，只允许白名单中的命�?
+    max_output_size: int = 10000  # 最大输出大小（字符�?
 
 
 class ToolsConfig(BaseModel):
@@ -122,16 +122,16 @@ class ToolsConfig(BaseModel):
 
 class TokenPoolConfig(BaseModel):
     """Token pool configuration for multi-account management."""
-    max_tokens_per_day: int = 0  # 每个账号每日最大Token限制�?=无限制）
+    max_tokens_per_day: int = 0  # 每个账号每日最大Token限制�?=无限制）
     max_requests_per_day: int = 0  # 每个账号每日最大请求次数限制（0=无限制）
     max_requests_per_hour: int = 0  # 每个账号每小时最大请求次数限制（0=无限制）
-    base_cooldown_seconds: int = 30  # 429错误后基础冷却时间（秒�?
+    base_cooldown_seconds: int = 30  # 429错误后基础冷却时间（秒�?
     max_cooldown_seconds: int = 300  # 最大冷却时间（秒）
     dead_threshold: int = 10  # 连续错误多少次标记为DEAD
 
 
 class Config(BaseSettings):
-    """Root configuration for nanobot."""
+    """Root configuration for solopreneur."""
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
     channels: ChannelsConfig = Field(default_factory=ChannelsConfig)
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
@@ -168,5 +168,5 @@ class Config(BaseSettings):
         return None
     
     class Config:
-        env_prefix = "NANOBOT_"
+        env_prefix = "SOLOPRENEUR_"
         env_nested_delimiter = "__"

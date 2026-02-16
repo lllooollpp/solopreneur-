@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Nanobot 前后端启动脚�?
+Solopreneur 前后端启动脚�?
 自动 kill 端口占用并启动前后端服务
 """
 import os
@@ -12,14 +12,14 @@ import signal
 from pathlib import Path
 from typing import Optional
 
-# Windows 控制�?UTF-8 设置 (必须在最开始设�?
+# Windows 控制�?UTF-8 设置 (必须在最开始设�?
 if sys.platform == "win32":
-    # 设置控制台代码页�?UTF-8
+    # 设置控制台代码页�?UTF-8
     os.system("chcp 65001 > nul 2>&1")
     # 设置 Python 环境变量
     os.environ["PYTHONIOENCODING"] = "utf-8"
     os.environ["PYTHONUTF8"] = "1"
-    # 强制重配 stdout/stderr �?UTF-8 (Python 3.7+)
+    # 强制重配 stdout/stderr �?UTF-8 (Python 3.7+)
     try:
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
         sys.stderr.reconfigure(encoding='utf-8', errors='replace')
@@ -31,8 +31,8 @@ if sys.platform == "win32":
 # 配置
 BACKEND_PORT = 8000
 FRONTEND_PORT = 5173
-BACKEND_HOST = "0.0.0.0"  # 允许所�?IP 访问 (局域网/公网)
-FRONTEND_HOST = "0.0.0.0"  # 允许所�?IP 访问 (局域网/公网)
+BACKEND_HOST = "0.0.0.0"  # 允许所�?IP 访问 (局域网/公网)
+FRONTEND_HOST = "0.0.0.0"  # 允许所�?IP 访问 (局域网/公网)
 
 # 颜色输出
 class Colors:
@@ -66,7 +66,7 @@ def log_debug(message: str):
     log(f"[DBG] {message}", Colors.BLUE)
 
 def get_process_on_port(port: int) -> Optional[int]:
-    """获取占用端口的进�?PID"""
+    """获取占用端口的进�?PID"""
     try:
         # Windows: netstat -ano | findstr :<port>
         if sys.platform == "win32":
@@ -82,7 +82,7 @@ def get_process_on_port(port: int) -> Optional[int]:
                     if f":{port}" in line and "LISTENING" in line:
                         parts = line.split()
                         pid = int(parts[-1])
-                        log_debug(f"端口 {port} 被进�?{pid} 占用")
+                        log_debug(f"端口 {port} 被进�?{pid} 占用")
                         return pid
         # Linux/macOS: lsof -ti:<port>
         else:
@@ -94,10 +94,10 @@ def get_process_on_port(port: int) -> Optional[int]:
             )
             if result.returncode == 0 and result.stdout.strip():
                 pid = int(result.stdout.strip())
-                log_debug(f"端口 {port} 被进�?{pid} 占用")
+                log_debug(f"端口 {port} 被进�?{pid} 占用")
                 return pid
     except Exception as e:
-        log_debug(f"检查端�?{port} 时出�? {e}")
+        log_debug(f"检查端�?{port} 时出�? {e}")
     
     return None
 
@@ -105,18 +105,18 @@ def kill_process(pid: int, port: int):
     """强制 kill 进程及其子进程树"""
     try:
         if sys.platform == "win32":
-            # /T = kill 整个进程树（含子进程�?
+            # /T = kill 整个进程树（含子进程�?
             subprocess.run(f"taskkill /F /T /PID {pid}", shell=True,
-                           capture_output=True)  # �?check，避免进程已退出时报错
+                           capture_output=True)  # �?check，避免进程已退出时报错
         else:
             os.kill(pid, signal.SIGKILL)
-        log_success(f"�?kill 进程 {pid} (端口 {port})")
+        log_success(f"�?kill 进程 {pid} (端口 {port})")
     except Exception as e:
         log_error(f"Kill 进程 {pid} 失败: {e}")
 
 def ensure_port_free(port: int, service_name: str):
-    """确保端口空闲，最多重�?3 �?""
-    log_info(f"检�?{service_name} 端口 {port}...")
+    """确保端口空闲，最多重�?3 �?""
+    log_info(f"检�?{service_name} 端口 {port}...")
     pid = get_process_on_port(port)
     if not pid:
         log_success(f"端口 {port} 空闲")
@@ -125,30 +125,30 @@ def ensure_port_free(port: int, service_name: str):
     log_warning(f"端口 {port} 被占用，正在 kill 进程 {pid}...")
     kill_process(pid, port)
 
-    # 等待端口释放，最多重�?3 �?
+    # 等待端口释放，最多重�?3 �?
     for attempt in range(3):
         time.sleep(1.5)
         pid = get_process_on_port(port)
         if not pid:
-            log_success(f"端口 {port} 已释�?)
+            log_success(f"端口 {port} 已释�?)
             return
-        log_debug(f"端口 {port} 仍被占用 (PID {pid})，重�?kill... ({attempt + 1}/3)")
+        log_debug(f"端口 {port} 仍被占用 (PID {pid})，重�?kill... ({attempt + 1}/3)")
         kill_process(pid, port)
 
     log_error(f"端口 {port} 仍被占用，请手动处理")
     sys.exit(1)
 
 def check_dependencies():
-    """检查依�?""
-    log_info("检查项目依�?..")
+    """检查依�?""
+    log_info("检查项目依�?..")
     
-    # 检�?Python 虚拟环境
+    # 检�?Python 虚拟环境
     venv_python = Path(".venv/Scripts/python.exe" if sys.platform == "win32" else ".venv/bin/python")
     if not venv_python.exists():
         log_error("未找到虚拟环境，请先运行: python -m venv .venv && .venv/Scripts/activate && pip install -e .")
         sys.exit(1)
     
-    # 检查前端依�?
+    # 检查前端依�?
     node_modules = Path("ui/node_modules")
     if not node_modules.exists():
         log_warning("前端依赖未安装，正在安装...")
@@ -159,13 +159,13 @@ def check_dependencies():
             log_error("前端依赖安装失败")
             sys.exit(1)
     
-    log_success("依赖检查完�?)
+    log_success("依赖检查完�?)
 
 def start_backend():
     """启动后端服务"""
     log_info(f"启动后端服务 (http://{BACKEND_HOST}:{BACKEND_PORT})...")
     
-    # 使用虚拟环境�?Python
+    # 使用虚拟环境�?Python
     if sys.platform == "win32":
         python_exe = Path(".venv/Scripts/python.exe").resolve()
     else:
@@ -175,7 +175,7 @@ def start_backend():
     cmd = [
         str(python_exe),
         "-m", "uvicorn",
-        "nanobot.api.main:app",
+        "solopreneur.api.main:app",
         "--host", BACKEND_HOST,
         "--port", str(BACKEND_PORT),
         "--reload",
@@ -184,7 +184,7 @@ def start_backend():
     
     log_debug(f"后端命令: {' '.join(cmd)}")
     
-    # 设置 UTF-8 环境变量（解�?Windows GBK 编码问题�?
+    # 设置 UTF-8 环境变量（解�?Windows GBK 编码问题�?
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
@@ -193,7 +193,7 @@ def start_backend():
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,  # 合并 stderr �?stdout，避�?PowerShell 红字误报
+        stderr=subprocess.STDOUT,  # 合并 stderr �?stdout，避�?PowerShell 红字误报
         text=True,
         bufsize=1,
         universal_newlines=True,
@@ -242,13 +242,13 @@ def stream_output(process, prefix: str, color: str):
     process.stdout.close()
 
 def main():
-    """主函�?""
+    """主函�?""
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*60}{Colors.END}")
-    print(f"{Colors.BOLD}{Colors.HEADER}>>> Nanobot Launcher{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.HEADER}>>> Solopreneur Launcher{Colors.END}")
     print(f"{Colors.BOLD}{Colors.HEADER}{'='*60}{Colors.END}\n")
     
     try:
-        # 1. 检查依�?
+        # 1. 检查依�?
         check_dependencies()
         
         # 2. 确保端口空闲
@@ -257,12 +257,12 @@ def main():
         
         # 3. 启动后端
         backend_process = start_backend()
-        log_success(f"后端进程已启�?(PID: {backend_process.pid})")
+        log_success(f"后端进程已启�?(PID: {backend_process.pid})")
         time.sleep(2)  # 等待后端启动
         
         # 4. 启动前端
         frontend_process = start_frontend()
-        log_success(f"前端进程已启�?(PID: {frontend_process.pid})")
+        log_success(f"前端进程已启�?(PID: {frontend_process.pid})")
         
         # 5. 显示访问信息
         print(f"\n{Colors.BOLD}{Colors.GREEN}{'='*60}{Colors.END}")
@@ -307,7 +307,7 @@ def main():
             backend_process.wait()
             frontend_process.wait()
         except KeyboardInterrupt:
-            log_warning("\n收到停止信号，正在关闭服�?..")
+            log_warning("\n收到停止信号，正在关闭服�?..")
             
             # 终止进程
             backend_process.terminate()
@@ -322,7 +322,7 @@ def main():
             if frontend_process.poll() is None:
                 frontend_process.kill()
             
-            log_success("服务已停�?)
+            log_success("服务已停�?)
     
     except Exception as e:
         log_error(f"启动失败: {e}")
