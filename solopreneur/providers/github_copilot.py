@@ -35,7 +35,7 @@ from solopreneur.providers.token_pool import TokenPool, TokenSlot, SlotState
 
 def _get_or_create_encryption_key() -> bytes:
     """获取或创建加密密钥�?""
-    key_file = Path.home() / ".nanobot" / ".token_key"
+    key_file = Path.home() / ".solopreneur" / ".token_key"
 
     if key_file.exists():
         return key_file.read_bytes()
@@ -134,7 +134,7 @@ class GitHubCopilotProvider(LLMProvider):
         self._pool = TokenPool(config=config)
 
         # 兼容旧单文件 token：自动迁移到 slot 1
-        legacy_token_file = Path.home() / ".nanobot" / ".copilot_token.json"
+        legacy_token_file = Path.home() / ".solopreneur" / ".copilot_token.json"
         self._pool.migrate_from_legacy(legacy_token_file)
 
         # Token 持久化文件路径（保留用于兼容�?
