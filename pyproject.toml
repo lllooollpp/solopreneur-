@@ -67,13 +67,9 @@ include = [
 [tool.hatch.build.targets.sdist]
 include = [
     "solopreneur/",
-    "bridge/",
     "README.md",
     "LICENSE",
 ]
-
-[tool.hatch.build.targets.wheel.force-include]
-"bridge" = "solopreneur/bridge"
 
 [tool.ruff]
 line-length = 100
