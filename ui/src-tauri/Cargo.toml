@@ -1,8 +1,8 @@
 [package]
-name = "nanobot-ui"
+name = "solopreneur-ui"
 version = "0.1.0"
-description = "Nanobot 桌面控制台"
-authors = ["Nanobot Team"]
+description = "Solopreneur 桌面控制台"
+authors = ["Solopreneur Team"]
 license = ""
 repository = ""
 edition = "2021"
