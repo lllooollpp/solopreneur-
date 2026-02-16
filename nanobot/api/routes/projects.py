@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel
 
-from nanobot.projects import ProjectManager, ProjectCreate, ProjectUpdate
+from nanobot.projects import ProjectManager, ProjectCreate, ProjectUpdate, ProjectEnvVar
 from nanobot.core.dependencies import get_component_manager
 from nanobot.storage import SubagentTaskPersistence
 
@@ -216,6 +216,75 @@ class WikiGenerateRequest(BaseModel):
     options: dict | None = None
     model: str | None = None
     note: str | None = None
+
+
+class ProjectEnvUpdateRequest(BaseModel):
+    env_vars: list[ProjectEnvVar]
+
+
+@router.get("/projects/{project_id}/env")
+async def get_project_env(project_id: str):
+    """获取项目环境变量列表。"""
+    try:
+        manager = get_project_manager()
+        project = manager.get_project(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+        return {
+            "project_id": project_id,
+            "env_vars": [item.model_dump(mode="json") for item in project.env_vars],
+            "total": len(project.env_vars),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get project env vars: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/projects/{project_id}/env")
+async def set_project_env(project_id: str, data: ProjectEnvUpdateRequest):
+    """覆盖设置项目环境变量。"""
+    try:
+        manager = get_project_manager()
+        project = manager.set_project_env_vars(project_id, data.env_vars)
+        if not project:
+            raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+        return {
+            "success": True,
+            "project_id": project_id,
+            "env_vars": [item.model_dump(mode="json") for item in project.env_vars],
+            "total": len(project.env_vars),
+            "message": "Project env vars updated successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to set project env vars: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/projects/{project_id}/env/{key}")
+async def delete_project_env(project_id: str, key: str):
+    """删除项目中的单个环境变量。"""
+    try:
+        manager = get_project_manager()
+        deleted, project = manager.delete_project_env_var(project_id, key)
+        if project is None:
+            raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"Env var not found: {key}")
+        return {
+            "success": True,
+            "project_id": project_id,
+            "message": f"Env var '{key}' deleted successfully",
+            "total": len(project.env_vars),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete project env var: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/projects/{project_id}/docs")

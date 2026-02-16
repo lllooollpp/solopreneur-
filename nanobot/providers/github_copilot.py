@@ -117,6 +117,10 @@ class GitHubCopilotProvider(LLMProvider):
         super().__init__(api_key=api_key or "", api_base=api_base)
         # 保存配置的默认模型
         self._default_model = default_model
+        # 模型列表缓存（避免频繁请求 GitHub API）
+        self._models_cache: list[str] = []
+        self._models_cache_time: datetime | None = None
+        self._models_cache_ttl = timedelta(minutes=5)  # 缓存 5 分钟
         # 添加 VS Code User-Agent
         self._http_client = httpx.AsyncClient(
             timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=10.0),
@@ -454,13 +458,22 @@ class GitHubCopilotProvider(LLMProvider):
             self._pool.report_auth_error(slot.slot_id)
             raise
 
-    async def get_available_models(self) -> list[str]:
+    async def get_available_models(self, force_refresh: bool = False) -> list[str]:
         """
-        获取可用的模型列表
+        获取可用的模型列表（带缓存）
+
+        Args:
+            force_refresh: 强制刷新缓存
 
         Returns:
             list[str]: 可用模型列表
         """
+        # 检查缓存是否有效
+        if not force_refresh and self._models_cache and self._models_cache_time:
+            if datetime.now() - self._models_cache_time < self._models_cache_ttl:
+                logger.debug(f"Using cached models: {self._models_cache}")
+                return self._models_cache
+
         await self.refresh_token_if_needed()
 
         if not self.session:
@@ -502,16 +515,27 @@ class GitHubCopilotProvider(LLMProvider):
                         continue
                     models.append(mid)
                 logger.info(f"Available chat models from API: {models}")
+                # 更新缓存
+                self._models_cache = models
+                self._models_cache_time = datetime.now()
                 return models
             else:
                 logger.warning(f"Unexpected API response format: {data}")
                 # 如果 API 格式不同，返回默认列表
-                return ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+                default_models = ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+                self._models_cache = default_models
+                self._models_cache_time = datetime.now()
+                return default_models
 
         except Exception as e:
             logger.error(f"Failed to fetch models from API: {e}")
-            # 如果获取失败，返回默认列表
-            return ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+            # 如果获取失败但有缓存，返回缓存
+            if self._models_cache:
+                logger.info(f"Using cached models due to API error: {self._models_cache}")
+                return self._models_cache
+            # 否则返回默认列表
+            default_models = ["gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+            return default_models
 
     def _build_headers(self, copilot_token: str) -> dict:
         """构建 Copilot API 请求头"""

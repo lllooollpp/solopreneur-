@@ -9,7 +9,7 @@
       <div
         v-for="project in projects"
         :key="project.id"
-        :class="['project-item', { active: currentProjectId === project.id }]"
+        :class="['project-item', { active: props.currentProjectId === project.id }]"
         @click="selectProject(project)"
       >
         <div class="project-icon">
@@ -209,7 +209,8 @@ defineExpose({
 
 <style scoped>
 .project-sidebar {
-  width: 280px;
+  width: 100%;
+  min-width: 0;
   background: #fff;
   border-right: 1px solid #e0e0e0;
   display: flex;

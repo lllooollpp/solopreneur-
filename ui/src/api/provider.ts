@@ -10,12 +10,14 @@ export interface ProvidersConfig {
   zhipu: { api_key: string; api_base?: string | null }
   vllm: { api_key: string; api_base?: string | null }
   gemini: { api_key: string; api_base?: string | null }
+  copilot_priority: boolean
 }
 
 export interface AgentDefaults {
   model: string
   max_tokens: number
   temperature: number
+  review_mode: 'auto' | 'manual'
 }
 
 export async function getProvidersConfig(): Promise<ProvidersConfig> {

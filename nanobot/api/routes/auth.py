@@ -37,10 +37,10 @@ async def get_models():
         manager = get_component_manager()
         config = manager.get_config()
 
-        # 检查是否使用 Copilot (有已认证的账号)
+        # 仅在开启 copilot_priority 时优先使用 Copilot
+        copilot_priority = getattr(config.providers, "copilot_priority", False)
         copilot_provider = manager.get_copilot_provider()
-        if copilot_provider.session:
-            # 使用 Copilot
+        if copilot_priority and copilot_provider.session:
             models = await copilot_provider.get_available_models()
             return {
                 "models": models,

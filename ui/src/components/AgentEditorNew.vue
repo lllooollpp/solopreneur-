@@ -52,7 +52,6 @@
 import { ref, computed, watch } from 'vue'
 import { Codemirror } from 'vue-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
-import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView } from '@codemirror/view'
 
 const props = defineProps<{

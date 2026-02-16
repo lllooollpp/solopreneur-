@@ -2,9 +2,11 @@
 Providers API 路由
 提供 LLM Provider 配置管理
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from fastapi import APIRouter
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from nanobot.core.dependencies import get_component_manager
 from nanobot.config.loader import save_config
@@ -27,6 +29,7 @@ class ProvidersConfig(BaseModel):
     zhipu: ProviderConfig = Field(default_factory=ProviderConfig)
     vllm: ProviderConfig = Field(default_factory=ProviderConfig)
     gemini: ProviderConfig = Field(default_factory=ProviderConfig)
+    copilot_priority: bool = False
 
 
 class AgentDefaults(BaseModel):
@@ -34,6 +37,7 @@ class AgentDefaults(BaseModel):
     model: str = "gpt-5-mini"
     max_tokens: int = 8192
     temperature: float = 0.7
+    review_mode: Literal["auto", "manual"] = "auto"
 
 
 class TestConnectionRequest(BaseModel):
@@ -83,6 +87,7 @@ async def get_providers_config() -> ProvidersConfig:
             api_key=config.providers.gemini.api_key,
             api_base=config.providers.gemini.api_base
         ),
+        copilot_priority=config.providers.copilot_priority,
     )
 
 
@@ -114,6 +119,8 @@ async def update_providers_config(config: ProvidersConfig):
     current_config.providers.gemini.api_key = config.gemini.api_key
     current_config.providers.gemini.api_base = config.gemini.api_base
 
+    current_config.providers.copilot_priority = config.copilot_priority
+
     # 保存到文件
     save_config(current_config)
 
@@ -132,6 +139,7 @@ async def get_agent_defaults() -> AgentDefaults:
         model=config.agents.defaults.model,
         max_tokens=config.agents.defaults.max_tokens,
         temperature=config.agents.defaults.temperature,
+        review_mode=config.agents.defaults.review_mode,
     )
 
 
@@ -144,13 +152,16 @@ async def update_agent_defaults(config: AgentDefaults):
     current_config.agents.defaults.model = config.model
     current_config.agents.defaults.max_tokens = config.max_tokens
     current_config.agents.defaults.temperature = config.temperature
+    current_config.agents.defaults.review_mode = config.review_mode
 
     # 保存到文件
     save_config(current_config)
 
     # 重置组件管理器以应用新配置
     manager.reset()
-    logger.info(f"Agent 默认配置已更新: model={config.model}, max_tokens={config.max_tokens}")
+    logger.info(
+        f"Agent 默认配置已更新: model={config.model}, max_tokens={config.max_tokens}, review_mode={config.review_mode}"
+    )
 
 
 @router.post("/providers/test", response_model=TestConnectionResponse)
@@ -204,7 +215,7 @@ async def test_provider_connection(request: TestConnectionRequest) -> TestConnec
 
         # 其他 Provider 发送真实测试请求
         try:
-            result = await provider.chat(
+            await provider.chat(
                 messages=test_message,
                 max_tokens=10,
             )

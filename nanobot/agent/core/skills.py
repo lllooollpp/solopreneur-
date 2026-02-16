@@ -1,4 +1,4 @@
-"""Agent 能力的技能加载器。"""
+"""Agent 能力的技能加载器（单一路径模式）。"""
 
 import json
 import os
@@ -24,6 +24,8 @@ class SkillsLoader:
         self.workspace = workspace
         self.workspace_skills = workspace / "skills"
         self.builtin_skills = builtin_skills_dir or BUILTIN_SKILLS_DIR
+        self.workspace_skills.mkdir(parents=True, exist_ok=True)
+        self._seed_builtin_skills()
     
     def list_skills(self, filter_unavailable: bool = True) -> list[dict[str, str]]:
         """
@@ -36,22 +38,14 @@ class SkillsLoader:
             包含技能信息的字典列表，键包括 'name'、'path'、'source'。
         """
         skills = []
-        
-        # 工作区技能（优先级最高）
+
+        # 单一路径：只从 workspace/skills 加载
         if self.workspace_skills.exists():
             for skill_dir in self.workspace_skills.iterdir():
                 if skill_dir.is_dir():
                     skill_file = skill_dir / "SKILL.md"
                     if skill_file.exists():
                         skills.append({"name": skill_dir.name, "path": str(skill_file), "source": "workspace"})
-        
-        # 内置技能
-        if self.builtin_skills and self.builtin_skills.exists():
-            for skill_dir in self.builtin_skills.iterdir():
-                if skill_dir.is_dir():
-                    skill_file = skill_dir / "SKILL.md"
-                    if skill_file.exists() and not any(s["name"] == skill_dir.name for s in skills):
-                        skills.append({"name": skill_dir.name, "path": str(skill_file), "source": "builtin"})
         
         # 按要求过滤
         if filter_unavailable:
@@ -68,18 +62,35 @@ class SkillsLoader:
         返回:
             技能内容，如果未找到则返回 None。
         """
-        # 首先检查工作区
+        # 单一路径：只检查工作区
         workspace_skill = self.workspace_skills / name / "SKILL.md"
         if workspace_skill.exists():
             return workspace_skill.read_text(encoding="utf-8")
-        
-        # 检查内置技能
-        if self.builtin_skills:
-            builtin_skill = self.builtin_skills / name / "SKILL.md"
-            if builtin_skill.exists():
-                return builtin_skill.read_text(encoding="utf-8")
-        
+
         return None
+
+    def _seed_builtin_skills(self):
+        """Copy built-in skills into canonical workspace/skills if missing."""
+        if not self.builtin_skills or not self.builtin_skills.exists():
+            return
+
+        copied = 0
+        for skill_dir in self.builtin_skills.iterdir():
+            if not skill_dir.is_dir():
+                continue
+            src_skill = skill_dir / "SKILL.md"
+            if not src_skill.exists():
+                continue
+
+            dst_dir = self.workspace_skills / skill_dir.name
+            dst_skill = dst_dir / "SKILL.md"
+            if not dst_skill.exists():
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_skill, dst_skill)
+                copied += 1
+
+        if copied:
+            pass
     
     def load_skills_for_context(self, skill_names: list[str]) -> str:
         """

@@ -2,7 +2,7 @@
 WebSocket 服务
 实时推送 Agent 事件、聊天流式输出、工作流状态到前端
 """
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from loguru import logger
 import json
 import asyncio
@@ -292,6 +292,7 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                         "path": project.path,
                         "source": project.source.value,
                         "git_info": project.git_info.model_dump(mode='json') if project.git_info else None,
+                        "env_vars": [item.model_dump(mode='json') for item in project.env_vars],
                     }
                 else:
                     # 前端传了项目信息但后端找不到，使用前端传来的基本信息
@@ -300,6 +301,7 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                         "name": data.get("project_name", "未命名项目"),
                         "path": project_path,
                         "source": "unknown",
+                        "env_vars": data.get("env_vars", []),
                     }
             
             logger.info(f"WebSocket chat: {content[:50]}... (session: {session_key}, project: {project_info['name'] if project_info else 'none'})")
@@ -309,9 +311,12 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
 
                 # 临时覆盖模型（可选）
                 original_model = agent_loop.model
+                original_subagent_model = agent_loop.subagents.model
                 try:
                     if model:
                         agent_loop.model = model
+                        # 保持子 Agent 与主控本次请求模型一致，避免 trace 中模型显示为旧值
+                        agent_loop.subagents.model = model
 
                     async def send_chunk(text: str):
                         await websocket.send_json({
@@ -332,9 +337,11 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                                 "type": "activity",
                                 "activity_type": evt,
                                 "tool_name": event.get("tool_name", ""),
+                                "delegate_agent": event.get("delegate_agent", ""),
                                 "tool_args": event.get("tool_args", {}),
                                 "duration_ms": event.get("duration_ms"),
                                 "result_length": event.get("result_length"),
+                                "result_preview": event.get("result_preview"),
                                 "iteration": event.get("iteration"),
                                 "timestamp": event.get("timestamp"),
                             })
@@ -343,9 +350,23 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                                 "type": "activity",
                                 "activity_type": evt,
                                 "iteration": event.get("iteration"),
+                                "agent_name": event.get("agent_name", ""),
                                 "model": event.get("model", ""),
                                 "duration_ms": event.get("duration_ms"),
                                 "total_tokens": event.get("total_tokens"),
+                                "timestamp": event.get("timestamp"),
+                            })
+                        elif evt in ("skill_start", "skill_end"):
+                            await websocket.send_json({
+                                "type": "activity",
+                                "activity_type": evt,
+                                "iteration": event.get("iteration"),
+                                "skill_name": event.get("skill_name", ""),
+                                "tool_name": event.get("tool_name", ""),
+                                "tool_args": event.get("tool_args", {}),
+                                "duration_ms": event.get("duration_ms"),
+                                "result_length": event.get("result_length"),
+                                "result_preview": event.get("result_preview"),
                                 "timestamp": event.get("timestamp"),
                             })
 
@@ -358,6 +379,7 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                     )
                 finally:
                     agent_loop.model = original_model
+                    agent_loop.subagents.model = original_subagent_model
 
                 await websocket.send_json({
                     "type": "done",

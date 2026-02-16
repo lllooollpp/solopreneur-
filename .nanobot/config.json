@@ -1,0 +1,94 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "D:\\workspace\\nanoclawbot\\nanobot",
+      "model": "Qwen3-32B",
+      "maxTokens": 30000,
+      "temperature": 0.7,
+      "maxToolIterations": 20,
+      "maxSubagents": 5,
+      "sessionCacheSize": 100,
+      "agentTimeout": 1800,
+      "maxTokensPerSession": 500000
+    }
+  },
+  "channels": {
+    "whatsapp": {
+      "enabled": false,
+      "bridgeUrl": "ws://localhost:3001",
+      "allowFrom": []
+    },
+    "telegram": {
+      "enabled": false,
+      "token": "",
+      "allowFrom": []
+    },
+    "wecom": {
+      "enabled": false,
+      "corpId": "",
+      "agentId": "",
+      "secret": "",
+      "token": "",
+      "aesKey": ""
+    }
+  },
+  "providers": {
+    "anthropic": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "openai": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "openrouter": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "groq": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "zhipu": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "vllm": {
+      "apiKey": "",
+      "apiBase": "http://10.104.6.16:38099/v1"
+    },
+    "gemini": {
+      "apiKey": "",
+      "apiBase": null
+    },
+    "copilotPriority": true
+  },
+  "gateway": {
+    "host": "0.0.0.0",
+    "port": 18790
+  },
+  "tools": {
+    "web": {
+      "search": {
+        "apiKey": "",
+        "maxResults": 5,
+        "timeout": 10,
+        "maxQueryLength": 500
+      }
+    },
+    "exec": {
+      "timeout": 60,
+      "restrictToWorkspace": false,
+      "whitelistMode": false,
+      "maxOutputSize": 10000
+    }
+  },
+  "tokenPool": {
+    "maxTokensPerDay": 0,
+    "maxRequestsPerDay": 0,
+    "maxRequestsPerHour": 0,
+    "baseCooldownSeconds": 30,
+    "maxCooldownSeconds": 300,
+    "deadThreshold": 10
+  }
+}

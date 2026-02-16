@@ -10,7 +10,11 @@ from nanobot.agent.core.tools.base import Tool
 def _validate_path(path: str, workspace: Path | None = None) -> tuple[Path, str | None]:
     """验证路径是否安全并在工作空间内。"""
     try:
-        resolved = Path(path).expanduser().resolve()
+        raw = Path(path).expanduser()
+        if not raw.is_absolute() and workspace is not None:
+            resolved = (workspace / raw).resolve()
+        else:
+            resolved = raw.resolve()
         
         # 如果指定了工作空间，检查路径是否在工作空间内
         if workspace:

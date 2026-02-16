@@ -2,15 +2,21 @@
 仪表盘统计 API 端点
 提供全面的系统统计数据
 """
-from fastapi import APIRouter
-from pydantic import BaseModel
-from typing import Dict, List, Any, Optional
-from loguru import logger
-from pathlib import Path
+import platform
+import sqlite3
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter
+from loguru import logger
+from pydantic import BaseModel
 
 from nanobot.core.dependencies import get_component_manager
+from nanobot.config.loader import get_config_path
+from nanobot.utils.helpers import get_data_path
 
 router = APIRouter()
 
@@ -121,7 +127,7 @@ async def get_dashboard_stats():
         comp = get_component_manager()
         
         # === Agent 状态 ===
-        runtime_file = Path.home() / ".nanobot" / "runtime.txt"
+        runtime_file = get_data_path() / "runtime.txt"
         uptime_seconds = 0
         if runtime_file.exists():
             try:
@@ -213,31 +219,26 @@ async def get_dashboard_stats():
         
         agent_dist = AgentDistribution(**agents_data)
         
-        # === 技能统计 ===
+        # === 技能统计（与 /api/config/skills 同源） ===
         skills_data = {"total": 0, "enabled": 0, "list": []}
         try:
-            bundled_skills_path = Path(__file__).parent.parent.parent / "skills"
-            
-            if bundled_skills_path.exists():
-                for skill_dir in bundled_skills_path.iterdir():
-                    if skill_dir.is_dir() and (skill_dir / "SKILL.md").exists():
-                        skill_md = skill_dir / "SKILL.md"
-                        description = "内置技能"
-                        
-                        try:
-                            first_line = skill_md.read_text(encoding='utf-8').split('\n')[0]
-                            if first_line.startswith('#'):
-                                description = first_line.lstrip('#').strip()
-                        except:
-                            pass
-                        
-                        skills_data["total"] += 1
-                        skills_data["enabled"] += 1
-                        skills_data["list"].append({
-                            "name": skill_dir.name,
-                            "description": description,
-                            "enabled": True
-                        })
+            skills_loader = comp.get_agent_manager().skills
+            discovered = skills_loader.list_skills(filter_unavailable=False)
+
+            for s in discovered:
+                name = s["name"]
+                description = "技能"
+                meta = skills_loader.get_skill_metadata(name) or {}
+                if meta.get("description"):
+                    description = meta["description"]
+
+                skills_data["total"] += 1
+                skills_data["enabled"] += 1
+                skills_data["list"].append({
+                    "name": name,
+                    "description": description,
+                    "enabled": True
+                })
         except Exception as e:
             logger.warning(f"获取技能统计失败: {e}")
         
@@ -255,6 +256,22 @@ async def get_dashboard_stats():
                 tokens_data["total_used"] = provider._total_tokens
             if hasattr(provider, '_request_count'):
                 tokens_data["requests_today"] = provider._request_count
+
+            # 优先使用 SQLite 聚合（更准确，跨进程/重启可持续）
+            db_path = get_data_path() / "nanobot.db"
+            if db_path.exists():
+                with sqlite3.connect(str(db_path)) as conn:
+                    row_all = conn.execute(
+                        "SELECT COALESCE(SUM(total_tokens), 0), COUNT(*) FROM llm_usage"
+                    ).fetchone()
+                    row_today = conn.execute(
+                        "SELECT COUNT(*) FROM llm_usage WHERE date(created_at) = date('now', 'localtime')"
+                    ).fetchone()
+
+                if row_all:
+                    tokens_data["total_used"] = int(row_all[0] or 0)
+                if row_today:
+                    tokens_data["requests_today"] = int(row_today[0] or 0)
         except Exception as e:
             logger.warning(f"获取 Token 统计失败: {e}")
         
@@ -281,7 +298,7 @@ async def get_dashboard_stats():
         
         # 从日志获取最近活动
         try:
-            log_file = Path.home() / ".nanobot" / "logs" / "nanobot.log"
+            log_file = get_data_path() / "logs" / "nanobot.log"
             if log_file.exists():
                 lines = log_file.read_text(encoding='utf-8').split('\n')[-100:]
                 for line in lines:
@@ -298,14 +315,11 @@ async def get_dashboard_stats():
         recent_activity = RecentActivity(**activity_data)
         
         # === 系统信息 ===
-        import sys
-        import platform
-        
         system_info = SystemInfo(
             version="1.0.0",  # 可以从包版本获取
             python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
             platform=platform.platform(),
-            config_path=str(Path.home() / ".nanobot" / "config.json"),
+            config_path=str(get_config_path()),
             workspace_path=str(Path.cwd())
         )
         
@@ -360,7 +374,7 @@ async def health_check():
         
         # 检查 agent loop
         try:
-            loop = await comp.get_agent_loop()
+            await comp.get_agent_loop()
             health["components"]["agent_loop"] = "ok"
         except:
             health["components"]["agent_loop"] = "not_started"

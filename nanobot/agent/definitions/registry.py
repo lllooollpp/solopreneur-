@@ -1,11 +1,11 @@
 """
 Agent Registry
 
-Central registry for all agents (built-in presets + user custom).
+Single-source registry for all agents under one canonical directory.
 """
 
 from pathlib import Path
-from typing import Any
+import shutil
 from loguru import logger
 
 from nanobot.agent.definitions.definition import AgentDefinition
@@ -14,51 +14,60 @@ from nanobot.agent.definitions.loader import AgentLoader
 
 class AgentRegistry:
     """
-    Registry for all available agents.
-    
-    Manages both built-in preset agents and user-defined custom agents.
-    Custom agents take precedence over presets.
+    Registry for all available agents from one canonical path.
+    Canonical path: <workspace>/agents
     """
     
     def __init__(self, workspace: Path):
         self.workspace = workspace
-        
-        # Built-in preset agents
-        preset_dir = Path(__file__).parent / "presets"
-        self._preset_loader = AgentLoader(preset_dir)
-        
-        # User custom agents (workspace/agents/)
-        custom_dir = workspace / "agents"
-        self._custom_loader = AgentLoader(custom_dir)
+
+        # Canonical single source directory
+        self._agents_dir = workspace / "agents"
+        self._agents_dir.mkdir(parents=True, exist_ok=True)
+
+        # Bootstrap built-in presets into canonical directory (only missing files)
+        self._seed_builtin_agents()
+
+        self._loader = AgentLoader(self._agents_dir)
         
         # Cache all loaded agents
         self._agents: dict[str, AgentDefinition] = {}
         self._load_all()
     
     def _load_all(self):
-        """Load all agents (presets first, then custom overrides)."""
-        # Load presets from all subdirectories
-        preset_dir = Path(__file__).parent / "presets"
-        for domain_dir in preset_dir.iterdir():
-            if domain_dir.is_dir():
-                loader = AgentLoader(domain_dir)
-                for name, agent in loader.load_all().items():
-                    # Prefix preset agents with domain
-                    agent.metadata["domain"] = domain_dir.name
-                    agent.metadata["source"] = "preset"
-                    self._agents[name] = agent
-        
-        # Load custom agents (override presets)
-        for name, agent in self._custom_loader.load_all().items():
-            agent.metadata["domain"] = agent.metadata.get("domain", "custom")
-            agent.metadata["source"] = "custom"
+        """Load all agents from canonical directory."""
+        self._agents.clear()
+
+        for name, agent in self._loader.load_all().items():
+            # Ensure compatible metadata fields exist
+            agent.metadata["domain"] = agent.metadata.get("domain", "general")
+            agent.metadata["source"] = agent.metadata.get("source", "preset")
             self._agents[name] = agent
-            if name in self._agents and self._agents[name].metadata.get("source") == "preset":
-                logger.info(f"Custom agent '{name}' overrides preset")
-        
-        logger.info(f"Loaded {len(self._agents)} agents: "
-                   f"{sum(1 for a in self._agents.values() if a.metadata.get('source') == 'preset')} preset, "
-                   f"{sum(1 for a in self._agents.values() if a.metadata.get('source') == 'custom')} custom")
+
+        logger.info(
+            f"Loaded {len(self._agents)} agents from canonical path: {self._agents_dir}"
+        )
+
+    def _seed_builtin_agents(self):
+        """Copy built-in preset agent files into canonical directory if missing."""
+        preset_root = Path(__file__).parent / "presets"
+        if not preset_root.exists():
+            return
+
+        copied = 0
+        for domain_dir in preset_root.iterdir():
+            if not domain_dir.is_dir():
+                continue
+            for file_path in domain_dir.iterdir():
+                if file_path.suffix not in [".yaml", ".yml", ".json"]:
+                    continue
+                target = self._agents_dir / file_path.name
+                if not target.exists():
+                    shutil.copy2(file_path, target)
+                    copied += 1
+
+        if copied:
+            logger.info(f"Bootstrapped {copied} built-in agents to {self._agents_dir}")
     
     def get(self, name: str) -> AgentDefinition | None:
         """Get agent by name."""
@@ -92,17 +101,14 @@ class AgentRegistry:
     
     def reload(self):
         """Reload all agents."""
-        self._agents.clear()
-        self._preset_loader.clear_cache()
-        self._custom_loader.clear_cache()
+        self._loader.clear_cache()
         self._load_all()
     
     def create_custom(self, agent: AgentDefinition) -> bool:
         """Create a new custom agent."""
-        custom_dir = self.workspace / "agents"
-        custom_dir.mkdir(parents=True, exist_ok=True)
-        
-        file_path = custom_dir / f"{agent.name}.yaml"
+        self._agents_dir.mkdir(parents=True, exist_ok=True)
+
+        file_path = self._agents_dir / f"{agent.name}.yaml"
         
         try:
             import yaml
@@ -119,10 +125,8 @@ class AgentRegistry:
     
     def delete_custom(self, name: str) -> bool:
         """Delete a custom agent."""
-        custom_dir = self.workspace / "agents"
-        
         for ext in [".yaml", ".yml", ".json"]:
-            file_path = custom_dir / f"{name}{ext}"
+            file_path = self._agents_dir / f"{name}{ext}"
             if file_path.exists():
                 try:
                     file_path.unlink()

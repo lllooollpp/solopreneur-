@@ -44,9 +44,14 @@ class ComponentManager:
     def get_config(self, force_reload: bool = False):
         """获取配置"""
         from nanobot.config.loader import load_config
+        from nanobot.utils.helpers import get_project_root
 
         if self._config is None or force_reload:
             self._config = load_config()
+
+            # 统一工作区到当前项目根目录（避免使用 ~ / Home 路径）
+            project_root = get_project_root()
+            self._config.agents.defaults.workspace = str(project_root)
         return self._config
 
     # ==================== Providers ====================
@@ -126,7 +131,12 @@ class ComponentManager:
         if self._agent_manager is None:
             from nanobot.agent.definitions.manager import AgentManager
             config = self.get_config()
-            self._agent_manager = AgentManager(workspace=config.workspace_path)
+            workspace = config.workspace_path
+            workspace.mkdir(parents=True, exist_ok=True)
+            (workspace / "agents").mkdir(parents=True, exist_ok=True)
+            (workspace / "skills").mkdir(parents=True, exist_ok=True)
+            logger.info(f"统一工作区路径: {workspace}")
+            self._agent_manager = AgentManager(workspace=workspace)
         return self._agent_manager
 
     # ==================== Agent Loop ====================
@@ -139,12 +149,26 @@ class ComponentManager:
         from nanobot.agent.core.loop import AgentLoop
         from nanobot.agent.core.context import ContextBuilder
         from nanobot.agent.core.compaction import CompactionEngine
+        from nanobot.agent.core.validator import ValidatorConfig
         from nanobot.workflow.engine import WorkflowEngine
 
         config = self.get_config()
 
         # 选择 Provider（不再强制使用 Copilot，使用配置的 Provider）
         provider = self.get_llm_provider()
+
+        # 构建验证器配置
+        validator_cfg = config.agents.defaults.task_validator
+        validator_config = ValidatorConfig(
+            enabled=validator_cfg.enabled,
+            min_iterations=validator_cfg.min_iterations,
+            check_feature_status=validator_cfg.check_feature_status,
+            check_git_clean=validator_cfg.check_git_clean,
+            check_tests_passed=validator_cfg.check_tests_passed,
+            max_continuation_prompts=validator_cfg.max_continuation_prompts,
+            use_ai_validation=validator_cfg.use_ai_validation,
+            ai_validation_threshold=validator_cfg.ai_validation_threshold,
+        )
 
         self._agent_loop = AgentLoop(
             bus=self.get_message_bus(),
@@ -156,6 +180,7 @@ class ComponentManager:
             exec_config=config.tools.exec,
             max_session_tokens=config.agents.defaults.max_tokens_per_session,
             max_total_time=config.agents.defaults.agent_timeout,
+            validator_config=validator_config,
         )
 
         return self._agent_loop

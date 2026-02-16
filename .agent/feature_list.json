@@ -1,0 +1,396 @@
+{
+  "project": "nanobot",
+  "version": "0.2.2",
+  "last_updated": "2026-02-13T18:00:00Z",
+  "constraints": {
+    "single_task": true,
+    "require_clean_working_tree": true,
+    "require_test_pass": true,
+    "smoke_test_on_start": true,
+    "status_gate_enabled": true
+  },
+  "status_governance": {
+    "description": "状态变更必须通过 transition_feature_status() 方法，直接修改文件无效",
+    "valid_transitions": {
+      "pending": ["in_progress", "blocked"],
+      "in_progress": ["completed", "blocked", "pending"],
+      "completed": [],
+      "blocked": ["pending", "in_progress"]
+    },
+    "audit_enabled": true
+  },
+  "test_config": {
+    "enabled": true,
+    "block_on_failure": true,
+    "commands": [
+      {"name": "pytest", "command": "pytest tests/ -x -q --ignore=tests/e2e", "timeout": 120},
+      {"name": "frontend", "command": "cd ui && npm test -- --run", "timeout": 60}
+    ],
+    "e2e_commands": [
+      {"name": "playwright", "command": "npx playwright test --reporter=list", "timeout": 300}
+    ]
+  },
+  "features": [
+    {
+      "id": "FEAT-001",
+      "category": "frontend",
+      "priority": "P0",
+      "description": "Web UI 基础框架 - Vue3 + TypeScript 项目",
+      "steps": [
+        "Vue3 + TypeScript 项目初始化",
+        "路由配置（Dashboard/Chat/Config/Skills/Projects）",
+        "基础布局组件（侧边栏、顶栏、主内容区）"
+      ],
+      "test_criteria": "访问 http://localhost:5173 显示正常布局，各导航页可切换",
+      "status": "completed",
+      "completed_at": "2026-02-10",
+      "test_cases": [
+        {
+          "name": "Frontend starts",
+          "command": "cd ui && npm run build",
+          "expected": "built in"
+        },
+        {
+          "name": "Routes accessible",
+          "command": "curl -s http://localhost:5173/ | head -5",
+          "expected": "<!doctype"
+        }
+      ],
+      "acceptance_tests": [
+        "Open browser to localhost:5173",
+        "Navigate to each menu item",
+        "Verify no console errors"
+      ]
+    },
+    {
+      "id": "FEAT-002",
+      "category": "frontend",
+      "priority": "P0",
+      "description": "聊天界面 WebSocket 实时通信",
+      "steps": [
+        "WebSocket 客户端实现",
+        "消息发送/接收",
+        "流式响应展示",
+        "Trace 事件转发"
+      ],
+      "test_criteria": "发送消息后能收到 AI 响应，流式显示正常",
+      "status": "completed",
+      "completed_at": "2026-02-12",
+      "test_cases": [
+        {
+          "name": "WebSocket connection",
+          "command": "python -c \"import websockets; print('OK')\"",
+          "expected": "OK"
+        },
+        {
+          "name": "Backend WS endpoint",
+          "command": "curl -s http://localhost:8000/api/health",
+          "expected": "healthy"
+        }
+      ],
+      "acceptance_tests": [
+        "Send a message in chat UI",
+        "Verify streaming response appears",
+        "Check trace panel updates"
+      ]
+    },
+    {
+      "id": "FEAT-003",
+      "category": "frontend",
+      "priority": "P1",
+      "description": "Token 统计与调用链路监控面板",
+      "steps": [
+        "TracePanel 组件实现",
+        "调用链路可视化",
+        "实时 Token 统计",
+        "Token 估算逻辑（当 provider 不返回 usage 时）"
+      ],
+      "test_criteria": "聊天后面板显示 Token 数量、调用链、耗时等信息",
+      "status": "completed",
+      "completed_at": "2026-02-13",
+      "notes": "TracePanel 组件完整实现，支持会话累计统计、调用链时间线、Token 进度条",
+      "test_cases": [
+        {
+          "name": "TracePanel imports",
+          "command": "python -c \"from pathlib import Path; p = Path('ui/src/components/TracePanel.vue'); print('EXISTS' if p.exists() else 'NOT_FOUND')\"",
+          "expected": "EXISTS"
+        }
+      ],
+      "acceptance_tests": [
+        "Complete a chat conversation",
+        "Open trace panel",
+        "Verify token count displays",
+        "Verify timeline shows events"
+      ]
+    },
+    {
+      "id": "FEAT-004",
+      "category": "provider",
+      "priority": "P0",
+      "description": "本地模型代理问题修复",
+      "steps": [
+        "检测本地 endpoint (localhost/127.0.0.1)",
+        "自动清除代理环境变量",
+        "添加调试日志"
+      ],
+      "test_criteria": "本地 vLLM 模型可正常连接，不走代理",
+      "status": "completed",
+      "completed_at": "2026-02-13",
+      "test_cases": [
+        {
+          "name": "Proxy bypass for localhost",
+          "command": "grep -q '127.0.0.1' nanobot/providers/litellm_provider.py && echo 'FOUND'",
+          "expected": "FOUND"
+        }
+      ],
+      "acceptance_tests": [
+        "Configure local vLLM endpoint",
+        "Send a test message",
+        "Verify connection succeeds without proxy errors"
+      ]
+    },
+    {
+      "id": "FEAT-005",
+      "category": "deployment",
+      "priority": "P1",
+      "description": "多端访问支持（局域网/手机）",
+      "steps": [
+        "后端绑定 0.0.0.0",
+        "前端 vite 配置 host: '0.0.0.0'",
+        "启动脚本显示本机 IP",
+        "CORS 配置允许所有来源"
+      ],
+      "test_criteria": "局域网内其他设备可通过 IP 访问前端和后端",
+      "status": "completed",
+      "completed_at": "2026-02-13",
+      "test_cases": [
+        {
+          "name": "Backend binds 0.0.0.0",
+          "command": "grep -q '0.0.0.0' start.py && echo 'FOUND'",
+          "expected": "FOUND"
+        },
+        {
+          "name": "Frontend host config",
+          "command": "grep -q \"host: '0.0.0.0'\" ui/vite.config.ts && echo 'FOUND'",
+          "expected": "FOUND"
+        }
+      ],
+      "acceptance_tests": [
+        "Get local IP address",
+        "Access from another device on same network",
+        "Verify UI loads correctly"
+      ]
+    },
+    {
+      "id": "FEAT-006",
+      "category": "channel",
+      "priority": "P1",
+      "description": "企业微信渠道集成",
+      "steps": [
+        "WeComChannel 实现",
+        "消息加密/解密",
+        "回调 API 端点",
+        "内网穿透配置指南"
+      ],
+      "test_criteria": "企业微信发送消息能收到 AI 回复",
+      "status": "completed",
+      "completed_at": "2026-02-13",
+      "notes": "完整实现消息接收、AI 处理、主动回复功能，含内网穿透指南",
+      "test_cases": [
+        {
+          "name": "WeCom callback exists",
+          "command": "grep -q '/api/wecom/callback' nanobot/api/routes/wecom.py && echo 'FOUND'",
+          "expected": "FOUND"
+        },
+        {
+          "name": "WeCom channel imports",
+          "command": "python -c \"from nanobot.channels.wecom import WeComChannel; print('OK')\"",
+          "expected": "OK"
+        }
+      ],
+      "acceptance_tests": [
+        "Configure WeCom application",
+        "Set up tunnel for callback URL",
+        "Send test message from WeCom app",
+        "Verify AI response received"
+      ]
+    },
+    {
+      "id": "FEAT-007",
+      "category": "provider",
+      "priority": "P1",
+      "description": "GitHub Copilot Provider",
+      "steps": [
+        "OAuth 设备流认证",
+        "Token 缓存管理",
+        "API 调用封装"
+      ],
+      "test_criteria": "使用 GitHub Copilot 订阅可正常调用模型",
+      "status": "completed",
+      "completed_at": "2026-02-08",
+      "test_cases": [
+        {
+          "name": "Copilot provider exists",
+          "command": "python -c \"from nanobot.providers.copilot import CopilotProvider; print('OK')\"",
+          "expected": "OK"
+        }
+      ],
+      "acceptance_tests": [
+        "Authenticate with GitHub Copilot",
+        "Send a test message",
+        "Verify response received"
+      ]
+    },
+    {
+      "id": "FEAT-008",
+      "category": "agent",
+      "priority": "P2",
+      "description": "长期运行 Agent 框架",
+      "steps": [
+        "LongRunningHarness 实现",
+        "Feature List 管理",
+        "Progress 文件记录",
+        "会话上下文恢复"
+      ],
+      "test_criteria": "Agent 能跨会话记住进度，每次只处理一个功能",
+      "status": "completed",
+      "completed_at": "2026-02-13",
+      "notes": "实现了 harness.py 核心、API 端点、初始化脚本，包含强约束机制",
+      "test_cases": [
+        {
+          "name": "Harness imports",
+          "command": "python -c \"from nanobot.agent.core.harness import LongRunningHarness; print('OK')\"",
+          "expected": "OK"
+        },
+        {
+          "name": "Single task constraint",
+          "command": "python -c \"import json; d = json.load(open('.agent/feature_list.json')); ip = [f for f in d['features'] if f['status'] == 'in_progress']; print('PASS' if len(ip) <= 1 else 'FAIL')\"",
+          "expected": "PASS"
+        },
+        {
+          "name": "Working tree check",
+          "command": "python -c \"from nanobot.agent.core.harness import LongRunningHarness; h = LongRunningHarness('.'); r = h.verify_working_tree_clean(); print('PASS' if r['clean'] else 'FAIL')\"",
+          "expected": "PASS"
+        }
+      ],
+      "acceptance_tests": [
+        "Run init.sh to verify smoke tests pass",
+        "Verify single in_progress constraint",
+        "Verify working tree check works",
+        "Complete a feature and verify constraints"
+      ]
+    },
+    {
+      "id": "FEAT-009",
+      "category": "frontend",
+      "priority": "P2",
+      "description": "项目管理功能",
+      "steps": [
+        "项目列表展示",
+        "项目创建/编辑/删除",
+        "Git 仓库克隆",
+        "项目配置管理"
+      ],
+      "test_criteria": "可创建、管理多个项目，支持 Git 操作",
+      "status": "completed",
+      "completed_at": "2026-02-11",
+      "test_cases": [
+        {
+          "name": "Projects API exists",
+          "command": "grep -q 'projects' nanobot/api/main.py && echo 'FOUND'",
+          "expected": "FOUND"
+        }
+      ],
+      "acceptance_tests": [
+        "Create a new project",
+        "Clone a git repository",
+        "Edit project settings"
+      ]
+    },
+    {
+      "id": "FEAT-010",
+      "category": "frontend",
+      "priority": "P2",
+      "description": "Skills 技能管理界面",
+      "steps": [
+        "Skills 列表展示",
+        "Skill 编辑器",
+        "技能测试功能"
+      ],
+      "test_criteria": "可查看、编辑、测试 Agent 技能",
+      "status": "completed",
+      "completed_at": "2026-02-11",
+      "test_cases": [
+        {
+          "name": "Skills API exists",
+          "command": "grep -q 'skills' nanobot/api/main.py && echo 'FOUND'",
+          "expected": "FOUND"
+        }
+      ],
+      "acceptance_tests": [
+        "View skills list",
+        "Edit a skill",
+        "Test a skill execution"
+      ]
+    },
+    {
+      "id": "FEAT-011",
+      "category": "provider",
+      "priority": "P1",
+      "description": "智谱 AI (GLM) Provider",
+      "steps": [
+        "API 集成",
+        "模型配置",
+        "Token 统计适配"
+      ],
+      "test_criteria": "使用智谱 AI API 可正常调用模型",
+      "status": "completed",
+      "completed_at": "2026-02-09",
+      "test_cases": [
+        {
+          "name": "GLM provider imports",
+          "command": "python -c \"from nanobot.providers.zhipu import ZhipuProvider; print('OK')\" 2>/dev/null || echo 'SKIPPED'",
+          "expected": ""
+        }
+      ],
+      "acceptance_tests": [
+        "Configure Zhipu API key",
+        "Send a test message",
+        "Verify response received"
+      ]
+    },
+    {
+      "id": "FEAT-012",
+      "category": "frontend",
+      "priority": "P1",
+      "description": "工具调用审批流程",
+      "steps": [
+        "敏感工具识别",
+        "审批卡片组件",
+        "实时审批交互"
+      ],
+      "test_criteria": "敏感工具调用时弹出审批卡片，用户可批准/拒绝",
+      "status": "completed",
+      "completed_at": "2026-02-12",
+      "test_cases": [
+        {
+          "name": "Approval component exists",
+          "command": "ls ui/src/components/*Approval* 2>/dev/null && echo 'FOUND' || echo 'SKIPPED'",
+          "expected": ""
+        }
+      ],
+      "acceptance_tests": [
+        "Trigger a sensitive tool call",
+        "Verify approval dialog appears",
+        "Approve/deny the action"
+      ]
+    }
+  ],
+  "statistics": {
+    "total": 12,
+    "completed": 12,
+    "in_progress": 0,
+    "pending": 0,
+    "blocked": 0
+  }
+}

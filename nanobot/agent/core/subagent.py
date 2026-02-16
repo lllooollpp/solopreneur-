@@ -19,7 +19,7 @@ from nanobot.agent.core.tools.registry import ToolRegistry
 from nanobot.agent.core.tools.filesystem import ReadFileTool, WriteFileTool, EditFileTool, ListDirTool
 from nanobot.agent.core.tools.db import DBInspectTool
 from nanobot.agent.core.tools.metrics import MetricsInspectTool
-from nanobot.agent.core.tools.repo import GitInspectTool, SearchCodeTool
+from nanobot.agent.core.tools.repo import GitInspectTool, GitCommandTool, SearchCodeTool
 from nanobot.agent.core.tools.shell import ExecTool
 from nanobot.agent.core.tools.web import WebSearchTool, WebFetchTool
 
@@ -57,6 +57,20 @@ class SubagentManager:
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
         self._max_concurrent_subagents = 5  # 最大并发子Agent数
         self._subagent_semaphore = asyncio.Semaphore(self._max_concurrent_subagents)
+        self._trace_emitter = None
+
+    def set_trace_emitter(self, emitter) -> None:
+        """设置 trace 事件回调（由主 AgentLoop 注入）。"""
+        self._trace_emitter = emitter
+
+    async def _emit_trace(self, event: dict[str, Any]) -> None:
+        """发送 trace 事件（失败不影响主流程）。"""
+        if not self._trace_emitter:
+            return
+        try:
+            await self._trace_emitter(event)
+        except Exception as e:
+            logger.debug(f"Subagent trace emit failed: {e}")
 
     def _record_usage(
         self,
@@ -195,10 +209,12 @@ class SubagentManager:
             tools.register(MetricsInspectTool())
             tools.register(SearchCodeTool(workspace=self.workspace))
             tools.register(GitInspectTool(workspace=self.workspace))
+            tools.register(GitCommandTool(workspace=self.workspace))
             tools.register(ExecTool(
                 working_dir=str(self.workspace),
                 timeout=self.exec_config.timeout,
                 restrict_to_workspace=self.exec_config.restrict_to_workspace,
+                whitelist_mode=self.exec_config.whitelist_mode,
             ))
             tools.register(WebSearchTool(api_key=self.brave_api_key))
             tools.register(WebFetchTool())
@@ -387,10 +403,12 @@ class SubagentManager:
             "metrics_inspect": MetricsInspectTool(),
             "search_code": SearchCodeTool(workspace=workspace_path),
             "git_inspect": GitInspectTool(workspace=workspace_path),
+            "git": GitCommandTool(workspace=workspace_path),
             "exec": ExecTool(
                 working_dir=str(workspace_path),
                 timeout=self.exec_config.timeout,
                 restrict_to_workspace=self.exec_config.restrict_to_workspace,
+                whitelist_mode=self.exec_config.whitelist_mode,
             ),
             "web_search": WebSearchTool(api_key=self.brave_api_key),
             "web_fetch": WebFetchTool(),
@@ -410,11 +428,88 @@ class SubagentManager:
 
     # 必须调用 write_file 的角色（否则只会输出 MD 描述而不创建文件）
     _MUST_WRITE_ROLES = {"developer", "tester", "devops"}
+    # 必须调用 exec 执行测试的角色（防止只输出建议不实际运行测试）
+    _MUST_EXEC_ROLES = {"tester"}
     # 必须调用工具（read_file/list_dir/write_file）的角色，避免只输出纯文本
     _MUST_USE_TOOLS_ROLES = {"developer", "tester", "devops", "architect", "code_reviewer"}
     _TOOL_REMINDER_MAX = 3  # 最多提醒几轮使用工具
     _LLM_CALL_MAX_RETRIES = 3  # LLM 调用瞬时错误最大重试次数
     _LLM_CALL_RETRY_BASE_DELAY = 5  # 重试基础延时（秒）
+
+    async def run_with_agents_parallel(
+        self,
+        agent_manager: "AgentManager",
+        jobs: list[dict[str, Any]],
+        max_parallel: int = 3,
+    ) -> list[dict[str, Any]]:
+        """
+        并行执行多个 Agent 任务（方案 A：串并行混合）。
+
+        Args:
+            agent_manager: Agent 管理器
+            jobs: 任务列表，每项格式：
+                {"agent": "developer", "task": "...", "context": "", "project_dir": ""}
+            max_parallel: 最大并发度（默认 3）
+
+        Returns:
+            与 jobs 同序的执行结果列表
+        """
+        if not jobs:
+            return []
+
+        parallel_limit = max(1, min(max_parallel, self._max_concurrent_subagents))
+        semaphore = asyncio.Semaphore(parallel_limit)
+
+        results: list[dict[str, Any] | None] = [None] * len(jobs)
+
+        async def _worker(index: int, job: dict[str, Any]) -> None:
+            agent_name = str(job.get("agent", "")).strip()
+            task = str(job.get("task", "")).strip()
+            context = str(job.get("context", ""))
+            project_dir = str(job.get("project_dir", ""))
+
+            if not agent_name or not task:
+                results[index] = {
+                    "ok": False,
+                    "agent": agent_name or "",
+                    "error": "missing required fields: agent/task",
+                }
+                return
+
+            agent_def = agent_manager.get_agent(agent_name)
+            if not agent_def:
+                results[index] = {
+                    "ok": False,
+                    "agent": agent_name,
+                    "error": f"unknown agent: {agent_name}",
+                }
+                return
+
+            async with semaphore:
+                try:
+                    output = await self.run_with_agent(
+                        agent_def=agent_def,
+                        agent_manager=agent_manager,
+                        task=task,
+                        context=context,
+                        project_dir=project_dir,
+                    )
+                    results[index] = {
+                        "ok": True,
+                        "agent": agent_name,
+                        "title": agent_def.title,
+                        "result": output,
+                    }
+                except Exception as e:
+                    results[index] = {
+                        "ok": False,
+                        "agent": agent_name,
+                        "title": agent_def.title,
+                        "error": str(e),
+                    }
+
+        await asyncio.gather(*[_worker(i, j) for i, j in enumerate(jobs)])
+        return [r if r is not None else {"ok": False, "agent": "", "error": "unknown"} for r in results]
 
     async def run_with_agent(
         self,
@@ -446,6 +541,13 @@ class SubagentManager:
         logger.info(
             f"{agent_def.emoji} Agent [{agent_def.title}] ({agent_id}) 开始执行任务"
         )
+        await self._emit_trace({
+            "event": "agent_start",
+            "agent_name": agent_def.name,
+            "agent_title": agent_def.title,
+            "agent_id": agent_id,
+            "timestamp": time.time(),
+        })
 
         logger.debug(
             f"[{agent_id}] 参数: task={task[:100] if task else 'None'}..., "
@@ -508,8 +610,15 @@ class SubagentManager:
             response = None
             for _retry in range(self._LLM_CALL_MAX_RETRIES):
                 try:
-                    logger.debug(f"[{agent_id}] 调用 LLM (重试 {_retry + 1}/{self._LLM_CALL_MAX_RETRIES})")
+                    logger.debug(f"[{agent_id}] 调用 LLM (尝试 {_retry + 1}/{self._LLM_CALL_MAX_RETRIES})")
                     llm_start = time.time()
+                    await self._emit_trace({
+                        "event": "llm_start",
+                        "agent_name": agent_def.name,
+                        "iteration": iteration,
+                        "model": self.model,
+                        "timestamp": llm_start,
+                    })
                     response = await self.provider.chat(
                         messages=messages,
                         tools=tools.get_definitions(),
@@ -523,6 +632,18 @@ class SubagentManager:
                         duration_ms=llm_duration_ms,
                     )
                     logger.info(f"[{agent_id}] ✓ LLM 调用成功 | tool_calls={len(response.tool_calls)} | has_tool_calls={response.has_tool_calls}")
+                    await self._emit_trace({
+                        "event": "llm_end",
+                        "agent_name": agent_def.name,
+                        "iteration": iteration,
+                        "model": self.model,
+                        "duration_ms": llm_duration_ms,
+                        "prompt_tokens": (response.usage or {}).get("prompt_tokens", 0),
+                        "completion_tokens": (response.usage or {}).get("completion_tokens", 0),
+                        "total_tokens": (response.usage or {}).get("total_tokens", 0),
+                        "has_tool_calls": response.has_tool_calls,
+                        "timestamp": time.time(),
+                    })
                     if response.content:
                         content_preview = response.content[:200].replace('\n', ' ')
                         logger.debug(f"[{agent_id}] LLM 回复内容: {content_preview}...")
@@ -574,6 +695,15 @@ class SubagentManager:
                     tools_called.add(tool_call.name)
                     if tool_call.name == "write_file":
                         write_file_count += 1
+                    tool_start = time.time()
+                    await self._emit_trace({
+                        "event": "tool_start",
+                        "agent_name": agent_def.name,
+                        "iteration": iteration,
+                        "tool_name": tool_call.name,
+                        "tool_args": tool_call.arguments,
+                        "timestamp": tool_start,
+                    })
                     logger.info(f"[{agent_id}] → 执行工具 [{tool_call.name}]: {json.dumps(tool_call.arguments, ensure_ascii=False)[:150]}...")
                     try:
                         result = await tools.execute(
@@ -588,6 +718,18 @@ class SubagentManager:
                         "tool_call_id": tool_call.id,
                         "name": tool_call.name,
                         "content": result,
+                    })
+                    tool_end = time.time()
+                    result_text = str(result)
+                    await self._emit_trace({
+                        "event": "tool_end",
+                        "agent_name": agent_def.name,
+                        "iteration": iteration,
+                        "tool_name": tool_call.name,
+                        "duration_ms": int((tool_end - tool_start) * 1000),
+                        "result_length": len(result_text),
+                        "result_preview": (result_text[:800] + "\n...<truncated>") if len(result_text) > 800 else result_text,
+                        "timestamp": tool_end,
                     })
             else:
                 logger.info(f"[{agent_id}] LLM 无工具调用，准备结束迭代")
@@ -626,6 +768,39 @@ class SubagentManager:
                         f"发送提醒 ({reminder_count}/{self._TOOL_REMINDER_MAX})"
                     )
                     continue  # 不退出循环，继续要求模型调用工具
+
+                # ── Tester 角色强制执行测试（exec 保障）──────────
+                # 如果 tester 已经写了测试文件但还没有调用 exec 运行测试
+                must_exec = (
+                    agent_def.name in self._MUST_EXEC_ROLES and bool(project_dir)
+                )
+                if (
+                    must_exec
+                    and "exec" not in tools_called
+                    and "write_file" in tools_called
+                    and reminder_count < self._TOOL_REMINDER_MAX
+                ):
+                    reminder_count += 1
+                    logger.warning(f"[{agent_id}] ⚠️ Tester角色已写测试但未调用exec运行测试 ({reminder_count}/{self._TOOL_REMINDER_MAX})")
+                    messages.append({
+                        "role": "assistant",
+                        "content": response.content or "",
+                    })
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "⚠️ 你已经编写了测试文件，但还没有使用 `exec` 工具实际运行测试！\n\n"
+                            "**请停止仅仅描述如何运行测试**，你必须立即使用 `exec` 工具执行测试。\n\n"
+                            f"项目目录：`{project_dir}`\n\n"
+                            "请现在执行：\n"
+                            "1. 使用 `exec` 工具运行你编写的测试\n"
+                            "2. 检查测试输出结果\n"
+                            "3. 如果测试失败，修复问题并重新运行\n"
+                            "4. 只有测试通过后才能报告完成\n\n"
+                            "不要再描述命令，直接调用 `exec` 工具运行。"
+                        ),
+                    })
+                    continue
 
                 # 通用工具使用检查：architect/code_reviewer 等角色至少应使用一次工具
                 # 如果完全没用过工具就想结束，提醒它先查看项目目录
@@ -692,4 +867,13 @@ class SubagentManager:
         logger.info(
             f"╚══════════════════════════════════════╝"
         )
+        await self._emit_trace({
+            "event": "agent_end",
+            "agent_name": agent_def.name,
+            "agent_title": agent_def.title,
+            "agent_id": agent_id,
+            "total_iterations": iteration,
+            "result_length": len(final_result) if final_result else 0,
+            "timestamp": time.time(),
+        })
         return final_result

@@ -1,6 +1,7 @@
 """Configuration schema using Pydantic."""
 
 from pathlib import Path
+from typing import Literal
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
@@ -35,6 +36,19 @@ class ChannelsConfig(BaseModel):
     wecom: WeComConfig = Field(default_factory=WeComConfig)
 
 
+class TaskValidatorConfig(BaseModel):
+    """任务完成验证器配置"""
+    enabled: bool = True  # 是否启用验证器
+    min_iterations: int = 2  # 最小迭代次数（防止过早退出）
+    check_feature_status: bool = True  # 检查 feature_list 状态
+    check_git_clean: bool = True  # 检查 working tree
+    check_tests_passed: bool = False  # 检查测试通过（可选，较耗时）
+    max_continuation_prompts: int = 3  # 最大继续提示次数
+    # AI 驱动验证配置
+    use_ai_validation: bool = True  # 是否使用 AI 验证（推荐）
+    ai_validation_threshold: int = 80  # AI 认为完成的阈值分数（0-100）
+
+
 class AgentDefaults(BaseModel):
     """Default agent configuration."""
     workspace: str = "~/.nanobot/workspace"
@@ -43,9 +57,11 @@ class AgentDefaults(BaseModel):
     temperature: float = 0.7
     max_tool_iterations: int = 20
     max_subagents: int = 5  # 最大并发子Agent数
+    review_mode: Literal["auto", "manual"] = "auto"  # 审批模式：自动/人工
     session_cache_size: int = 100  # Session LRU缓存大小
     agent_timeout: int = 1800  # Agent执行总超时（秒），30分钟
     max_tokens_per_session: int = 500000  # 每个会话最大Token消耗（超限后自动压缩上下文继续执行）
+    task_validator: TaskValidatorConfig = Field(default_factory=TaskValidatorConfig)  # 任务完成验证器
 
 
 class AgentsConfig(BaseModel):

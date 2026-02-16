@@ -46,7 +46,7 @@
           <div class="card-content">
             <div class="card-title">当前模型</div>
             <div class="card-value">{{ dashboardStore.stats.agent.current_model }}</div>
-            <div class="card-sub">消息: {{ dashboardStore.stats.agent.total_messages }}</div>
+            <div class="card-sub">7天调用: {{ formatNumber(usageCalls) }}</div>
           </div>
         </div>
 
@@ -210,6 +210,61 @@
               </div>
             </div>
           </section>
+
+          <!-- 指标概览 -->
+          <section class="card metrics-section" v-if="dashboardStore.metrics">
+            <div class="section-header">
+              <h3>📈 指标概览（近7天）</h3>
+              <span class="badge">调用 {{ formatNumber(dashboardStore.metrics.usage.calls) }}</span>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <div class="metric-label">Prompt Tokens</div>
+                <div class="metric-value">{{ formatNumber(dashboardStore.metrics.usage.prompt_tokens) }}</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">Completion Tokens</div>
+                <div class="metric-value">{{ formatNumber(dashboardStore.metrics.usage.completion_tokens) }}</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">平均耗时</div>
+                <div class="metric-value">{{ dashboardStore.metrics.usage.avg_duration_ms }}ms</div>
+              </div>
+              <div class="metric-item">
+                <div class="metric-label">流式占比</div>
+                <div class="metric-value">{{ streamRatio }}%</div>
+              </div>
+            </div>
+
+            <div class="daily-list" v-if="dashboardStore.usageDaily.length">
+              <div class="daily-title">按天调用</div>
+              <div
+                v-for="row in dashboardStore.usageDaily"
+                :key="row.day"
+                class="daily-item"
+              >
+                <span class="daily-day">{{ row.day }}</span>
+                <div class="daily-bar-wrap">
+                  <div class="daily-bar" :style="{ width: usageBarWidth(row.calls) + '%' }"></div>
+                </div>
+                <span class="daily-count">{{ row.calls }}</span>
+              </div>
+            </div>
+
+            <div class="task-status-list" v-if="dashboardStore.taskStatusList.length">
+              <div class="daily-title">任务状态</div>
+              <div class="status-tags">
+                <span
+                  v-for="item in dashboardStore.taskStatusList"
+                  :key="item.status"
+                  class="status-tag"
+                >
+                  {{ item.status }}: {{ item.count }}
+                </span>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -218,15 +273,15 @@
         <div class="stat-item">
           <div class="stat-icon">📊</div>
           <div class="stat-content">
-            <div class="stat-number">{{ formatNumber(dashboardStore.stats.tokens.total_used) }}</div>
-            <div class="stat-label">Token 使用</div>
+            <div class="stat-number">{{ formatNumber(totalTokens) }}</div>
+            <div class="stat-label">7天 Token</div>
           </div>
         </div>
         <div class="stat-item">
           <div class="stat-icon">📨</div>
           <div class="stat-content">
-            <div class="stat-number">{{ formatNumber(dashboardStore.stats.tokens.requests_today) }}</div>
-            <div class="stat-label">今日请求</div>
+            <div class="stat-number">{{ formatNumber(usageCalls) }}</div>
+            <div class="stat-label">7天调用</div>
           </div>
         </div>
         <div class="stat-item">
@@ -241,6 +296,13 @@
           <div class="stat-content">
             <div class="stat-number">{{ dashboardStore.stats.agents.total }}</div>
             <div class="stat-label">Agent 总数</div>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon">🧩</div>
+          <div class="stat-content">
+            <div class="stat-number">{{ formatNumber(taskTotal) }}</div>
+            <div class="stat-label">7天任务</div>
           </div>
         </div>
         <div class="stat-item">
@@ -268,6 +330,23 @@ const tokenPoolPercent = computed(() => {
   if (pool_size === 0) return 0
   return Math.round((available_slots / pool_size) * 100)
 })
+
+const usageCalls = computed(() => dashboardStore.metrics?.usage.calls ?? dashboardStore.stats?.tokens.requests_today ?? 0)
+const totalTokens = computed(() => dashboardStore.metrics?.usage.total_tokens ?? dashboardStore.stats?.tokens.total_used ?? 0)
+const taskTotal = computed(() => dashboardStore.metrics?.tasks.total ?? 0)
+const maxDailyCalls = computed(() => {
+  if (!dashboardStore.usageDaily.length) return 1
+  return Math.max(...dashboardStore.usageDaily.map((r) => r.calls), 1)
+})
+const streamRatio = computed(() => {
+  const usage = dashboardStore.metrics?.usage
+  if (!usage || usage.calls <= 0) return 0
+  return Math.round((usage.stream_calls / usage.calls) * 100)
+})
+
+function usageBarWidth(calls: number): number {
+  return Math.round((calls / maxDailyCalls.value) * 100)
+}
 
 // 刷新数据
 async function handleRefresh() {
@@ -928,10 +1007,97 @@ onUnmounted(() => {
   color: #666;
 }
 
+/* 指标区域 */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+
+.metric-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.metric-label {
+  font-size: 0.72rem;
+  color: #666;
+}
+
+.metric-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.daily-title {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.5rem 0;
+}
+
+.daily-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.daily-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.daily-day {
+  width: 78px;
+  font-size: 0.72rem;
+  color: #666;
+}
+
+.daily-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.daily-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4facfe, #00c6ff);
+}
+
+.daily-count {
+  width: 26px;
+  text-align: right;
+  font-size: 0.72rem;
+  color: #666;
+}
+
+.task-status-list {
+  margin-top: 0.75rem;
+}
+
+.status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.status-tag {
+  font-size: 0.72rem;
+  background: #eef3ff;
+  color: #3356a5;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
 /* 统计底部 */
 .stats-footer {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 1rem;
 }
 

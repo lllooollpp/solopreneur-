@@ -9,7 +9,8 @@ from nanobot.config.schema import Config
 
 def get_config_path() -> Path:
     """获取默认配置文件路径。"""
-    return Path.home() / ".nanobot" / "config.json"
+    from nanobot.utils.helpers import get_data_path
+    return get_data_path() / "config.json"
 
 
 def get_data_dir() -> Path:

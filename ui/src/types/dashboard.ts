@@ -88,3 +88,47 @@ export interface HealthCheck {
   components: Record<string, string>
   timestamp: string
 }
+
+export interface UsageSummary {
+  calls: number
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  avg_duration_ms: number
+  stream_calls: number
+}
+
+export interface TaskSummary {
+  total: number
+  by_status: Record<string, number>
+}
+
+export interface MetricsSnapshot {
+  usage: UsageSummary
+  tasks: TaskSummary
+}
+
+export interface UsageDailyRow {
+  day: string
+  calls: number
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  avg_duration_ms: number
+}
+
+export interface UsageDailyResponse {
+  days: number
+  rows: UsageDailyRow[]
+}
+
+export interface TaskDailyRow {
+  day: string
+  status: string
+  count: number
+}
+
+export interface TaskDailyResponse {
+  days: number
+  rows: TaskDailyRow[]
+}

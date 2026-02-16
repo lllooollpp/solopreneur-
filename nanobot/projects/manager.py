@@ -10,7 +10,7 @@ from urllib.parse import urlparse, urlunparse
 from loguru import logger
 
 from nanobot.storage import GitCredentialPersistence, ProjectPersistence
-from .models import Project, ProjectCreate, ProjectUpdate, ProjectSource, ProjectStatus, GitInfo
+from .models import Project, ProjectCreate, ProjectUpdate, ProjectSource, ProjectStatus, GitInfo, ProjectEnvVar
 
 
 class ProjectManager:
@@ -184,6 +184,22 @@ class ProjectManager:
     def get_project(self, project_id: str) -> Optional[Project]:
         """获取指定项目"""
         return self._projects.get(project_id)
+
+    def get_project_by_path(self, project_path: str | Path) -> Optional[Project]:
+        """按路径获取项目（用于基于工作目录的上下文工具）。"""
+        try:
+            target = Path(project_path).expanduser().resolve()
+        except Exception:
+            return None
+
+        for project in self._projects.values():
+            try:
+                p = Path(project.path).expanduser().resolve()
+                if p == target:
+                    return project
+            except Exception:
+                continue
+        return None
     
     def create_project(self, data: ProjectCreate) -> Project:
         """
@@ -256,6 +272,7 @@ class ProjectManager:
             path=str(project_path),
             git_info=git_info,
             session_id=session_id,
+            env_vars=data.env_vars,
             status=ProjectStatus.ACTIVE,
             created_at=datetime.now(),
             updated_at=datetime.now(),
@@ -288,12 +305,54 @@ class ProjectManager:
             project.description = data.description
         if data.status is not None:
             project.status = data.status
+        if data.env_vars is not None:
+            project.env_vars = data.env_vars
         
         project.updated_at = datetime.now()
         self._save_projects()
         
         logger.info(f"Updated project: {project.name} ({project.id})")
         return project
+
+    def set_project_env_vars(self, project_id: str, env_vars: list[ProjectEnvVar]) -> Optional[Project]:
+        """覆盖设置项目环境变量。"""
+        project = self._projects.get(project_id)
+        if not project:
+            return None
+
+        project.env_vars = env_vars
+        project.updated_at = datetime.now()
+        self._save_projects()
+        logger.info(f"Updated env vars for project: {project.name} ({project.id}), count={len(env_vars)}")
+        return project
+
+    def get_project_env_vars(self, project_id: str) -> Optional[list[ProjectEnvVar]]:
+        """获取项目环境变量列表。"""
+        project = self._projects.get(project_id)
+        if not project:
+            return None
+        return project.env_vars
+
+    def delete_project_env_var(self, project_id: str, key: str) -> tuple[bool, Optional[Project]]:
+        """
+        删除项目中的单个环境变量。
+
+        Returns:
+            (是否删除成功, 项目对象或None)
+        """
+        project = self._projects.get(project_id)
+        if not project:
+            return False, None
+
+        before = len(project.env_vars)
+        project.env_vars = [item for item in project.env_vars if item.key != key]
+        if len(project.env_vars) == before:
+            return False, project
+
+        project.updated_at = datetime.now()
+        self._save_projects()
+        logger.info(f"Deleted env var '{key}' from project: {project.name} ({project.id})")
+        return True, project
     
     def delete_project(self, project_id: str, delete_files: bool = False) -> bool:
         """

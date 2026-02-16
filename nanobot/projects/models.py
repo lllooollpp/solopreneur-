@@ -9,6 +9,33 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+class ProjectEnvCategory(str, Enum):
+    """项目环境变量分类"""
+    DATABASE = "database"
+    REGISTRY = "registry"
+    SERVER = "server"
+    MIDDLEWARE = "middleware"
+    CREDENTIAL = "credential"
+    GENERAL = "general"
+
+
+class ProjectEnvVar(BaseModel):
+    """项目环境变量定义"""
+    key: str = Field(..., min_length=1, max_length=100, description="变量名，如 DB_HOST")
+    value: str = Field(..., description="变量值")
+    category: ProjectEnvCategory = Field(default=ProjectEnvCategory.GENERAL, description="变量分类")
+    description: str = Field(default="", max_length=500, description="变量说明")
+    sensitive: bool = Field(default=False, description="是否敏感（如密码、密钥）")
+
+    @field_validator("key")
+    @classmethod
+    def validate_key(cls, v: str) -> str:
+        key = v.strip()
+        if not key:
+            raise ValueError("环境变量 key 不能为空")
+        return key
+
+
 class ProjectSource(str, Enum):
     """项目来源类型"""
     LOCAL = "local"           # 本地项目
@@ -58,6 +85,9 @@ class Project(BaseModel):
     
     # 会话关联
     session_id: str = Field(..., description="关联的聊天会话ID")
+
+    # 项目级环境变量
+    env_vars: list[ProjectEnvVar] = Field(default_factory=list, description="项目环境变量")
     
     # 状态
     status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
@@ -99,6 +129,16 @@ class Project(BaseModel):
             "path": self.path,
             "git_info": git_info_dict,
             "session_id": self.session_id,
+            "env_vars": [
+                {
+                    "key": env.key,
+                    "value": env.value,
+                    "category": env.category.value,
+                    "description": env.description,
+                    "sensitive": env.sensitive,
+                }
+                for env in self.env_vars
+            ],
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
@@ -110,6 +150,8 @@ class Project(BaseModel):
         git_info = None
         if data.get("git_info"):
             git_info = GitInfo(**data["git_info"])
+
+        env_vars = [ProjectEnvVar(**item) for item in data.get("env_vars", [])]
         
         return cls(
             id=data["id"],
@@ -119,6 +161,7 @@ class Project(BaseModel):
             path=data["path"],
             git_info=git_info,
             session_id=data["session_id"],
+            env_vars=env_vars,
             status=ProjectStatus(data.get("status", "active")),
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
@@ -145,6 +188,9 @@ class ProjectCreate(BaseModel):
     # Git 代理（可选）
     use_proxy: bool = Field(default=False, description="是否使用代理")
     proxy_url: Optional[str] = Field(default=None, description="代理地址，如 http://127.0.0.1:7890")
+
+    # 项目环境变量（可选）
+    env_vars: list[ProjectEnvVar] = Field(default_factory=list, description="项目环境变量")
     
     @field_validator('name')
     @classmethod
@@ -166,3 +212,4 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     description: Optional[str] = Field(default=None, max_length=500)
     status: Optional[ProjectStatus] = None
+    env_vars: Optional[list[ProjectEnvVar]] = None

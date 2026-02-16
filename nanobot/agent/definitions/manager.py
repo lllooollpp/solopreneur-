@@ -68,7 +68,9 @@ class AgentManager:
         lines = [
             "# Available Agents",
             "",
-            "Use `delegate` to assign tasks to specialized agents. You decide which agents to involve and in what order based on the task.",
+            "Prefer `delegate_auto` to let system analyze dependencies and choose serial/parallel execution automatically.",
+            "Use `delegate` only when you explicitly need strict sequential handoff.",
+            "Use `delegate_parallel` only when you are certain tasks are independent.",
             "",
         ]
 
@@ -86,6 +88,22 @@ class AgentManager:
         lines.extend([
             "## Usage",
             "",
+            "Use `delegate_auto` for mixed orchestration (recommended):",
+            '```yaml',
+            'jobs:',
+            '  - id: "backend"',
+            '    agent: "developer"',
+            '    task: "Implement backend API"',
+            '  - id: "frontend"',
+            '    agent: "developer"',
+            '    task: "Build frontend page"',
+            '  - id: "integration_test"',
+            '    agent: "tester"',
+            '    task: "Run integration tests"',
+            '    depends_on: ["backend", "frontend"]',
+            'max_parallel: 3',
+            '```',
+            "",
             "Use `delegate` to assign a task to a specific agent and get the result synchronously:",
             '```yaml',
             'agent: "developer"',
@@ -95,6 +113,7 @@ class AgentManager:
             '```',
             "",
             "Chain multiple `delegate` calls to orchestrate complex tasks. Pass each agent's output as `context` to the next.",
+            "Use `delegate_parallel` when tasks are independent and can run concurrently.",
             "",
             "> `run_workflow` is also available as a shortcut for standard multi-agent pipelines when the user explicitly requests it.",
         ])

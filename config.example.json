@@ -14,6 +14,9 @@
       "_comment_temperature_note": "0.0-0.3 精确但短，0.7-1.0 有创意但长",
       "temperature": 0.7,
 
+      "_comment_review_mode": "审批模式：auto=自动审核继续执行，manual=人工审核（先通知用户确认）",
+      "review_mode": "auto",
+
       "_comment_max_tool_iterations": "最大工具调用迭代次数",
       "_comment_max_tool_iterations_note": "间接控制 Token 消耗，每次迭代可能调用多个工具",
       "max_tool_iterations": 20,
@@ -82,10 +85,10 @@
 
   "channels": {
     "wecom": {
-      "enabled": false,
+      "enabled": true,
       "corp_id": "",
-      "agent_id": "",
-      "secret": "",
+      "agent_id": "1000002",
+      "secret": "UXC9jCRikya_NdF2pixpk-IFvZOxeN84nWVaFFJeYCk",
       "token": "",
       "aes_key": ""
     },

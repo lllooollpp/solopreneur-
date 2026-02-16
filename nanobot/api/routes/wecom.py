@@ -1,10 +1,11 @@
 """
 企业微信回调端点
-处理消息验证和消息接收
+处理消息验证和消息接收，集成 AI 回复
 """
-from fastapi import APIRouter, Query, Body, HTTPException
+from fastapi import APIRouter, Query, Body, HTTPException, BackgroundTasks
 from loguru import logger
 from typing import Optional
+import asyncio
 
 from nanobot.channels.wecom import (
     WeComConfig,
@@ -58,6 +59,109 @@ def init_wecom(config: WeComConfig):
         encoding_aes_key=config.aes_key,
         corp_id=config.corp_id
     )
+
+
+async def _process_message_async(message, chat_id: str, content: str) -> str:
+    """
+    异步处理消息并返回 AI 回复
+    
+    使用 AgentLoop 处理消息
+    """
+    try:
+        from nanobot.core.dependencies import get_component_manager
+        from nanobot.agent.core.loop import AgentLoop
+        from nanobot.bus.queue import MessageBus
+        from pathlib import Path
+        
+        manager = get_component_manager()
+        config = manager.get_config()
+        
+        # 获取 Provider
+        provider = manager.get_llm_provider()
+        
+        # 获取工作空间
+        workspace = Path(config.agents.defaults.workspace).expanduser()
+        
+        # 创建 AgentLoop
+        agent = AgentLoop(
+            bus=MessageBus(),
+            provider=provider,
+            workspace=workspace,
+            model=config.agents.defaults.model,
+            max_iterations=config.agents.defaults.max_tool_iterations,
+        )
+        
+        # 处理消息（流式回调用于收集完整响应）
+        response_parts = []
+        
+        async def on_chunk(text: str):
+            response_parts.append(text)
+        
+        session_key = f"wecom:{chat_id}"
+        
+        result = await agent.process_message_stream(
+            content=content,
+            session_key=session_key,
+            on_chunk=on_chunk,
+        )
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"处理消息失败: {e}")
+        return f"抱歉，处理您的消息时出错: {str(e)}"
+
+
+async def _send_wecom_message(user_id: str, content: str):
+    """
+    通过企业微信 API 主动发送消息
+    
+    Args:
+        user_id: 接收者 UserID
+        content: 消息内容
+    """
+    try:
+        import httpx
+        
+        if not _wecom_config:
+            logger.error("企业微信未配置，无法发送消息")
+            return
+        
+        # 获取 access_token
+        async with httpx.AsyncClient() as client:
+            # 获取 token
+            token_url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={_wecom_config.corp_id}&corpsecret={_wecom_config.secret}"
+            token_resp = await client.get(token_url)
+            token_data = token_resp.json()
+            
+            if token_data.get("errcode", 0) != 0:
+                logger.error(f"获取 access_token 失败: {token_data}")
+                return
+            
+            access_token = token_data["access_token"]
+            
+            # 发送消息
+            send_url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
+            send_data = {
+                "touser": user_id,
+                "msgtype": "text",
+                "agentid": int(_wecom_config.agent_id),
+                "text": {
+                    "content": content
+                },
+                "safe": 0
+            }
+            
+            send_resp = await client.post(send_url, json=send_data)
+            send_result = send_resp.json()
+            
+            if send_result.get("errcode", 0) == 0:
+                logger.info(f"消息发送成功: {user_id}")
+            else:
+                logger.error(f"消息发送失败: {send_result}")
+                
+    except Exception as e:
+        logger.error(f"发送企业微信消息失败: {e}")
 
 
 @router.get("/wecom/callback")
@@ -118,6 +222,7 @@ async def wecom_verify(
 
 @router.post("/wecom/callback")
 async def wecom_receive_message(
+    background_tasks: BackgroundTasks,
     msg_signature: str = Query(
         ..., 
         description="消息签名",
@@ -142,6 +247,10 @@ async def wecom_receive_message(
     接收企业微信消息
     
     企业微信会 POST 加密的 XML 消息到此端点
+    处理流程：
+    1. 验证签名
+    2. 解密消息
+    3. 异步处理并返回 AI 回复
     """
     logger.info(f"收到企业微信消息: timestamp={timestamp}, nonce={nonce}")
     
@@ -171,43 +280,55 @@ async def wecom_receive_message(
         message = parse_wecom_message(xml_content)
         logger.info(f"解析消息成功: from={message.from_user}, type={message.msg_type}, content={message.content}")
         
-        # 将消息发送到总线（如果启用）
-        try:
-            from nanobot.bus.queue import MessageBus
-            from nanobot.bus.events import InboundMessage
-            
-            bus = MessageBus()
-            inbound_msg = InboundMessage(
-                channel='wecom',
-                chat_id=message.from_user,
-                user_id=message.from_user,
-                content=message.content,
-                timestamp=message.create_time
-            )
-            await bus.publish_inbound(inbound_msg)
-            logger.info("消息已发送到总线")
-        except Exception as bus_error:
-            logger.warning(f"发送消息到总线失败: {bus_error}")
+        # 只处理文本消息
+        if message.msg_type != "text":
+            # 非文本消息返回空响应
+            return ""
         
-        # 构建回复（暂时返回确认消息）
-        reply_xml = build_text_reply(
-            to_user=message.from_user,
-            from_user=message.to_user,
-            content=f"收到您的消息: {message.content}"
-        )
+        # 在后台处理消息并发送回复
+        async def process_and_reply():
+            try:
+                # 获取 AI 回复
+                ai_response = await _process_message_async(
+                    message=message,
+                    chat_id=message.from_user,
+                    content=message.content
+                )
+                
+                # 通过 API 发送回复（因为被动回复有 5 秒限制）
+                await _send_wecom_message(message.from_user, ai_response)
+                
+            except Exception as e:
+                logger.error(f"后台处理消息失败: {e}")
+                # 发送错误提示
+                await _send_wecom_message(message.from_user, "抱歉，处理您的消息时出现了问题。")
         
-        # 加密回复
-        encrypted_reply = _wecom_crypto.encrypt_message(reply_xml, nonce)
-        reply_signature = _wecom_crypto.generate_signature(timestamp, nonce, encrypted_reply)
+        # 添加后台任务
+        background_tasks.add_task(process_and_reply)
         
-        # 返回加密回复
-        return {
-            "Encrypt": encrypted_reply,
-            "MsgSignature": reply_signature,
-            "TimeStamp": timestamp,
-            "Nonce": nonce
-        }
+        # 立即返回成功响应（告诉企业微信我们收到了）
+        return "success"
         
     except Exception as e:
         logger.error(f"处理企业微信消息失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wecom/send")
+async def wecom_send_message(
+    user_id: str = Query(..., description="接收者 UserID"),
+    content: str = Body(..., embed=True, description="消息内容")
+):
+    """
+    主动发送企业微信消息
+    
+    用于测试或主动推送消息
+    """
+    _ensure_config()
+    
+    if not _wecom_config:
+        raise HTTPException(status_code=500, detail="WeChat Work not configured")
+    
+    await _send_wecom_message(user_id, content)
+    
+    return {"message": "发送成功", "user_id": user_id}

@@ -3,19 +3,40 @@
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { DashboardStats, HealthCheck } from '@/types/dashboard'
-import { fetchDashboardStats, fetchHealthCheck } from '@/api/dashboard'
+import type {
+  DashboardStats,
+  HealthCheck,
+  MetricsSnapshot,
+  TaskDailyRow,
+  UsageDailyRow
+} from '@/types/dashboard'
+import {
+  fetchDashboardStats,
+  fetchHealthCheck,
+  fetchMetricsSnapshot,
+  fetchTaskDaily,
+  fetchUsageDaily
+} from '@/api/dashboard'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // 状态
   const stats = ref<DashboardStats | null>(null)
   const health = ref<HealthCheck | null>(null)
+  const metrics = ref<MetricsSnapshot | null>(null)
+  const usageDaily = ref<UsageDailyRow[]>([])
+  const taskDaily = ref<TaskDailyRow[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const lastUpdate = ref<Date | null>(null)
 
   // 计算属性
   const isHealthy = computed(() => health.value?.status === 'healthy')
+  const taskStatusList = computed(() => {
+    if (!metrics.value) return [] as Array<{ status: string; count: number }>
+    return Object.entries(metrics.value.tasks.by_status)
+      .map(([status, count]) => ({ status, count }))
+      .sort((a, b) => b.count - a.count)
+  })
   
   const agentStatusClass = computed(() => {
     if (!stats.value) return 'unknown'
@@ -78,19 +99,38 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  async function loadMetrics(days: number = 7) {
+    try {
+      const [snapshot, usage, tasks] = await Promise.all([
+        fetchMetricsSnapshot(days),
+        fetchUsageDaily(days, 14),
+        fetchTaskDaily(days, 50)
+      ])
+      metrics.value = snapshot
+      usageDaily.value = usage.rows
+      taskDaily.value = tasks.rows
+    } catch (e) {
+      console.error('Failed to load metrics:', e)
+    }
+  }
+
   async function refresh() {
-    await Promise.all([loadStats(), loadHealth()])
+    await Promise.all([loadStats(), loadHealth(), loadMetrics(7)])
   }
 
   return {
     // 状态
     stats,
     health,
+    metrics,
+    usageDaily,
+    taskDaily,
     loading,
     error,
     lastUpdate,
     // 计算属性
     isHealthy,
+    taskStatusList,
     agentStatusClass,
     agentStatusText,
     healthStatusText,
@@ -98,6 +138,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     // 方法
     loadStats,
     loadHealth,
+    loadMetrics,
     refresh
   }
 })

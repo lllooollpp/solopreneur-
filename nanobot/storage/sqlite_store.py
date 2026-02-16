@@ -67,6 +67,7 @@ class SQLiteStore:
                     source TEXT NOT NULL,
                     path TEXT NOT NULL,
                     git_info_json TEXT,
+                    env_vars_json TEXT,
                     session_id TEXT NOT NULL,
                     status TEXT NOT NULL,
                     created_at TEXT NOT NULL,
@@ -121,6 +122,16 @@ class SQLiteStore:
                 );
                 """
             )
+
+            # 兼容迁移：旧版本 projects 表没有 env_vars_json 字段
+            self._ensure_column(conn, "projects", "env_vars_json", "TEXT")
+
+    def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, column_type: str) -> None:
+        """确保指定表存在指定列（幂等）。"""
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        existing = {row[1] for row in rows}  # row[1] = name
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
 
     @staticmethod
     def _to_iso(value: datetime | str | None) -> str:
@@ -265,7 +276,7 @@ class SQLiteStore:
         with self._lock, self._connect() as conn:
             rows = conn.execute(
                 """
-                SELECT id, name, description, source, path, git_info_json,
+                SELECT id, name, description, source, path, git_info_json, env_vars_json,
                        session_id, status, created_at, updated_at
                 FROM projects
                 ORDER BY created_at DESC
@@ -281,6 +292,13 @@ class SQLiteStore:
                 except json.JSONDecodeError:
                     logger.warning(f"Invalid git_info_json in project {row['id']}")
 
+            env_vars = []
+            if row["env_vars_json"]:
+                try:
+                    env_vars = json.loads(row["env_vars_json"])
+                except json.JSONDecodeError:
+                    logger.warning(f"Invalid env_vars_json in project {row['id']}")
+
             projects.append(
                 {
                     "id": row["id"],
@@ -289,6 +307,7 @@ class SQLiteStore:
                     "source": row["source"],
                     "path": row["path"],
                     "git_info": git_info,
+                    "env_vars": env_vars,
                     "session_id": row["session_id"],
                     "status": row["status"],
                     "created_at": row["created_at"],
@@ -300,19 +319,22 @@ class SQLiteStore:
     def save_project(self, project_data: dict[str, Any]) -> None:
         git_info = project_data.get("git_info")
         git_info_json = json.dumps(git_info, ensure_ascii=False) if git_info else None
+        env_vars = project_data.get("env_vars") or []
+        env_vars_json = json.dumps(env_vars, ensure_ascii=False)
 
         with self._lock, self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO projects(id, name, description, source, path, git_info_json,
+                INSERT INTO projects(id, name, description, source, path, git_info_json, env_vars_json,
                                      session_id, status, created_at, updated_at)
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     name = excluded.name,
                     description = excluded.description,
                     source = excluded.source,
                     path = excluded.path,
                     git_info_json = excluded.git_info_json,
+                    env_vars_json = excluded.env_vars_json,
                     session_id = excluded.session_id,
                     status = excluded.status,
                     updated_at = excluded.updated_at
@@ -324,6 +346,7 @@ class SQLiteStore:
                     project_data["source"],
                     project_data["path"],
                     git_info_json,
+                    env_vars_json,
                     project_data["session_id"],
                     project_data["status"],
                     project_data["created_at"],

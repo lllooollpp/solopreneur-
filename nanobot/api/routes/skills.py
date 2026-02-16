@@ -6,7 +6,6 @@ from fastapi import APIRouter, HTTPException, Path as PathParam
 from pydantic import BaseModel, Field, field_validator
 from typing import Dict, List
 from loguru import logger
-from pathlib import Path
 
 router = APIRouter()
 
@@ -59,37 +58,47 @@ async def get_skills():
     logger.info("获取技能列表")
     
     try:
-        skills = []
-        
-        # 扫描 bundled skills
-        from nanobot.config.loader import load_config
-        config = load_config()
-        
-        bundled_skills_path = Path(__file__).parent.parent.parent / "skills"
-        
-        if bundled_skills_path.exists():
-            for skill_dir in bundled_skills_path.iterdir():
-                if skill_dir.is_dir() and (skill_dir / "SKILL.md").exists():
-                    skill_md = skill_dir / "SKILL.md"
-                    description = "内置技能"
-                    
-                    # 读取技能描述（从 SKILL.md 第一行）
-                    try:
-                        first_line = skill_md.read_text(encoding='utf-8').split('\n')[0]
-                        if first_line.startswith('#'):
-                            description = first_line.lstrip('#').strip()
-                    except:
-                        pass
-                    
-                    skills.append(SkillItem(
-                        name=skill_dir.name,
-                        source="bundled",
-                        enabled=True,
-                        description=description,
-                        variables={},
-                        overridden=False
-                    ))
-        
+        # 与 AgentManager 使用同一份 workspace 路径与 SkillsLoader，避免“页面与运行时路径不一致”
+        from nanobot.core.dependencies import get_component_manager
+        manager = get_component_manager()
+        agent_manager = manager.get_agent_manager()
+        skills_loader = agent_manager.skills
+
+        discovered = skills_loader.list_skills(filter_unavailable=False)
+        skills: List[SkillItem] = []
+
+        for skill in discovered:
+            name = skill["name"]
+            source = skill.get("source", "builtin")
+            source_mapped = "bundled" if source == "builtin" else source
+
+            # 优先从 frontmatter description 获取
+            description = "技能"
+            meta = skills_loader.get_skill_metadata(name) or {}
+            if meta.get("description"):
+                description = meta["description"]
+            else:
+                # 回退：读取标题行
+                try:
+                    content = skills_loader.load_skill(name) or ""
+                    first_line = content.split("\n", 1)[0].strip()
+                    if first_line.startswith("#"):
+                        description = first_line.lstrip("#").strip()
+                except Exception:
+                    pass
+
+            skills.append(SkillItem(
+                name=name,
+                source=source_mapped,
+                enabled=True,
+                description=description,
+                variables={},
+                overridden=(source_mapped == "workspace"),
+            ))
+
+        logger.info(
+            f"技能列表已加载: total={len(skills)}, workspace={sum(1 for s in skills if s.source == 'workspace')}, bundled={sum(1 for s in skills if s.source == 'bundled')}"
+        )
         return SkillsResponse(skills=skills)
         
     except Exception as e:

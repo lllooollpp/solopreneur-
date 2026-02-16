@@ -123,6 +123,15 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label>审批模式</label>
+          <select v-model="agentDefaults.review_mode" class="input-field">
+            <option value="auto">自动审核（自动继续执行）</option>
+            <option value="manual">人工审核（先 message 通知并等待确认）</option>
+          </select>
+          <span class="field-hint">控制任务推进时是否需要用户确认</span>
+        </div>
+
         <div class="form-actions">
           <button class="btn-test" @click="testConnection" :disabled="testing">
             {{ testing ? '⏳ 测试中...' : '🔍 测试连接' }}
@@ -189,6 +198,7 @@ const agentDefaults = reactive({
   model: 'llama-3-8b',
   max_tokens: 8192,
   temperature: 0.7,
+  review_mode: 'auto' as 'auto' | 'manual',
 })
 
 const selectedModelSuggestion = ref('')
@@ -227,8 +237,42 @@ function applyModelSuggestion() {
   }
 }
 
-function toggleCopilotPriority() {
+async function toggleCopilotPriority() {
+  const prev = providersConfig.copilot_priority
   providersConfig.copilot_priority = copilotPriority.value
+
+  try {
+    // 开关切换即立即持久化到后端
+    await updateProvidersConfig(providersConfig as any)
+
+    // 回读后端，确保与服务端一致
+    const persistedProviders = await getProvidersConfig()
+    Object.assign(providersConfig, persistedProviders)
+    copilotPriority.value = persistedProviders.copilot_priority ?? false
+
+    // 同步到本地缓存，供聊天页快速读取
+    const configToSave = {
+      providers: {
+        copilot_priority: persistedProviders.copilot_priority,
+        anthropic: persistedProviders.anthropic,
+        openai: persistedProviders.openai,
+        openrouter: persistedProviders.openrouter,
+        groq: persistedProviders.groq,
+        zhipu: persistedProviders.zhipu,
+        vllm: persistedProviders.vllm,
+        gemini: persistedProviders.gemini
+      },
+      agents: {
+        defaults: agentDefaults
+      }
+    }
+    localStorage.setItem('provider_config', JSON.stringify(configToSave))
+  } catch (e: any) {
+    // 失败回滚 UI 状态
+    providersConfig.copilot_priority = prev
+    copilotPriority.value = prev
+    alert(`❌ 优先开关保存失败: ${e.response?.data?.detail || e.message || '未知错误'}`)
+  }
 }
 
 async function testConnection() {
@@ -251,10 +295,15 @@ async function saveConfig() {
     await updateProvidersConfig(providersConfig)
     await updateAgentDefaults(agentDefaults)
 
+    // 立刻回读后端，确保“优先使用”已真正持久化
+    const persistedProviders = await getProvidersConfig()
+    Object.assign(providersConfig, persistedProviders)
+    copilotPriority.value = persistedProviders.copilot_priority ?? false
+
     // 同时保存到 localStorage（用于前端快速读取）
     const configToSave = {
       providers: {
-        copilot_priority: providersConfig.copilot_priority,
+        copilot_priority: persistedProviders.copilot_priority,
         anthropic: providersConfig.anthropic,
         openai: providersConfig.openai,
         openrouter: providersConfig.openrouter,

@@ -1,11 +1,12 @@
 <template>
   <div class="chat-layout">
     <!-- 左侧项目列表 -->
-    <ProjectSidebar
-      ref="projectSidebarRef"
-      :current-project-id="currentProject?.id"
-      @select="handleProjectSelect"
-    />
+    <div class="chat-left-pane">
+      <ProjectSidebar
+        :current-project-id="currentProject?.id"
+        @select="handleProjectSelect"
+      />
+    </div>
     
     <!-- 中间主区域 -->
     <div class="chat-main-area">
@@ -61,7 +62,7 @@
               :class="['message-item', message.role]"
             >
               <div class="message-header">
-                <span class="role-badge">{{ roleText(message.role) }}</span>
+                <span class="role-badge">{{ message.role === 'assistant' ? (message.agentName || '主控 Agent') : roleText(message.role) }}</span>
                 <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
               </div>
 
@@ -75,10 +76,21 @@
                     <div v-if="act.type === 'tool_start'" class="activity-card tool-card">
                       <div class="activity-icon">🔧</div>
                       <div class="activity-info">
-                        <span class="activity-label">调用工具</span>
-                        <span class="activity-name">{{ act.toolName }}</span>
+                        <span class="activity-label">{{ act.toolName === 'delegate' ? '委派角色' : '调用工具' }}</span>
+                        <span class="activity-name">{{ act.toolName === 'delegate' ? (act.delegateAgent || 'unknown-agent') : act.toolName }}</span>
                         <span v-if="getToolEndInfo(message, act.toolName)" class="activity-duration">
                           {{ getToolEndInfo(message, act.toolName)!.durationMs }}ms
+                        </span>
+                        <span v-else class="activity-running">执行中...</span>
+                      </div>
+                    </div>
+                    <div v-if="act.type === 'skill_start'" class="activity-card skill-card">
+                      <div class="activity-icon">🧩</div>
+                      <div class="activity-info">
+                        <span class="activity-label">加载技能</span>
+                        <span class="activity-name">{{ (act as SkillActivity).skillName }}</span>
+                        <span v-if="getSkillEndInfo(message, (act as SkillActivity).skillName)" class="activity-duration">
+                          {{ getSkillEndInfo(message, (act as SkillActivity).skillName)!.durationMs }}ms
                         </span>
                         <span v-else class="activity-running">执行中...</span>
                       </div>
@@ -88,9 +100,9 @@
                       <div class="activity-info">
                         <span class="activity-label">思考中</span>
                         <span class="activity-name">{{ act.model }} #{{ act.iteration }}</span>
-                        <span v-if="getLLMEndInfo(message, act.iteration)" class="activity-duration">
-                          {{ getLLMEndInfo(message, act.iteration)!.durationMs }}ms
-                          · {{ getLLMEndInfo(message, act.iteration)!.tokens }} tokens
+                        <span v-if="getLLMEndInfo(message, act as LLMActivity)" class="activity-duration">
+                          {{ getLLMEndInfo(message, act as LLMActivity)!.durationMs }}ms
+                          · {{ getLLMEndInfo(message, act as LLMActivity)!.tokens }} tokens
                         </span>
                         <span v-else class="activity-running">思考中...</span>
                       </div>
@@ -220,7 +232,9 @@
     </div>
     
     <!-- 右侧监控面板 -->
-    <TracePanel ref="tracePanelRef" />
+    <div class="chat-right-pane">
+      <TracePanel ref="tracePanelRef" />
+    </div>
     
     <!-- 生成 Wiki 对话框 -->
     <div v-if="showGenerateWikiDialog" class="dialog-overlay" @click="showGenerateWikiDialog = false">
@@ -294,7 +308,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted, watch, computed } from 'vue'
-import type { ChatMessage, ToolActivity, LLMActivity } from '@/types/message'
+import type { ChatMessage, ToolActivity, LLMActivity, SkillActivity } from '@/types/message'
 import type { Project } from '@/types/project'
 import ProjectSidebar from '@/components/ProjectSidebar.vue'
 import TracePanel from '@/components/TracePanel.vue'
@@ -316,7 +330,6 @@ const isConnected = ref(false)
 const availableModels = ref<string[]>(['gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4'])
 const currentProvider = ref<string | null>(null)
 const sessionId = ref('')
-const projectSidebarRef = ref<InstanceType<typeof ProjectSidebar>>()
 const tracePanelRef = ref<InstanceType<typeof TracePanel>>()
 const currentProject = ref<Project | null>(null)
 
@@ -347,6 +360,22 @@ const renderedWikiContent = computed(() => {
 let ws: WebSocket | null = null
 let currentAssistantMessageId: string | null = null
 
+const MODELS_REFRESH_MIN_INTERVAL_MS = 15_000
+const lastModelsLoadAt = ref(0)
+const modelsLoading = ref(false)
+
+const providerNames: Record<string, string> = {
+  'copilot': '🐙 Copilot',
+  'vllm': '🏠 本地接口',
+  'zhipu': '🌋 火山引擎',
+  'openrouter': '🌐 OpenRouter',
+  'anthropic': '🧠 Anthropic',
+  'openai': '🤖 OpenAI',
+  'groq': '⚡ Groq',
+  'gemini': '💎 Gemini',
+  'none': '❌ 未配置'
+}
+
 /** 当前助手消息是否有内容 */
 const currentHasContent = computed(() => {
   if (!currentAssistantMessageId) return false
@@ -368,13 +397,27 @@ function getToolEndInfo(message: ChatMessage, toolName: string): { durationMs: n
   return end?.durationMs != null ? { durationMs: end.durationMs } : null
 }
 
-/** 获取 LLM 结束信息 */
-function getLLMEndInfo(message: ChatMessage, iteration: number): { durationMs: number; tokens: number } | null {
+/** 获取 LLM 结束信息（按 agent + iteration + 时间匹配，避免串位） */
+function getLLMEndInfo(message: ChatMessage, startActivity: LLMActivity): { durationMs: number; tokens: number } | null {
+  if (!message.activities) return null
+  const startTs = startActivity.timestamp || 0
+  const end = message.activities.find(a => {
+    if (a.type !== 'llm_end') return false
+    const e = a as LLMActivity
+    if (e.iteration !== startActivity.iteration) return false
+    if ((e.agentName || '') !== (startActivity.agentName || '')) return false
+    return (e.timestamp || 0) >= startTs
+  }) as LLMActivity | undefined
+  return end?.durationMs != null ? { durationMs: end.durationMs, tokens: end.tokens || 0 } : null
+}
+
+/** 获取 Skill 结束信息 */
+function getSkillEndInfo(message: ChatMessage, skillName: string): { durationMs: number } | null {
   if (!message.activities) return null
   const end = message.activities.find(
-    a => a.type === 'llm_end' && (a as LLMActivity).iteration === iteration
-  ) as LLMActivity | undefined
-  return end?.durationMs != null ? { durationMs: end.durationMs, tokens: end.tokens || 0 } : null
+    a => a.type === 'skill_end' && (a as SkillActivity).skillName === skillName
+  ) as SkillActivity | undefined
+  return end?.durationMs != null ? { durationMs: end.durationMs } : null
 }
 
 /** 获取 localStorage key */
@@ -446,6 +489,9 @@ function connectWebSocket() {
       if (currentAssistantMessageId) {
         const msg = messages.value.find(m => m.id === currentAssistantMessageId)
         if (msg) {
+          if (data.event === 'start' && !msg.agentName) {
+            msg.agentName = data.agent_name || '主控 Agent'
+          }
           if (!msg.activities) msg.activities = []
           const actType = data.activity_type as string
           if (actType === 'tool_start' || actType === 'tool_end') {
@@ -453,9 +499,11 @@ function connectWebSocket() {
               id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
               type: actType,
               toolName: data.tool_name || '',
+              delegateAgent: data.delegate_agent,
               toolArgs: data.tool_args,
               durationMs: data.duration_ms,
               resultLength: data.result_length,
+              resultPreview: data.result_preview,
               timestamp: data.timestamp || Date.now() / 1000,
             } as ToolActivity)
           } else if (actType === 'llm_start' || actType === 'llm_end') {
@@ -463,11 +511,24 @@ function connectWebSocket() {
               id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
               type: actType,
               iteration: data.iteration || 0,
+              agentName: data.agent_name || '',
               model: data.model,
               durationMs: data.duration_ms,
               tokens: data.total_tokens,
               timestamp: data.timestamp || Date.now() / 1000,
             } as LLMActivity)
+          } else if (actType === 'skill_start' || actType === 'skill_end') {
+            msg.activities.push({
+              id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              type: actType,
+              skillName: data.skill_name || '',
+              toolName: data.tool_name,
+              toolArgs: data.tool_args,
+              durationMs: data.duration_ms,
+              resultLength: data.result_length,
+              resultPreview: data.result_preview,
+              timestamp: data.timestamp || Date.now() / 1000,
+            } as SkillActivity)
           }
         }
       }
@@ -488,123 +549,28 @@ function generateSessionId() {
 }
 
 // 加载可用模型列表
-async function loadModels() {
-  // 优先从 localStorage 读取 Provider 配置
-  try {
-    const providerConfigStr = localStorage.getItem('provider_config')
-    if (providerConfigStr) {
-      const providerConfig = JSON.parse(providerConfigStr)
-
-      // 检查是否有配置的 Provider
-      if (providerConfig && providerConfig.providers) {
-        const providers = providerConfig.providers
-
-        // 获取当前使用的 Provider
-        let activeProvider = null
-        let activeModel = providerConfig.agents?.defaults?.model || ''
-
-        // 检查 Copilot 优先级
-        if (providers.copilot_priority) {
-          activeProvider = 'copilot'
-          // Copilot 的模型列表（固定）
-          availableModels.value = ['gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4']
-          selectedModel.value = activeModel || 'gpt-5-mini'
-        }
-        // 检查 vLLM (本地)
-        else if (providers.vllm && providers.vllm.api_base) {
-          activeProvider = 'vllm'
-          // 从配置读取的本地模型（用户在配置管理中设置的）
-          const vllmModel = activeModel || 'llama-3-8b'
-          availableModels.value = [vllmModel]
-          selectedModel.value = vllmModel
-          // 锁定模型，不允许用户修改
-          lockedModel.value = true
-        }
-        // 检查火山引擎
-        else if (providers.zhipu && providers.zhipu.api_key) {
-          activeProvider = 'zhipu'
-          availableModels.value = ['glm-4', 'glm-4-plus', 'glm-3-turbo', 'glm-4-flash']
-          selectedModel.value = activeModel || 'glm-4'
-        }
-        // 检查 OpenRouter
-        else if (providers.openrouter && providers.openrouter.api_key) {
-          activeProvider = 'openrouter'
-          availableModels.value = ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'google/gemini-pro-1.5', 'meta-llama/llama-3.1-70b-instruct']
-          selectedModel.value = activeModel || 'anthropic/claude-3.5-sonnet'
-        }
-        // 检查 Anthropic
-        else if (providers.anthropic && providers.anthropic.api_key) {
-          activeProvider = 'anthropic'
-          availableModels.value = ['claude-3-5-sonnet', 'claude-3-5-haiku', 'claude-3-opus']
-          selectedModel.value = activeModel || 'claude-3-5-sonnet'
-        }
-        // 检查 OpenAI
-        else if (providers.openai && providers.openai.api_key) {
-          activeProvider = 'openai'
-          availableModels.value = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo']
-          selectedModel.value = activeModel || 'gpt-4o'
-        }
-        // 检查 Groq
-        else if (providers.groq && providers.groq.api_key) {
-          activeProvider = 'groq'
-          availableModels.value = ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768']
-          selectedModel.value = activeModel || 'llama-3.1-70b-versatile'
-        }
-        // 检查 Gemini
-        else if (providers.gemini && providers.gemini.api_key) {
-          activeProvider = 'gemini'
-          availableModels.value = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.0-pro']
-          selectedModel.value = activeModel || 'gemini-1.5-pro'
-        }
-
-        // 设置 Provider 显示名称
-        const providerNames: Record<string, string> = {
-          'copilot': '🐙 Copilot',
-          'vllm': '🏠 本地接口',
-          'zhipu': '🌋 火山引擎',
-          'openrouter': '🌐 OpenRouter',
-          'anthropic': '🧠 Anthropic',
-          'openai': '🤖 OpenAI',
-          'groq': '⚡ Groq',
-          'gemini': '💎 Gemini',
-          'none': '❌ 未配置'
-        }
-
-        if (activeProvider) {
-          currentProvider.value = providerNames[activeProvider] || activeProvider
-          console.log('Loaded from localStorage:', {
-            provider: activeProvider,
-            models: availableModels.value,
-            selected: selectedModel.value,
-            locked: lockedModel.value
-          })
-          return
-        }
-      }
-    }
-  } catch (e) {
-    console.debug('Failed to load provider config from localStorage:', e)
+async function loadModels(force = false) {
+  const now = Date.now()
+  if (!force) {
+    if (modelsLoading.value) return
+    if (now - lastModelsLoadAt.value < MODELS_REFRESH_MIN_INTERVAL_MS) return
   }
 
-  // 回退：如果 localStorage 没有配置，从后端加载
+  modelsLoading.value = true
+  // 每次重算前先重置，避免从 vLLM 场景切换后仍被锁定
+  lockedModel.value = false
+  // 主逻辑：始终从后端实时获取（Copilot 模型是动态的）
   try {
     const response = await fetch('http://localhost:8000/api/auth/models')
     if (response.ok) {
       const data = await response.json()
-      availableModels.value = data.models
-
-      const providerNames: Record<string, string> = {
-        'copilot': '🐙 Copilot',
-        'vllm': '🏠 本地接口',
-        'zhipu': '🌋 火山引擎',
-        'openrouter': '🌐 OpenRouter',
-        'anthropic': '🧠 Anthropic',
-        'openai': '🤖 OpenAI',
-        'groq': '⚡ Groq',
-        'gemini': '💎 Gemini',
-        'none': '❌ 未配置'
-      }
+      availableModels.value = Array.isArray(data.models) && data.models.length > 0
+        ? data.models
+        : ['gpt-5-mini']
       currentProvider.value = providerNames[data.provider] || data.provider
+
+      // 仅 vLLM 默认锁定模型输入（兼容本地固定模型场景）
+      lockedModel.value = data.provider === 'vllm'
 
       if (data.models.includes(selectedModel.value)) {
         // 保持当前选中的模型
@@ -612,14 +578,38 @@ async function loadModels() {
         selectedModel.value = data.models[0]
       }
 
-      console.log('Fallback to backend API:', {
+      console.log('Loaded models from backend API:', {
         provider: data.provider,
         models: data.models,
-        selected: selectedModel.value
+        selected: selectedModel.value,
+        locked: lockedModel.value,
       })
+      lastModelsLoadAt.value = Date.now()
+      return
     }
   } catch (error) {
     console.error('Failed to load models from backend:', error)
+  }
+
+  // 兜底：后端不可用时使用 localStorage
+  try {
+    const providerConfigStr = localStorage.getItem('provider_config')
+    if (!providerConfigStr) return
+    const providerConfig = JSON.parse(providerConfigStr)
+    const providers = providerConfig?.providers || {}
+    const activeModel = providerConfig?.agents?.defaults?.model || ''
+
+    if (providers.copilot_priority) {
+      currentProvider.value = providerNames.copilot
+      availableModels.value = ['gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4']
+      selectedModel.value = activeModel || availableModels.value[0]
+      lockedModel.value = false
+    }
+  }
+  catch (e) {
+    console.debug('Fallback to localStorage failed:', e)
+  } finally {
+    modelsLoading.value = false
   }
 }
 
@@ -780,7 +770,7 @@ async function generateWiki() {
 }
 
 onMounted(() => {
-  loadModels()
+  loadModels(true)
   connectWebSocket()
 })
 
@@ -856,6 +846,7 @@ function sendMessage() {
   const assistantMessage: ChatMessage = {
     id: `msg-${Date.now() + 1}`,
     role: 'assistant',
+    agentName: '主控 Agent',
     content: '',
     timestamp: new Date().toISOString(),
     activities: [],
@@ -887,12 +878,50 @@ function sendMessage() {
   overflow: hidden;
 }
 
+.chat-left-pane {
+  flex: 0 0 15%;
+  min-width: 240px;
+  max-width: 420px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.chat-right-pane {
+  flex: 0 0 25%;
+  min-width: 300px;
+  height: 100%;
+  overflow: hidden;
+}
+
 .chat-main-area {
-  flex: 1;
+  flex: 0 0 60%;
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+}
+
+.chat-left-pane :deep(.project-sidebar),
+.chat-right-pane :deep(.trace-panel) {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
+@media (max-width: 1280px) {
+  .chat-left-pane {
+    flex-basis: 18%;
+    min-width: 200px;
+  }
+
+  .chat-main-area {
+    flex-basis: 57%;
+  }
+
+  .chat-right-pane {
+    flex-basis: 25%;
+    min-width: 280px;
+  }
 }
 
 .chat-header {
@@ -1523,6 +1552,11 @@ textarea {
 .llm-card {
   background: #e3f2fd;
   border: 1px solid #bbdefb;
+}
+
+.skill-card {
+  background: #f3e8ff;
+  border: 1px solid #e9d5ff;
 }
 
 .activity-running {
