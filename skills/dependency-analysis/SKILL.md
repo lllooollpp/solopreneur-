@@ -25,3 +25,10 @@ always: true
 2. 使用 `delegate_auto(jobs=..., max_parallel=...)`
 3. 对失败分支定向重试（`delegate` 或二次 `delegate_auto`）
 4. 最终由主控 Agent 汇总并给出交付结论
+
+## jobs 编写建议
+
+- `agent`: 选择最匹配的专业 Agent
+- `task`: 明确输入/输出
+- `depends_on`: 能写就写，提升调度准确率
+- `project_dir`: 涉及写文件时必须提供

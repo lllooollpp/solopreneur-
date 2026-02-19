@@ -29,7 +29,7 @@ def get_workspace_path(workspace: str | None = None) -> Path:
     Get the workspace path.
     
     Args:
-        workspace: Optional workspace path. Defaults to current project root.
+        workspace: Optional workspace path. Defaults to a 'workspace' directory under current project root.
     
     Returns:
         Expanded and ensured workspace path.
@@ -37,7 +37,8 @@ def get_workspace_path(workspace: str | None = None) -> Path:
     if workspace:
         path = Path(workspace).expanduser()
     else:
-        path = get_project_root()
+        # 默认使用项目根目录下的 workspace 文件夹，避免与源码混淆
+        path = get_project_root() / "workspace"
     return ensure_dir(path)
 
 

@@ -24,16 +24,94 @@
       <router-link to="/accounts" class="link-btn">前往账号池管理 →</router-link>
     </div>
 
-    <div class="divider">
-      <span>或配置其他 Provider</span>
+    <!-- 本地 OpenAI 标准接口：直接填写区域 -->
+    <div class="vllm-section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="title-icon">🏠</span>
+          <h4>本地 OpenAI 标准接口</h4>
+        </div>
+      </div>
+      <p class="section-desc" style="margin-bottom: 1rem;">
+        本地部署的 OpenAI 兼容接口（vLLM、Ollama 等），填写 API 地址和模型名称即可使用
+      </p>
+
+      <div class="provider-form">
+        <div class="form-row">
+          <div class="form-group form-group-flex">
+            <label>API Base <span class="required">*</span></label>
+            <input
+              v-model="providersConfig.vllm.api_base"
+              placeholder="例如 http://localhost:8000/v1"
+              class="input-field"
+            />
+          </div>
+          <div class="form-group form-group-flex">
+            <label>模型名称 <span class="required">*</span></label>
+            <input
+              v-model="agentDefaults.model"
+              placeholder="例如 Qwen3-32B"
+              class="input-field"
+            />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-group-flex">
+            <label>API Key</label>
+            <input
+              v-model="providersConfig.vllm.api_key"
+              placeholder="本地部署通常填 dummy 即可"
+              class="input-field"
+            />
+            <span class="field-hint">本地服务无需认证时填任意值即可</span>
+          </div>
+          <div class="form-group form-group-flex">
+            <label>Max Tokens</label>
+            <input
+              v-model.number="agentDefaults.max_tokens"
+              type="number"
+              min="1"
+              max="128000"
+              class="input-field"
+            />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group form-group-flex">
+            <label>Temperature: {{ agentDefaults.temperature }}</label>
+            <div class="slider-wrapper">
+              <input
+                v-model.number="agentDefaults.temperature"
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                class="slider"
+              />
+              <span class="slider-value">{{ agentDefaults.temperature }}</span>
+            </div>
+          </div>
+          <div class="form-group form-group-flex">
+            <label>审批模式</label>
+            <select v-model="agentDefaults.review_mode" class="input-field">
+              <option value="auto">自动审核（自动继续执行）</option>
+              <option value="manual">人工审核（先 message 通知并等待确认）</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- 其他 Provider 选择器 -->
+    <div class="divider">
+      <span>或配置云端 Provider</span>
+    </div>
+
+    <!-- 云端 Provider 选择器（不含 vllm 和 copilot） -->
     <div class="provider-selector">
-      <label class="selector-label">选择其他 Provider:</label>
+      <label class="selector-label">选择云端 Provider:</label>
       <div class="provider-tabs">
         <button
-          v-for="opt in otherProviderOptions"
+          v-for="opt in cloudProviderOptions"
           :key="opt.value"
           :class="['provider-tab', { active: selectedProvider === opt.value }]"
           @click="selectProvider(opt.value)"
@@ -44,7 +122,7 @@
       </div>
     </div>
 
-    <!-- 当前 Provider 配置 -->
+    <!-- 当前云端 Provider 配置 -->
     <div class="config-panel">
       <div class="provider-header">
         <div class="provider-title">
@@ -96,54 +174,22 @@
             </select>
           </div>
         </div>
+      </div>
+    </div>
 
-        <div class="form-group">
-          <label>Max Tokens</label>
-          <input
-            v-model.number="agentDefaults.max_tokens"
-            type="number"
-            min="1"
-            max="128000"
-            class="input-field"
-          />
-        </div>
+    <!-- 统一保存与测试按钮 -->
+    <div class="config-panel save-panel">
+      <div class="form-actions">
+        <button class="btn-test" @click="testConnection" :disabled="testing">
+          {{ testing ? '⏳ 测试中...' : '🔍 测试连接' }}
+        </button>
+        <button class="btn-save" @click="saveConfig" :disabled="saving">
+          {{ saving ? '⏳ 保存中...' : '💾 保存配置' }}
+        </button>
+      </div>
 
-        <div class="form-group">
-          <label>Temperature: {{ agentDefaults.temperature }}</label>
-          <div class="slider-wrapper">
-            <input
-              v-model.number="agentDefaults.temperature"
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              class="slider"
-            />
-            <span class="slider-value">{{ agentDefaults.temperature }}</span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>审批模式</label>
-          <select v-model="agentDefaults.review_mode" class="input-field">
-            <option value="auto">自动审核（自动继续执行）</option>
-            <option value="manual">人工审核（先 message 通知并等待确认）</option>
-          </select>
-          <span class="field-hint">控制任务推进时是否需要用户确认</span>
-        </div>
-
-        <div class="form-actions">
-          <button class="btn-test" @click="testConnection" :disabled="testing">
-            {{ testing ? '⏳ 测试中...' : '🔍 测试连接' }}
-          </button>
-          <button class="btn-save" @click="saveConfig" :disabled="saving">
-            {{ saving ? '⏳ 保存中...' : '💾 保存配置' }}
-          </button>
-        </div>
-
-        <div v-if="testResult" :class="['test-result', testResult.success ? 'success' : 'error']">
-          {{ testResult.success ? '✅' : '❌' }} {{ testResult.success ? '连接成功' : testResult.error }}
-        </div>
+      <div v-if="testResult" :class="['test-result', testResult.success ? 'success' : 'error']">
+        {{ testResult.success ? '✅' : '❌' }} {{ testResult.success ? '连接成功' : testResult.error }}
       </div>
     </div>
 
@@ -177,7 +223,7 @@ import { getProvidersConfig, updateProvidersConfig, getAgentDefaults, updateAgen
 // Copilot 优先级开关
 const copilotPriority = ref(false)
 
-const selectedProvider = ref<ProviderType>('vllm')  // 默认选择本地 Provider
+const selectedProvider = ref<ProviderType>('openai')  // 默认选择 OpenAI（云端）
 const showApiKey = ref(false)
 const testing = ref(false)
 const saving = ref(false)
@@ -195,7 +241,7 @@ const providersConfig = reactive({
 })
 
 const agentDefaults = reactive({
-  model: 'llama-3-8b',
+  model: 'Qwen3-32B',
   max_tokens: 8192,
   temperature: 0.7,
   review_mode: 'auto' as 'auto' | 'manual',
@@ -203,9 +249,9 @@ const agentDefaults = reactive({
 
 const selectedModelSuggestion = ref('')
 
-// 过滤掉 copilot，只显示其他 Provider
-const otherProviderOptions = computed(() => {
-  return PROVIDER_OPTIONS.filter(opt => opt.value !== 'copilot')
+// 过滤掉 copilot 和 vllm，只显示云端 Provider
+const cloudProviderOptions = computed(() => {
+  return PROVIDER_OPTIONS.filter(opt => opt.value !== 'copilot' && opt.value !== 'vllm')
 })
 
 const currentProviderOption = computed(() => {
@@ -279,7 +325,12 @@ async function testConnection() {
   testing.value = true
   testResult.value = null
   try {
-    const result = await testProviderConnection(selectedProvider.value, currentConfig.value)
+    // 优先测试本地 vLLM（如果配置了 api_base）；否则测试当前选中的云端 Provider
+    const testProvider = providersConfig.vllm.api_base ? 'vllm' : selectedProvider.value
+    const testConfig = testProvider === 'vllm'
+      ? providersConfig.vllm
+      : currentConfig.value
+    const result = await testProviderConnection(testProvider, testConfig)
     testResult.value = result
   } catch (e: any) {
     testResult.value = { success: false, error: e.response?.data?.detail || e.message || '测试失败' }
@@ -669,6 +720,41 @@ onMounted(() => {
 
 .btn-primary:hover {
   background: #1565c0;
+}
+
+/* 新增样式：vLLM 独立区域 */
+.vllm-section {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 2px solid #a5d6a7;
+}
+
+.vllm-section .section-title h4 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-group-flex {
+  flex: 1;
+  min-width: 0;
+}
+
+.required {
+  color: #e53935;
+  font-weight: 700;
+}
+
+.save-panel {
+  margin-top: 1.5rem;
 }
 
 /* 新增样式：Copilot 区域和分隔符 */

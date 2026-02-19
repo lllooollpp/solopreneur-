@@ -15,7 +15,11 @@ ENV/
 # Solopreneur
 .solopreneur/
 .compaction/
-memory/memory_search.db
+memory/
+skills/
+agents/
+workspace/
+memory_search.db
 logs/
 
 # IDE
