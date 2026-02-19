@@ -80,15 +80,15 @@ async def get_models():
 
             # 检测当前使用的 Provider
             if providers_config.vllm.api_base:
-                # 当配置了本地 vLLM 接口时，优先返回 local 标识和默认模型（从 config.agents.defaults.model 中读取）
-                default_model = getattr(config.agents.defaults, 'model', None)
+                # 当配置了本地 vLLM 接口时，直接使用用户配置的模型
+                default_model = getattr(config.agents.defaults, 'model', None) or 'Qwen3-32B'
                 return {
-                    "models": ["llama-3-8b", "llama-3-70b", "qwen-7b", "qwen-14b", "yi-34b", "your-model-name"],
+                    "models": [default_model],
                     "default_model": default_model,
                     "local": True,
                     "authenticated": True,
                     "provider": "vllm",
-                    "note": "本地 vLLM/OpenAI 兼容接口，请根据实际部署的模型填写模型名称"
+                    "note": "本地 vLLM/OpenAI 兼容接口"
                 }
             elif providers_config.zhipu.api_key:
                 return {
