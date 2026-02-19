@@ -233,7 +233,7 @@
     
     <!-- 右侧监控面板 -->
     <div class="chat-right-pane">
-      <TracePanel ref="tracePanelRef" />
+      <TracePanel ref="tracePanelRef" :session-key="webSessionKey" />
     </div>
     
     <!-- 生成 Wiki 对话框 -->
@@ -381,6 +381,11 @@ const currentHasContent = computed(() => {
   if (!currentAssistantMessageId) return false
   const msg = messages.value.find(m => m.id === currentAssistantMessageId)
   return msg ? msg.content.length > 0 : false
+})
+
+/** 后端使用的 session key，格式为 web:{sessionId} */
+const webSessionKey = computed(() => {
+  return sessionId.value ? `web:${sessionId.value}` : ''
 })
 
 /** 渲染 Markdown */

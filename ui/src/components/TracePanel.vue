@@ -315,7 +315,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, reactive } from 'vue'
+import { ref, computed, nextTick, reactive, watch, onMounted } from 'vue'
+import { listTraceRequests, getTraceEvents } from '@/services/traceApi'
+import type { TraceRequest } from '@/services/traceApi'
 
 interface TraceEvent {
   event: string
@@ -327,6 +329,7 @@ interface HistoryRecord {
   totalTokens: number
   totalDurationMs: number
   events: TraceEvent[]
+  requestId?: string
 }
 
 interface ChainStep {
@@ -355,6 +358,10 @@ interface OfficeWorker {
   status: 'busy' | 'done' | 'idle'
 }
 
+const props = defineProps<{
+  sessionKey?: string
+}>()
+
 const isCollapsed = ref(false)
 const traceEvents = ref<TraceEvent[]>([])
 const history = ref<HistoryRecord[]>([])
@@ -363,6 +370,7 @@ const expandedSteps = reactive(new Set<string>())
 const expandedRaw = reactive(new Set<number>())
 const timelineRef = ref<HTMLElement>()
 const selectedAgent = ref<string>('')
+const isLoadingHistory = ref(false)
 
 // 会话累积统计
 const sessionSummary = reactive({
@@ -702,7 +710,109 @@ function viewHistory(idx: number) {
   }
 }
 
-defineExpose({ handleTraceEvent })
+/**
+ * 从后端加载持久化的 trace 历史记录，恢复 history 列表和会话统计。
+ * 在挂载时 & sessionKey 变化时调用。
+ */
+async function loadPersistedTraces() {
+  const sk = props.sessionKey
+  if (!sk) return
+
+  isLoadingHistory.value = true
+  try {
+    // 1. 获取该 session 的所有 request 列表
+    const requests: TraceRequest[] = await listTraceRequests(sk)
+    if (requests.length === 0) return
+
+    // 2. 对每个请求加载事件，重建 history
+    const restored: HistoryRecord[] = []
+    let cumTokens = 0
+    let cumPrompt = 0
+    let cumCompletion = 0
+    let cumLlm = 0
+    let cumTool = 0
+
+    // 只加载最近 20 条历史（与内存中 history 上限保持一致）
+    const toLoad = requests.slice(0, 20)
+
+    for (const req of toLoad) {
+      const records = await getTraceEvents(sk, req.request_id, 500)
+      if (records.length === 0) continue
+
+      const events: TraceEvent[] = records.map(r => r.data as TraceEvent)
+      const endEvt = events.find(e => e.event === 'end')
+
+      // 累积会话统计
+      for (const e of events) {
+        if (e.event === 'llm_end') {
+          cumTokens += (e.total_tokens || 0)
+          cumPrompt += (e.prompt_tokens || 0)
+          cumCompletion += (e.completion_tokens || 0)
+          cumLlm += 1
+        } else if (e.event === 'tool_start') {
+          cumTool += 1
+        }
+      }
+
+      restored.push({
+        timestamp: endEvt?.timestamp || (new Date(req.started_at).getTime() / 1000),
+        totalTokens: endEvt?.total_tokens || 0,
+        totalDurationMs: endEvt?.total_duration_ms || 0,
+        events,
+        requestId: req.request_id,
+      })
+    }
+
+    // 3. 恢复到 history（最新的排在前面）
+    history.value = restored
+
+    // 4. 恢复会话累积统计
+    sessionSummary.totalTokens = cumTokens
+    sessionSummary.promptTokens = cumPrompt
+    sessionSummary.completionTokens = cumCompletion
+    sessionSummary.llmCalls = cumLlm
+    sessionSummary.toolCalls = cumTool
+
+    // 5. 将最近一次请求的事件作为当前显示
+    if (restored.length > 0) {
+      const latest = restored[0]
+      traceEvents.value = [...latest.events]
+    }
+
+    console.log(`TracePanel: restored ${restored.length} history records from backend`)
+  } catch (err) {
+    console.warn('TracePanel: failed to load persisted traces', err)
+  } finally {
+    isLoadingHistory.value = false
+  }
+}
+
+// 挂载时自动加载
+onMounted(() => {
+  loadPersistedTraces()
+})
+
+// sessionKey 变化时重新加载
+watch(() => props.sessionKey, (newKey, oldKey) => {
+  if (newKey && newKey !== oldKey) {
+    // 重置当前状态
+    traceEvents.value = []
+    history.value = []
+    expandedArgs.clear()
+    expandedSteps.clear()
+    expandedRaw.clear()
+    selectedAgent.value = ''
+    sessionSummary.totalTokens = 0
+    sessionSummary.promptTokens = 0
+    sessionSummary.completionTokens = 0
+    sessionSummary.llmCalls = 0
+    sessionSummary.toolCalls = 0
+    // 加载新 session 的持久化数据
+    loadPersistedTraces()
+  }
+})
+
+defineExpose({ handleTraceEvent, loadPersistedTraces })
 </script>
 
 <style scoped>

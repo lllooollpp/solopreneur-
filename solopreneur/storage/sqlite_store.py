@@ -120,6 +120,23 @@ class SQLiteStore:
                     token TEXT,
                     updated_at TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS trace_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_key TEXT NOT NULL,
+                    request_id TEXT NOT NULL,
+                    project_id TEXT,
+                    event_type TEXT NOT NULL,
+                    agent_name TEXT,
+                    data_json TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_trace_events_session_request
+                ON trace_events(session_key, request_id);
+
+                CREATE INDEX IF NOT EXISTS idx_trace_events_session_time
+                ON trace_events(session_key, created_at);
                 """
             )
 
@@ -504,3 +521,165 @@ class SQLiteStore:
                 (project_id,),
             )
             return result.rowcount > 0
+
+    # ---------- Trace event persistence ----------
+
+    def save_trace_event(
+        self,
+        session_key: str,
+        request_id: str,
+        event_type: str,
+        data: dict[str, Any],
+        project_id: str | None = None,
+        agent_name: str | None = None,
+    ) -> None:
+        """Save a single trace event."""
+        now = datetime.now().isoformat()
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO trace_events(
+                    session_key, request_id, project_id, event_type,
+                    agent_name, data_json, created_at
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_key,
+                    request_id,
+                    project_id,
+                    event_type,
+                    agent_name,
+                    json.dumps(data, ensure_ascii=False),
+                    now,
+                ),
+            )
+
+    def save_trace_events_batch(
+        self,
+        events: list[dict[str, Any]],
+    ) -> None:
+        """Batch-save multiple trace events."""
+        if not events:
+            return
+        now = datetime.now().isoformat()
+        params = []
+        for evt in events:
+            params.append((
+                evt["session_key"],
+                evt["request_id"],
+                evt.get("project_id"),
+                evt["event_type"],
+                evt.get("agent_name"),
+                json.dumps(evt.get("data", {}), ensure_ascii=False),
+                evt.get("created_at", now),
+            ))
+        with self._lock, self._connect() as conn:
+            conn.executemany(
+                """
+                INSERT INTO trace_events(
+                    session_key, request_id, project_id, event_type,
+                    agent_name, data_json, created_at
+                )
+                VALUES(?, ?, ?, ?, ?, ?, ?)
+                """,
+                params,
+            )
+
+    def load_trace_events(
+        self,
+        session_key: str,
+        request_id: str | None = None,
+        limit: int = 500,
+    ) -> list[dict[str, Any]]:
+        """Load trace events for a session, optionally filtered by request_id."""
+        with self._lock, self._connect() as conn:
+            if request_id:
+                rows = conn.execute(
+                    """
+                    SELECT id, session_key, request_id, project_id, event_type,
+                           agent_name, data_json, created_at
+                    FROM trace_events
+                    WHERE session_key = ? AND request_id = ?
+                    ORDER BY id ASC
+                    LIMIT ?
+                    """,
+                    (session_key, request_id, limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT id, session_key, request_id, project_id, event_type,
+                           agent_name, data_json, created_at
+                    FROM trace_events
+                    WHERE session_key = ?
+                    ORDER BY id ASC
+                    LIMIT ?
+                    """,
+                    (session_key, limit),
+                ).fetchall()
+
+        results: list[dict[str, Any]] = []
+        for row in rows:
+            data = {}
+            if row["data_json"]:
+                try:
+                    data = json.loads(row["data_json"])
+                except json.JSONDecodeError:
+                    pass
+            results.append({
+                "id": row["id"],
+                "session_key": row["session_key"],
+                "request_id": row["request_id"],
+                "project_id": row["project_id"],
+                "event_type": row["event_type"],
+                "agent_name": row["agent_name"],
+                "data": data,
+                "created_at": row["created_at"],
+            })
+        return results
+
+    def list_trace_requests(
+        self,
+        session_key: str,
+    ) -> list[dict[str, Any]]:
+        """List distinct request_ids for a session with summary info."""
+        with self._lock, self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT request_id,
+                       MIN(created_at) as started_at,
+                       MAX(created_at) as ended_at,
+                       COUNT(*) as event_count
+                FROM trace_events
+                WHERE session_key = ?
+                GROUP BY request_id
+                ORDER BY MIN(id) DESC
+                """,
+                (session_key,),
+            ).fetchall()
+
+        return [
+            {
+                "request_id": row["request_id"],
+                "started_at": row["started_at"],
+                "ended_at": row["ended_at"],
+                "event_count": row["event_count"],
+            }
+            for row in rows
+        ]
+
+    def delete_trace_events(self, session_key: str, request_id: str | None = None) -> int:
+        """Delete trace events. Returns number of deleted rows."""
+        with self._lock, self._connect() as conn:
+            if request_id:
+                result = conn.execute(
+                    "DELETE FROM trace_events WHERE session_key = ? AND request_id = ?",
+                    (session_key, request_id),
+                )
+            else:
+                result = conn.execute(
+                    "DELETE FROM trace_events WHERE session_key = ?",
+                    (session_key,),
+                )
+            return result.rowcount

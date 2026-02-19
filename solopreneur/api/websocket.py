@@ -9,7 +9,19 @@ import asyncio
 from typing import List
 from datetime import datetime
 
+from solopreneur.storage.services import TracePersistence
+
 router = APIRouter()
+
+# 全局 trace 持久化服务（懒加载）
+_trace_svc: TracePersistence | None = None
+
+
+def _get_trace_svc() -> TracePersistence:
+    global _trace_svc
+    if _trace_svc is None:
+        _trace_svc = TracePersistence()
+    return _trace_svc
 
 
 # ==================== 连接管理器 ====================
@@ -318,6 +330,11 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                         # 保持子 Agent 与主控本次请求模型一致，避免 trace 中模型显示为旧值
                         agent_loop.subagents.model = model
 
+                    # 为本次请求生成唯一 request_id，用于 trace 持久化
+                    import uuid
+                    request_id = f"req-{uuid.uuid4().hex[:12]}"
+                    trace_svc = _get_trace_svc()
+
                     async def send_chunk(text: str):
                         await websocket.send_json({
                             "type": "chunk",
@@ -328,8 +345,24 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                         # 将 trace 事件转发到前端
                         await websocket.send_json({
                             "type": "trace",
+                            "request_id": request_id,
                             **event
                         })
+
+                        # ── 持久化到 SQLite（异步落盘，不阻塞主流） ──
+                        evt_type = event.get("event", "unknown")
+                        try:
+                            trace_svc.save_event(
+                                session_key=session_key,
+                                request_id=request_id,
+                                event_type=evt_type,
+                                data=event,
+                                project_id=project_id,
+                                agent_name=event.get("agent_name"),
+                            )
+                        except Exception as persist_err:
+                            logger.warning(f"Failed to persist trace event: {persist_err}")
+
                         # 工具调用和角色委派事件同时作为 activity 发送到聊天流
                         evt = event.get("event", "")
                         if evt in ("tool_start", "tool_end"):

@@ -11,7 +11,7 @@ import os
 from loguru import logger
 from datetime import datetime
 
-from solopreneur.api.routes import status, wecom, auth, chat, skills, agents, projects, dashboard, providers, metrics, harness
+from solopreneur.api.routes import status, wecom, auth, chat, skills, agents, projects, dashboard, providers, metrics, harness, traces
 from solopreneur.api.websocket import router as ws_router
 from solopreneur.api.middleware import RateLimitMiddleware
 
@@ -85,6 +85,7 @@ app.include_router(projects.router, prefix="/api/v1", tags=["projects"])
 app.include_router(dashboard.router, prefix="/api/v1", tags=["dashboard"])
 app.include_router(metrics.router, prefix="/api/v1", tags=["metrics"])
 app.include_router(harness.router, prefix="/api/v1", tags=["harness"])
+app.include_router(traces.router, prefix="/api/v1", tags=["traces"])
 app.include_router(ws_router, tags=["websocket"])
 
 

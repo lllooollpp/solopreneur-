@@ -145,3 +145,49 @@ class GitCredentialPersistence:
 
     def delete(self, project_id: str) -> bool:
         return self._store.delete_git_credentials(project_id)
+
+
+class TracePersistence:
+    """Persistence service for trace events (audit trail)."""
+
+    def __init__(self, store: SQLiteStore | None = None):
+        self._store = store or SQLiteStore()
+
+    def save_event(
+        self,
+        session_key: str,
+        request_id: str,
+        event_type: str,
+        data: dict[str, Any],
+        project_id: str | None = None,
+        agent_name: str | None = None,
+    ) -> None:
+        self._store.save_trace_event(
+            session_key=session_key,
+            request_id=request_id,
+            event_type=event_type,
+            data=data,
+            project_id=project_id,
+            agent_name=agent_name,
+        )
+
+    def save_batch(self, events: list[dict[str, Any]]) -> None:
+        self._store.save_trace_events_batch(events)
+
+    def load(
+        self,
+        session_key: str,
+        request_id: str | None = None,
+        limit: int = 500,
+    ) -> list[dict[str, Any]]:
+        return self._store.load_trace_events(
+            session_key=session_key,
+            request_id=request_id,
+            limit=limit,
+        )
+
+    def list_requests(self, session_key: str) -> list[dict[str, Any]]:
+        return self._store.list_trace_requests(session_key)
+
+    def delete(self, session_key: str, request_id: str | None = None) -> int:
+        return self._store.delete_trace_events(session_key, request_id)
