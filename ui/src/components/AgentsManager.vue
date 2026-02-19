@@ -101,7 +101,18 @@
             </div>
             <div class="form-group small">
               <label>Emoji</label>
-              <input v-model="newAgent.emoji" placeholder="🤖" maxlength="2" />
+              <div class="emoji-picker-wrapper" @click.stop>
+                <button type="button" class="emoji-trigger" @click.stop="showEmojiPicker = showEmojiPicker === 'create' ? '' : 'create'">
+                  {{ newAgent.emoji || '🤖' }}
+                </button>
+                <div v-if="showEmojiPicker === 'create'" class="emoji-grid">
+                  <span
+                    v-for="e in EMOJI_LIST" :key="e"
+                    class="emoji-option"
+                    @click="newAgent.emoji = e; showEmojiPicker = ''"
+                  >{{ e }}</span>
+                </div>
+              </div>
             </div>
           </div>
           <div class="form-group">
@@ -132,8 +143,33 @@
             </div>
           </div>
           <div class="form-group">
-            <label>技能 (逗号分隔)</label>
-            <input v-model="skillsInput" placeholder="例如: diagnosis, medical_record" />
+            <label>技能</label>
+            <div class="skills-checklist">
+              <label v-for="skill in availableSkills" :key="skill.name" class="skill-item">
+                <input
+                  class="skill-checkbox"
+                  type="checkbox"
+                  :checked="isSkillSelected(newAgent.skills, skill.name)"
+                  @change="toggleSkill('new', skill.name, ($event.target as HTMLInputElement).checked)"
+                />
+                <div class="skill-meta">
+                  <div class="skill-main">
+                    <span class="skill-name">{{ skill.name }}</span>
+                    <span class="skill-source">{{ skill.source }}</span>
+                  </div>
+                  <span class="skill-desc">{{ skill.description }}</span>
+                </div>
+              </label>
+              <div v-if="!availableSkills.length" class="pick-empty">暂无可用技能</div>
+            </div>
+          </div>
+          <div v-if="isCopilotGlobal" class="form-group">
+            <label>专用模型 <span class="label-hint">(不选则使用全局默认)</span></label>
+            <select v-model="newAgent.model" class="model-select">
+              <option :value="null">— 使用全局默认 —</option>
+              <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
+              <option v-if="!availableModels.length" :value="null" disabled>未获取到 Copilot 模型，请先登录 Copilot</option>
+            </select>
           </div>
           <div class="form-actions">
             <button type="button" class="btn-secondary" @click="showCreateModal = false">
@@ -185,6 +221,11 @@
               <span v-for="tool in selectedAgent.tools" :key="tool" class="tag">{{ tool }}</span>
             </div>
           </div>
+          <div v-if="isCopilotGlobal" class="detail-section">
+            <label>专用模型:</label>
+            <span v-if="selectedAgent.model" class="model-badge">{{ selectedAgent.model }}</span>
+            <span v-else class="model-default">跟随全局默认</span>
+          </div>
         </div>
       </div>
     </div>
@@ -204,7 +245,18 @@
             </div>
             <div class="form-group small">
               <label>Emoji</label>
-              <input v-model="editingAgent.emoji" placeholder="🤖" maxlength="2" />
+              <div class="emoji-picker-wrapper" @click.stop>
+                <button type="button" class="emoji-trigger" @click.stop="showEmojiPicker = showEmojiPicker === 'edit' ? '' : 'edit'">
+                  {{ editingAgent.emoji || '🤖' }}
+                </button>
+                <div v-if="showEmojiPicker === 'edit'" class="emoji-grid">
+                  <span
+                    v-for="e in EMOJI_LIST" :key="e"
+                    class="emoji-option"
+                    @click="editingAgent.emoji = e; showEmojiPicker = ''"
+                  >{{ e }}</span>
+                </div>
+              </div>
             </div>
           </div>
           <div class="form-group">
@@ -234,8 +286,33 @@
             </div>
           </div>
           <div class="form-group">
-            <label>技能 (逗号分隔)</label>
-            <input v-model="editingAgent.skills" placeholder="例如: diagnosis, medical_record" />
+            <label>技能</label>
+            <div class="skills-checklist">
+              <label v-for="skill in availableSkills" :key="skill.name" class="skill-item">
+                <input
+                  class="skill-checkbox"
+                  type="checkbox"
+                  :checked="isSkillSelected(editingAgent.skills, skill.name)"
+                  @change="toggleSkill('edit', skill.name, ($event.target as HTMLInputElement).checked)"
+                />
+                <div class="skill-meta">
+                  <div class="skill-main">
+                    <span class="skill-name">{{ skill.name }}</span>
+                    <span class="skill-source">{{ skill.source }}</span>
+                  </div>
+                  <span class="skill-desc">{{ skill.description }}</span>
+                </div>
+              </label>
+              <div v-if="!availableSkills.length" class="pick-empty">暂无可用技能</div>
+            </div>
+          </div>
+          <div v-if="isCopilotGlobal" class="form-group">
+            <label>专用模型 <span class="label-hint">(不选则使用全局默认)</span></label>
+            <select v-model="editingAgent.model" class="model-select">
+              <option :value="null">— 使用全局默认 —</option>
+              <option v-for="m in availableModels" :key="m" :value="m">{{ m }}</option>
+              <option v-if="!availableModels.length" :value="null" disabled>未获取到 Copilot 模型，请先登录 Copilot</option>
+            </select>
           </div>
           <div class="form-actions">
             <button type="button" class="btn-secondary" @click="showEditModal = false">
@@ -252,8 +329,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useAgentsStore, type CreateAgentRequest } from '@/stores/agents'
+import { apiClient } from '@/api/client'
+
+const EMOJI_LIST = [
+  '🤖','👨‍💻','👩‍💻','🧑‍🔬','👩‍⚕️','👨‍⚕️','🧑‍🏫','🧑‍💼','👮','🕵️',
+  '⚙️','🔧','🛠️','🔨','📝','📋','📊','🗂️','🚀','⚡',
+  '🔍','💡','✅','🎯','🌐','🏗️','🔐','🛡️','📡','🧩',
+  '🦊','🦁','🐉','🦅','🐺','🌟','💫','🔮','🌈','🎨',
+]
 
 const agentsStore = useAgentsStore()
 
@@ -264,10 +349,15 @@ const filterSource = ref('')
 const showCreateModal = ref(false)
 const showDetailModal = ref(false)
 const showEditModal = ref(false)
+const showEmojiPicker = ref<'create' | 'edit' | ''>('')
+const availableModels = ref<string[]>([])
+const availableSkills = ref<{name: string, description: string, source: string}[]>([])
+const isCopilotGlobal = ref(false)
 const selectedAgent = computed(() => agentsStore.currentAgent)
 const creating = ref(false)
 const editing = ref(false)
 const editingAgent = ref<Partial<CreateAgentRequest>>({})
+const editingAgentName = ref('')
 
 const newAgent = ref<CreateAgentRequest>({
   name: '',
@@ -278,13 +368,7 @@ const newAgent = ref<CreateAgentRequest>({
   type: 'subagent',
   skills: [],
   max_iterations: 15,
-})
-
-const skillsInput = computed({
-  get: () => newAgent.value.skills?.join(', ') || '',
-  set: (val: string) => {
-    newAgent.value.skills = val.split(',').map(s => s.trim()).filter(Boolean)
-  }
+  model: null,
 })
 
 // Computed
@@ -301,8 +385,97 @@ const filteredAgents = computed(() => {
 })
 
 // Methods
+async function loadModels() {
+  try {
+    if (!isCopilotGlobal.value) {
+      availableModels.value = []
+      return
+    }
+
+    const res = await apiClient.get('/api/auth/copilot-models')
+    availableModels.value = res.models || []
+
+    if (!availableModels.value.length) {
+      const fallback = await apiClient.get('/api/auth/models')
+      availableModels.value = fallback.models || []
+    }
+  } catch (e) {
+    console.error('Failed to load models:', e)
+  }
+}
+
+async function loadProviderMode() {
+  try {
+    const cfg = await apiClient.get('/api/config/providers')
+    isCopilotGlobal.value = !!cfg.copilot_priority
+  } catch (e) {
+    console.error('Failed to load provider mode:', e)
+    isCopilotGlobal.value = false
+  }
+}
+
+async function loadSkills() {
+  try {
+    const res = await apiClient.get('/api/config/skills')
+    availableSkills.value = (res.skills || []).map((s: any) => ({
+      name: String(s.name || '').trim(),
+      description: s.description || s.name,
+      source: s.source || 'unknown',
+    }))
+  } catch (e) {
+    console.error('Failed to load skills:', e)
+  }
+}
+
+function normalizeSkills(skills: unknown): string[] {
+  if (!Array.isArray(skills)) return []
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const item of skills) {
+    const v = String(item || '').trim()
+    if (!v || seen.has(v)) continue
+    seen.add(v)
+    result.push(v)
+  }
+  return result
+}
+
+function isSkillSelected(skills: unknown, skillName: string): boolean {
+  const normalized = normalizeSkills(skills)
+  return normalized.includes(String(skillName || '').trim())
+}
+
+function toggleSkill(target: 'new' | 'edit', skillName: string, checked: boolean) {
+  const name = String(skillName || '').trim()
+  if (!name) return
+
+  const current = target === 'new'
+    ? normalizeSkills(newAgent.value.skills)
+    : normalizeSkills(editingAgent.value.skills)
+
+  const next = checked
+    ? Array.from(new Set([...current, name]))
+    : current.filter(s => s !== name)
+
+  if (target === 'new') {
+    newAgent.value.skills = next
+  } else {
+    editingAgent.value.skills = next
+  }
+}
+
+function closeAllPickers() {
+  showEmojiPicker.value = ''
+}
+
 onMounted(() => {
   agentsStore.loadAgents()
+  Promise.all([loadProviderMode(), loadSkills()]).then(() => loadModels())
+  document.addEventListener('click', closeAllPickers)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeAllPickers)
 })
 
 async function reloadAgents() {
@@ -312,6 +485,7 @@ async function reloadAgents() {
 async function createAgent() {
   creating.value = true
   try {
+    newAgent.value.skills = normalizeSkills(newAgent.value.skills)
     await agentsStore.createAgent(newAgent.value)
     showCreateModal.value = false
     resetForm()
@@ -336,21 +510,24 @@ async function deleteAgent(name: string) {
 }
 
 function editAgent(agent: any) {
+  editingAgentName.value = agent.name || ''
   editingAgent.value = {
     title: agent.title,
     emoji: agent.emoji,
     description: agent.description,
     system_prompt: '', // 需要重新加载详情获取
     type: agent.type,
-    skills: agent.skills || [],
+    skills: normalizeSkills(agent.skills),
     max_iterations: 15,
+    model: null,
   }
   // 加载完整详情
   agentsStore.loadAgentDetail(agent.name).then(() => {
     if (agentsStore.currentAgent) {
       editingAgent.value.system_prompt = agentsStore.currentAgent.system_prompt
-      editingAgent.value.skills = agentsStore.currentAgent.skills || []
+      editingAgent.value.skills = normalizeSkills(agentsStore.currentAgent.skills)
       editingAgent.value.max_iterations = agentsStore.currentAgent.max_iterations
+      editingAgent.value.model = agentsStore.currentAgent.model || null
     }
   })
   showEditModal.value = true
@@ -359,11 +536,19 @@ function editAgent(agent: any) {
 async function updateAgent() {
   editing.value = true
   try {
-    const name = agentsStore.currentAgent?.name
-    if (!name) return
+    const name = editingAgentName.value || agentsStore.currentAgent?.name
+    if (!name) {
+      console.error('No editing agent name found')
+      return
+    }
+
+    if (editingAgent.value.skills !== undefined) {
+      editingAgent.value.skills = normalizeSkills(editingAgent.value.skills)
+    }
     
     await agentsStore.updateAgent(name, editingAgent.value)
     showEditModal.value = false
+    editingAgentName.value = ''
   } finally {
     editing.value = false
   }
@@ -379,6 +564,7 @@ function resetForm() {
     type: 'subagent',
     skills: [],
     max_iterations: 15,
+    model: null,
   }
 }
 </script>
@@ -728,5 +914,292 @@ function resetForm() {
   padding: 0.2rem 0.6rem;
   border-radius: 12px;
   font-size: 0.8rem;
+}
+
+.model-badge {
+  display: inline-block;
+  background: #fff3e0;
+  color: #e65100;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: monospace;
+  border: 1px solid #ffcc80;
+}
+
+.model-default {
+  font-size: 0.85rem;
+  color: #9e9e9e;
+  font-style: italic;
+}
+
+.label-hint {
+  font-size: 0.75rem;
+  color: #9e9e9e;
+  font-weight: normal;
+}
+
+.model-select {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: white;
+  cursor: pointer;
+}
+
+.model-select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.provider-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #9e9e9e;
+}
+
+.multi-select {
+  width: 100%;
+  min-height: 120px;
+  padding: 0.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+}
+
+.multi-select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.skills-checklist {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background: #fff;
+}
+
+.skill-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: start;
+  gap: 0.6rem;
+  padding: 0.45rem 0.25rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.skill-item:hover {
+  background: #f8f9fa;
+}
+
+.skill-checkbox {
+  width: auto !important;
+  margin-top: 0.2rem;
+  cursor: pointer;
+}
+
+.skill-meta {
+  min-width: 0;
+}
+
+.skill-main {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.skill-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.skill-source {
+  font-size: 0.72rem;
+  color: #5f6b7a;
+  background: #eef2f7;
+  border: 1px solid #d9e2ef;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+
+.skill-desc {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: #8c96a3;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Emoji Picker */
+.emoji-picker-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.emoji-trigger {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 1.4rem;
+  line-height: 1;
+  text-align: center;
+  transition: border-color 0.2s;
+  min-width: 52px;
+}
+
+.emoji-trigger:hover {
+  border-color: #1976d2;
+}
+
+.emoji-grid {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 2000;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  min-width: 280px;
+}
+
+.emoji-option {
+  font-size: 1.3rem;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.emoji-option:hover {
+  background: #f0f0f0;
+}
+
+/* Skills / 多选下拉 */
+.multi-pick-wrapper {
+  position: relative;
+}
+
+.multi-pick-trigger {
+  width: 100%;
+  min-height: 38px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  transition: border-color 0.2s;
+}
+
+.multi-pick-trigger:hover {
+  border-color: #1976d2;
+}
+
+.pick-placeholder {
+  color: #aaa;
+  flex: 1;
+}
+
+.pick-tags {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.pick-tag {
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.78rem;
+}
+
+.drop-arrow {
+  color: #9e9e9e;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.multi-pick-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.pick-option {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pick-option:hover {
+  background: #f5f5f5;
+}
+
+.pick-option input[type="checkbox"] {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.pick-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #2c3e50;
+  white-space: nowrap;
+}
+
+.pick-desc {
+  font-size: 0.75rem;
+  color: #9e9e9e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.pick-empty {
+  padding: 0.75rem;
+  text-align: center;
+  color: #9e9e9e;
+  font-size: 0.85rem;
 }
 </style>

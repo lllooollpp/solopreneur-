@@ -164,6 +164,81 @@ async def update_agent_defaults(config: AgentDefaults):
     )
 
 
+class MemorySearchConfigPayload(BaseModel):
+    """Memory Search 配置"""
+    enabled: bool = True
+    embedding_provider: str = "local"
+    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_device: str = "auto"
+    embedding_api_key: str = ""
+    embedding_api_base: str = ""
+    embedding_dimension: int = 384
+    embedding_batch_size: int = 64
+    vector_weight: float = 0.6
+    keyword_weight: float = 0.4
+    max_chunk_size: int = 1200
+    min_chunk_size: int = 100
+    top_k: int = 5
+    min_score: float = 0.1
+    auto_index_on_start: bool = True
+
+
+@router.get("/memory-search")
+async def get_memory_search_config() -> MemorySearchConfigPayload:
+    """获取 Memory Search 配置"""
+    manager = get_component_manager()
+    config = manager.get_config()
+    ms = config.memory_search
+
+    return MemorySearchConfigPayload(
+        enabled=ms.enabled,
+        embedding_provider=ms.embedding_provider,
+        embedding_model=ms.embedding_model,
+        embedding_device=ms.embedding_device,
+        embedding_api_key=ms.embedding_api_key,
+        embedding_api_base=ms.embedding_api_base,
+        embedding_dimension=ms.embedding_dimension,
+        embedding_batch_size=ms.embedding_batch_size,
+        vector_weight=ms.vector_weight,
+        keyword_weight=ms.keyword_weight,
+        max_chunk_size=ms.max_chunk_size,
+        min_chunk_size=ms.min_chunk_size,
+        top_k=ms.top_k,
+        min_score=ms.min_score,
+        auto_index_on_start=ms.auto_index_on_start,
+    )
+
+
+@router.post("/memory-search")
+async def update_memory_search_config(payload: MemorySearchConfigPayload):
+    """更新 Memory Search 配置"""
+    manager = get_component_manager()
+    current_config = manager.get_config()
+    ms = current_config.memory_search
+
+    ms.enabled = payload.enabled
+    ms.embedding_provider = payload.embedding_provider
+    ms.embedding_model = payload.embedding_model
+    ms.embedding_device = payload.embedding_device
+    ms.embedding_api_key = payload.embedding_api_key
+    ms.embedding_api_base = payload.embedding_api_base
+    ms.embedding_dimension = payload.embedding_dimension
+    ms.embedding_batch_size = payload.embedding_batch_size
+    ms.vector_weight = payload.vector_weight
+    ms.keyword_weight = payload.keyword_weight
+    ms.max_chunk_size = payload.max_chunk_size
+    ms.min_chunk_size = payload.min_chunk_size
+    ms.top_k = payload.top_k
+    ms.min_score = payload.min_score
+    ms.auto_index_on_start = payload.auto_index_on_start
+
+    save_config(current_config)
+    manager.reset()
+    logger.info("Memory Search 配置已更新")
+
+    return {"status": "ok", "message": "Memory Search 配置已保存"}
+
+
 @router.post("/providers/test", response_model=TestConnectionResponse)
 async def test_provider_connection(request: TestConnectionRequest) -> TestConnectionResponse:
     """

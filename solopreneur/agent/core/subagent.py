@@ -77,13 +77,15 @@ class SubagentManager:
         session_key: str,
         usage: dict[str, int] | None,
         duration_ms: int,
+        model: str | None = None,
     ) -> None:
         """记录一次子 Agent LLM 调用 usage（失败不影响主流程）。"""
         usage = usage or {}
+        used_model = model or self.model
         try:
             self.usage_store.record(
                 session_key=session_key,
-                model=self.model,
+                model=used_model,
                 prompt_tokens=usage.get("prompt_tokens", 0),
                 completion_tokens=usage.get("completion_tokens", 0),
                 total_tokens=usage.get("total_tokens", 0),
@@ -518,6 +520,7 @@ class SubagentManager:
         task: str,
         context: str = "",
         project_dir: str = "",
+        model_override: str | None = None,
     ) -> str:
         """
         以指定 Agent 同步执行任务并返回结果。
@@ -551,8 +554,10 @@ class SubagentManager:
 
         logger.debug(
             f"[{agent_id}] 参数: task={task[:100] if task else 'None'}..., "
-            f"project_dir={project_dir}, context_len={len(context)}"
+            f"project_dir={project_dir}, context_len={len(context)}, model_override={model_override}"
         )
+
+        run_model = (model_override or agent_def.model or self.model or "").strip() or self.model
 
         try:
             tools = self._build_agent_tools(agent_def, project_dir=project_dir)
@@ -593,7 +598,7 @@ class SubagentManager:
         compactor = CompactionEngine(
             provider=self.provider,
             workspace=self.workspace,
-            model=self.model,
+            model=run_model,
         )
 
         while iteration < max_iterations:
@@ -616,13 +621,13 @@ class SubagentManager:
                         "event": "llm_start",
                         "agent_name": agent_def.name,
                         "iteration": iteration,
-                        "model": self.model,
+                        "model": run_model,
                         "timestamp": llm_start,
                     })
                     response = await self.provider.chat(
                         messages=messages,
                         tools=tools.get_definitions(),
-                        model=self.model,
+                        model=run_model,
                         max_tokens=16384,  # 代码生成需要更多输出空间
                     )
                     llm_duration_ms = int((time.time() - llm_start) * 1000)
@@ -630,13 +635,14 @@ class SubagentManager:
                         session_key=f"subagent:{agent_id}",
                         usage=response.usage,
                         duration_ms=llm_duration_ms,
+                        model=run_model,
                     )
                     logger.info(f"[{agent_id}] ✓ LLM 调用成功 | tool_calls={len(response.tool_calls)} | has_tool_calls={response.has_tool_calls}")
                     await self._emit_trace({
                         "event": "llm_end",
                         "agent_name": agent_def.name,
                         "iteration": iteration,
-                        "model": self.model,
+                        "model": run_model,
                         "duration_ms": llm_duration_ms,
                         "prompt_tokens": (response.usage or {}).get("prompt_tokens", 0),
                         "completion_tokens": (response.usage or {}).get("completion_tokens", 0),

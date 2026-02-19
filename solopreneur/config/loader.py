@@ -54,7 +54,7 @@ def load_config(config_path: Path | None = None, force_reload: bool = False) -> 
 
     if path.exists():
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             config = Config.model_validate(convert_keys(data))
             # 缓存配置和文件修改时间
@@ -65,7 +65,7 @@ def load_config(config_path: Path | None = None, force_reload: bool = False) -> 
             except Exception:
                 _config_cache._mtime = 0
             return config
-        except (json.JSONDecodeError, ValueError) as e:
+        except (json.JSONDecodeError, ValueError, UnicodeDecodeError) as e:
             print(f"警告：无法从 {path} 加载配置: {e}")
             print("正在使用默认配置。")
 
@@ -99,8 +99,8 @@ def save_config(config: Config, config_path: Path | None = None) -> None:
     data = config.model_dump()
     data = convert_to_camel(data)
     
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 def convert_keys(data: Any) -> Any:

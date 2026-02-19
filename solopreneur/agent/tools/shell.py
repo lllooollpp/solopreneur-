@@ -4,7 +4,7 @@ import asyncio
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from solopreneur.agent.tools.base import Tool
 
@@ -61,6 +61,12 @@ class ExecTool(Tool):
         ]
         
         self.restrict_to_workspace = restrict_to_workspace
+        # 实时输出流回调（async callable，每行调用一次）
+        self._stream_callback: Callable[[str], Any] | None = None
+
+    def set_stream_callback(self, callback: Callable[[str], Any] | None) -> None:
+        """注入实时输出回调；传 None 则清除。"""
+        self._stream_callback = callback
     
     @property
     def name(self) -> str:
@@ -97,39 +103,44 @@ class ExecTool(Tool):
             process = await asyncio.create_subprocess_shell(
                 command,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,  # 合并 stderr，按序流式输出
                 cwd=cwd,
             )
-            
+
+            output_lines: list[str] = []
+            cb = self._stream_callback
+
+            async def _read_stream() -> None:
+                assert process.stdout is not None
+                async for raw_line in process.stdout:
+                    line = raw_line.decode("utf-8", errors="replace")
+                    output_lines.append(line)
+                    if cb is not None:
+                        try:
+                            result = cb(line)
+                            if asyncio.iscoroutine(result):
+                                await result
+                        except Exception:
+                            pass
+
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=self.timeout
-                )
+                await asyncio.wait_for(_read_stream(), timeout=self.timeout)
             except asyncio.TimeoutError:
                 process.kill()
                 return f"Error: Command timed out after {self.timeout} seconds"
-            
-            output_parts = []
-            
-            if stdout:
-                output_parts.append(stdout.decode("utf-8", errors="replace"))
-            
-            if stderr:
-                stderr_text = stderr.decode("utf-8", errors="replace")
-                if stderr_text.strip():
-                    output_parts.append(f"STDERR:\n{stderr_text}")
-            
+
+            await process.wait()
+
+            result = "".join(output_lines) if output_lines else "(no output)"
+
             if process.returncode != 0:
-                output_parts.append(f"\nExit code: {process.returncode}")
-            
-            result = "\n".join(output_parts) if output_parts else "(no output)"
-            
-            # Truncate very long output
+                result += f"\nExit code: {process.returncode}"
+
+            # 截断超长输出
             max_len = 10000
             if len(result) > max_len:
                 result = result[:max_len] + f"\n... (truncated, {len(result) - max_len} more chars)"
-            
+
             return result
             
         except Exception as e:

@@ -47,12 +47,13 @@ class TaskValidatorConfig(BaseModel):
     # AI 驱动验证配置
     use_ai_validation: bool = True  # 是否使用 AI 验证（推荐）
     ai_validation_threshold: int = 80  # AI 认为完成的阈值分数（0-100）
+    validator_model: str = ""  # 验证器使用的模型（空字符串=使用 provider 默认模型）
 
 
 class AgentDefaults(BaseModel):
     """Default agent configuration."""
     workspace: str = "~/.solopreneur/workspace"
-    model: str = "claude-sonnet-4"
+    model: str = "Qwen3-32B"
     max_tokens: int = 8192
     temperature: float = 0.7
     max_tool_iterations: int = 20
@@ -61,6 +62,7 @@ class AgentDefaults(BaseModel):
     session_cache_size: int = 100  # Session LRU缓存大小
     agent_timeout: int = 1800  # Agent执行总超时（秒），30分钟
     max_tokens_per_session: int = 500000  # 每个会话最大Token消耗（超限后自动压缩上下文继续执行）
+    history_window: int = 50  # 每次 LLM 调用携带的最大历史消息条数（越大上下文越长）
     task_validator: TaskValidatorConfig = Field(default_factory=TaskValidatorConfig)  # 任务完成验证器
 
 
@@ -112,12 +114,32 @@ class ExecToolConfig(BaseModel):
     restrict_to_workspace: bool = False  # If true, block commands accessing paths outside workspace
     whitelist_mode: bool = False  # 如果为True，只允许白名单中的命令
     max_output_size: int = 10000  # 最大输出大小（字符）
+    console_stream: bool = True   # 命令执行时将输出实时打印到服务端控制台
 
 
 class ToolsConfig(BaseModel):
     """Tools configuration."""
     web: WebToolsConfig = Field(default_factory=WebToolsConfig)
     exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
+
+
+class MemorySearchConfig(BaseModel):
+    """Memory search engine configuration."""
+    enabled: bool = True  # 是否启用语义记忆搜索
+    embedding_provider: str = "auto"  # 嵌入提供商: local / auto / openai / litellm / custom / noop
+    embedding_model: str = "all-MiniLM-L6-v2"  # 嵌入模型名称（local 默认 sentence-transformers 模型）
+    embedding_device: str = "auto"  # 本地模型运行设备: auto / cpu / cuda
+    embedding_api_key: str = ""  # 嵌入 API key（auto 模式自动从 providers 推断）
+    embedding_api_base: str = ""  # 嵌入 API base URL（auto 模式自动从 providers 推断）
+    embedding_dimension: int = 384  # 嵌入向量维度（all-MiniLM-L6-v2 = 384）
+    embedding_batch_size: int = 64  # 嵌入批量大小
+    vector_weight: float = 0.6  # 向量搜索权重 (0~1)
+    keyword_weight: float = 0.4  # 关键词搜索权重 (0~1)
+    max_chunk_size: int = 1200  # 单块最大字符数
+    min_chunk_size: int = 100  # 单块最小字符数
+    top_k: int = 5  # 搜索返回条数
+    min_score: float = 0.1  # 最低融合分数阈值
+    auto_index_on_start: bool = True  # 启动时自动索引记忆目录
 
 
 class TokenPoolConfig(BaseModel):
@@ -137,6 +159,7 @@ class Config(BaseSettings):
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    memory_search: MemorySearchConfig = Field(default_factory=MemorySearchConfig)
     token_pool: TokenPoolConfig = Field(default_factory=TokenPoolConfig)
     
     @property

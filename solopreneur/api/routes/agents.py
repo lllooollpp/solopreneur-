@@ -36,6 +36,7 @@ class AgentDetail(AgentItem):
     max_iterations: int
     temperature: float | None
     output_format: str
+    model: str | None = None  # 该 Agent 专用模型，None 表示使用全局默认
 
 
 class AgentsResponse(BaseModel):
@@ -56,6 +57,7 @@ class AgentCreateRequest(BaseModel):
     max_iterations: int = Field(default=15, ge=1, le=100)
     temperature: float | None = Field(default=None, ge=0, le=2)
     output_format: str = Field(default="")
+    model: str | None = Field(default=None, description="该 Agent 专用模型，留空使用全局默认")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -70,6 +72,7 @@ class AgentUpdateRequest(BaseModel):
     max_iterations: int | None = Field(default=None, ge=1, le=100)
     temperature: float | None = Field(default=None, ge=0, le=2)
     output_format: str | None = None
+    model: str | None = Field(default=None, description="该 Agent 专用模型，留空使用全局默认")
     metadata: Dict[str, Any] | None = None
 
 
@@ -159,6 +162,7 @@ async def get_agent(
             max_iterations=agent.max_iterations,
             temperature=agent.temperature,
             output_format=agent.output_format,
+            model=agent.model,
         )
         
     except HTTPException:
@@ -202,6 +206,7 @@ async def create_agent(request: AgentCreateRequest):
             max_iterations=request.max_iterations,
             temperature=request.temperature,
             output_format=request.output_format,
+            model=request.model or None,
             metadata={**request.metadata, "source": "custom", "domain": "custom"},
         )
         
@@ -266,6 +271,9 @@ async def update_agent(
             update_data["temperature"] = request.temperature
         if request.output_format is not None:
             update_data["output_format"] = request.output_format
+        if "model" in request.model_fields_set:
+            # 前端明确传入了 model 字段（包括 null = 使用全局默认）
+            update_data["model"] = request.model.strip() if request.model else None
         if request.metadata is not None:
             update_data["metadata"] = request.metadata
         

@@ -528,7 +528,7 @@ class GitHubCopilotProvider(LLMProvider):
                 return default_models
 
         except Exception as e:
-            logger.error(f"Failed to fetch models from API: {e}")
+            logger.error(f"Failed to fetch models from API: {type(e).__name__}: {e}")
             # 如果获取失败但有缓存，返回缓存
             if self._models_cache:
                 logger.info(f"Using cached models due to API error: {self._models_cache}")

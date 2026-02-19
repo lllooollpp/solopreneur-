@@ -19,3 +19,9 @@ __all__ = [
 	"UsagePersistence",
 	"SubagentTaskPersistence",
 ]
+
+# Lazy import for memory engine (avoid import overhead when not used)
+def get_memory_search_engine():
+	"""Lazy factory for MemorySearchEngine."""
+	from solopreneur.storage.memory_engine.engine import MemorySearchEngine
+	return MemorySearchEngine

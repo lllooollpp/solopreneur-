@@ -1,47 +1,28 @@
-.assets
-.env
-*.pyc
-dist/
+# Gradle
+.gradle/
 build/
-docs/
-*.egg-info/
-*.egg
-*.pyc
-*.pyo
-*.pyd
-*.pyw
-*.pyz
-*.pywz
-*.pyzz
 
 # Python
 __pycache__/
-.venv/
-venv/
 *.py[cod]
 *$py.class
+.venv/
+venv/
+ENV/
+.env
+.pytest_cache/
 
-# Node.js / Frontend
-ui/node_modules/
-ui/dist/
-ui/.vscode/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Rust / Tauri
-ui/src-tauri/target/
-ui/src-tauri/WixTools/
-*.rs.bk
-*.rlib
+# Solopreneur
+.solopreneur/
+.compaction/
+memory/memory_search.db
+logs/
 
 # IDE
-.idea/
 .vscode/
-*.swp
-*.swo
-*.swn
+.idea/
+*.iml
+
+# OS
 .DS_Store
 Thumbs.db

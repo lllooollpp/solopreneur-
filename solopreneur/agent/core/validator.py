@@ -112,6 +112,7 @@ class ValidatorConfig:
     # AI 验证配置
     use_ai_validation: bool = True  # 是否使用 AI 验证
     ai_validation_threshold: int = 80  # AI 认为完成的阈值分数
+    validator_model: str = ""  # 验证器使用的模型（空字符串=使用 provider 默认模型）
 
 
 class TaskCompletionValidator:
@@ -206,11 +207,20 @@ class TaskCompletionValidator:
                 feature_status=feature_status,
             )
             
-            # 调用 LLM
-            messages = [{"role": "user", "content": prompt}]
+            # 调用 LLM —— 使用 validator_model（若配置），否则用 provider 默认模型
+            val_model = self.config.validator_model or None
+            if not val_model and self.model:
+                # 尝试获取 provider 支持的模型列表，用第一个兼容模型
+                try:
+                    supported = await self.provider.get_available_models()
+                    if supported:
+                        val_model = supported[0]
+                except Exception:
+                    val_model = None  # 让 provider 自己决定
+            messages = [{'role': 'user', 'content': prompt}]
             response = await self.provider.chat(
                 messages=messages,
-                model=self.model,
+                model=val_model,
                 temperature=0.3,  # 低温度以获得更一致的判断
             )
             

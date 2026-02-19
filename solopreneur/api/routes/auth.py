@@ -27,6 +27,29 @@ def get_copilot_provider() -> GitHubCopilotProvider:
 # 模型 API
 # ========================================================================
 
+@router.get("/auth/copilot-models")
+async def get_copilot_models():
+    """
+    获取 Copilot 可用模型列表（专供 Agent 专用模型配置使用）
+
+    只要 Copilot 已登录（有有效 slot）就返回模型列表，
+    不受 copilot_priority 开关影响。
+    """
+    try:
+        from solopreneur.core.dependencies import get_component_manager
+        manager = get_component_manager()
+        copilot_provider = manager.get_copilot_provider()
+
+        if copilot_provider.pool.size == 0:
+            return {"models": [], "authenticated": False}
+
+        models = await copilot_provider.get_available_models()
+        return {"models": models, "authenticated": True}
+    except Exception as e:
+        logger.error(f"获取 Copilot 模型列表失败: {e}")
+        return {"models": [], "authenticated": False}
+
+
 @router.get("/auth/models")
 async def get_models():
     """获取可用的模型列表"""

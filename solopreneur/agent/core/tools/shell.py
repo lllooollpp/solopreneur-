@@ -6,8 +6,9 @@ import os
 import re
 import subprocess
 import sys
+import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from solopreneur.agent.core.tools.base import Tool
 
@@ -23,10 +24,12 @@ class ExecTool(Tool):
         allow_patterns: list[str] | None = None,
         restrict_to_workspace: bool = False,
         whitelist_mode: bool = False,
+        console_stream: bool = True,
     ):
         self.timeout = timeout
         self.working_dir = working_dir
         self.whitelist_mode = whitelist_mode
+        self.console_stream = console_stream
         
         # 增强的危险命令模式
         self.deny_patterns = deny_patterns or [
@@ -71,6 +74,12 @@ class ExecTool(Tool):
         ]
         
         self.restrict_to_workspace = restrict_to_workspace
+        # 实时输出流回调（每行调用一次，从线程安全地推送到 async 侧）
+        self._stream_callback: Callable[[str], None] | None = None
+
+    def set_stream_callback(self, callback: Callable[[str], None] | None) -> None:
+        """注入实时输出回调；传 None 则清除。"""
+        self._stream_callback = callback
     
     @property
     def name(self) -> str:
@@ -119,47 +128,65 @@ class ExecTool(Tool):
             return f"Error executing command: {str(e)}"
 
     def _run_command_sync(self, command: str, cwd: str) -> str:
-        """在线程池中同步执行命令（兼容所有事件循环）。"""
+        """在线程池中同步执行命令，逐行读取输出并通过回调实时推送。"""
         try:
-            # 在 Windows 上确保子进程继承 PATH
             env = os.environ.copy()
             if sys.platform == "win32":
                 env.setdefault("PYTHONIOENCODING", "utf-8")
 
-            proc = subprocess.run(
+            proc = subprocess.Popen(
                 command,
                 shell=True,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stderr=subprocess.STDOUT,   # stderr 合并进 stdout，便于按序流式输出
                 cwd=cwd,
-                timeout=self.timeout,
                 env=env,
             )
 
-            output_parts = []
+            timed_out = threading.Event()
 
-            if proc.stdout:
-                output_parts.append(proc.stdout.decode("utf-8", errors="replace"))
+            def _kill_on_timeout() -> None:
+                timed_out.set()
+                proc.kill()
 
-            if proc.stderr:
-                stderr_text = proc.stderr.decode("utf-8", errors="replace")
-                if stderr_text.strip():
-                    output_parts.append(f"STDERR:\n{stderr_text}")
+            timer = threading.Timer(self.timeout, _kill_on_timeout)
+            cb = self._stream_callback
+            output_lines: list[str] = []
+
+            try:
+                timer.start()
+                assert proc.stdout is not None
+                for raw_line in iter(proc.stdout.readline, b""):
+                    line = raw_line.decode("utf-8", errors="replace")
+                    output_lines.append(line)
+                    if self.console_stream:
+                        sys.stdout.write(line)
+                        sys.stdout.flush()
+                    if cb is not None:
+                        try:
+                            cb(line)
+                        except Exception:
+                            pass  # 回调异常不影响命令执行
+                proc.stdout.close()
+                proc.wait()
+            finally:
+                timer.cancel()
+
+            if timed_out.is_set():
+                return f"Error: Command timed out after {self.timeout} seconds"
+
+            result = "".join(output_lines) if output_lines else "(no output)"
 
             if proc.returncode != 0:
-                output_parts.append(f"\nExit code: {proc.returncode}")
+                result += f"\nExit code: {proc.returncode}"
 
-            result = "\n".join(output_parts) if output_parts else "(no output)"
-
-            # Truncate very long output
+            # 截断超长输出
             max_len = 10000
             if len(result) > max_len:
                 result = result[:max_len] + f"\n... (truncated, {len(result) - max_len} more chars)"
 
             return result
 
-        except subprocess.TimeoutExpired:
-            return f"Error: Command timed out after {self.timeout} seconds"
         except Exception as e:
             return f"Error executing command: {str(e)}"
 

@@ -1,6 +1,6 @@
 ﻿<div align="center">
   <img src="solopreneur_logo.png" alt="solopreneur" width="420">
-  <h1>solopreneur：可配置的多领域 AI Agent 框架</h1>
+  <h1>solopreneur：面向一人软件公司的 AI 执行平台</h1>
   <p>
     <a href="https://pypi.org/project/solopreneur-ai/"><img src="https://img.shields.io/pypi/v/solopreneur-ai" alt="PyPI"></a>
     <a href="https://pepy.tech/project/solopreneur-ai"><img src="https://static.pepy.tech/badge/solopreneur-ai" alt="Downloads"></a>
@@ -11,18 +11,19 @@
   </p>
 </div>
 
-🐈 **solopreneur** 是一个轻量级、可配置的多领域 AI Agent 框架。通过 YAML/JSON 配置即可定义任意领域的 Agent（软件工程、医疗、法律、教育等），支持多 LLM 提供商、多聊天渠道、工具调用和 Agent 协作。核心代码约 4,000 行，易于理解、修改和部署。
+🐈 **solopreneur** 是一个轻量级、可配置的 AI Agent 执行平台，核心定位是服务**一人软件公司**（Solo Founder / Solo Dev）从需求到交付的完整流程。它支持多 LLM 提供商、多聊天入口、工具调用、项目级上下文与多 Agent 协作，帮助你把“聊天”变成“可执行的工程动作”。
 
 ## 核心特性
 
-- **完全可配置的 Agent 系统**：通过 YAML/JSON 定义 Agent，支持任意领域
-- **Agent 循环**：支持工具调用（最多 20 次迭代）、上下文三层压缩、Token 限制和超时控制（30 分钟）
+- **面向一人软件公司的 Agent 系统**：通过 YAML/JSON 定义角色分工（产品、架构、开发、测试、运维）
+- **Agent 循环**：支持工具调用（最多 20 次迭代）、上下文三层压缩、Token 限制和超时控制（30 分钟），具备工具调用强提示保障（防止只说不做）
 - **多 LLM 支持**：通过 LiteLLM 支持 OpenRouter、Anthropic、OpenAI、Gemini、Groq、火山引擎（智谱）、vLLM/本地模型，以及 GitHub Copilot（多账号 Token 池）
-- **Provider 优先级控制**：可配置 Copilot 优先或使用其他 Provider
-- **Web UI 界面**：支持项目管理、实时对话、调用链路监控、Wiki 文档生成
-- **工具系统**：文件操作、Shell 执行、Web 搜索/获取、消息发送、子 Agent 衍生、Agent 委派、工作流执行
+- **语义记忆系统**：除了传统的每日笔记（Markdown），新增基于向量+关键词的混合搜索记忆引擎，支持实时语义召回
+- **子 Agent 系统**：支持 Spawn（后台异步）和 Delegate（同步委派）模式，具备并行执行能力和角色工具隔离
+- **Web UI 界面**：支持项目管理、实时对话、多级调用链路监控、Wiki 文档生成、记忆检索配置
+- **工具系统**：文件操作（含智能 Edit）、Shell 执行、Web 搜索/获取、消息发送、子 Agent 衍生、Agent 委派、工作流执行、数据库/Git 审计
 - **项目环境变量**：每个项目可配置专属环境变量（数据库、私服、中间件等），AI 自动感知使用
-- **多领域预设 Agent**：软件工程、医疗、法律、通用等领域预设 Agent
+- **软件交付预设 Agent**：内置产品、架构、开发、测试（具备自动执行保障）、运维等软件交付角色
 - **工作流引擎**：预定义流水线（功能开发、Bug 修复等），支持自动和分步交互模式
 - **聊天渠道**：WhatsApp、Telegram、企业微信（WeCom），支持白名单权限控制
 - **记忆系统**：每日笔记（YYYY-MM-DD.md）+ 长期记忆（MEMORY.md）
@@ -482,6 +483,22 @@ Agent 可用的工具：
 
 ## 最近更新
 
+### v0.5.x - 子 Agent 增强与执行保障
+
+**新增功能**：
+- 🤖 **子 Agent 2.0**：支持后台异步 (`spawn`) 与同步流程 (`run_with_agent`) 双模式。
+- 🛡️ **执行保障机制**：针对 Developer/Tester 等角色引入工具调用强约束（Tool Guardrails），防止 Agent 只输出 Markdown 代码块而不进行实际文件写入或测试运行。
+- ⚡ **并行任务执行**：支持多 Agent 任务并行分发与结果汇总。
+- 🔍 **全链路 Trace**：实时监控 Agent 的 LLM 调用、工具执行和状态流转。
+
+### v0.4.x - 语义记忆系统与 UI 增强
+
+**新增功能**：
+- 🧠 **语义记忆引擎**：集成 `all-MiniLM-L6-v2` 向量搜索，支持对历史记忆和本地文档的混合语义召回。
+- 🔍 **Memory Search UI**：在前端增加记忆检索面板，支持实时测试搜索效果。
+- 🖇️ **存储层重构**：引入 SQLite 作为统一的持久化后端，管理 Session、项目、凭证和子任务状态。
+- 📊 **Usage 实时追踪**：精细化记录每个 Slot、每个 Agent 的 Token 消耗与执行耗时。
+
 ### v0.3.x - 项目环境变量与配置提取
 
 **新增功能**：
@@ -519,4 +536,4 @@ Agent 可用的工具：
 
 ---
 
-<p align="center">🐈 solopreneur - 轻量级 AI Agent 框架</p>
+<p align="center">🐈 solopreneur - 一人软件公司的 AI 执行平台</p>

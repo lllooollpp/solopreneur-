@@ -52,6 +52,8 @@ class AgentLoop:
         exec_config: "ExecToolConfig | None" = None,
         max_session_tokens: int = 0,
         max_total_time: int = 0,
+        memory_search_config: dict | None = None,
+        history_window: int = 50,
     ):
         from solopreneur.config.schema import ExecToolConfig
         self.bus = bus
@@ -63,8 +65,9 @@ class AgentLoop:
         self.exec_config = exec_config or ExecToolConfig()
         self.max_session_tokens = max_session_tokens or DEFAULT_MAX_TOKENS_PER_SESSION
         self.max_total_time = max_total_time or DEFAULT_MAX_TOTAL_TIME
+        self.history_window = history_window
         
-        self.context = ContextBuilder(workspace)
+        self.context = ContextBuilder(workspace, memory_search_config=memory_search_config)
         self.sessions = SessionManager(workspace)
         self.tools = ToolRegistry()
         self.subagents = SubagentManager(
@@ -226,11 +229,15 @@ class AgentLoop:
         if isinstance(spawn_tool, SpawnTool):
             spawn_tool.set_context(msg.channel, msg.chat_id)
         
+        # 语义记忆检索（将用户消息作为 query）
+        _semantic_mem = await self.context.fetch_semantic_memory(msg.content)
+
         # 构建初始消息（使用 get_history 获取 LLM 格式的消息）
         messages = self.context.build_messages(
-            history=session.get_history(),
+            history=session.get_history(self.history_window),
             current_message=msg.content,
             media=msg.media if msg.media else None,
+            semantic_memory=_semantic_mem,
         )
         
         # Agent 循环 - 添加安全限制
@@ -362,10 +369,14 @@ class AgentLoop:
         if isinstance(spawn_tool, SpawnTool):
             spawn_tool.set_context(origin_channel, origin_chat_id)
         
+        # 语义记忆检索
+        _semantic_mem = await self.context.fetch_semantic_memory(msg.content)
+
         # 使用宣告内容构建消息
         messages = self.context.build_messages(
-            history=session.get_history(),
-            current_message=msg.content
+            history=session.get_history(self.history_window),
+            current_message=msg.content,
+            semantic_memory=_semantic_mem,
         )
         
         # Agent 循环（针对宣告处理进行了限制）
@@ -492,9 +503,13 @@ class AgentLoop:
         if isinstance(spawn_tool, SpawnTool):
             spawn_tool.set_context(msg.channel, msg.chat_id)
 
+        # 语义记忆检索
+        _semantic_mem = await self.context.fetch_semantic_memory(msg.content)
+
         messages = self.context.build_messages(
-            history=session.get_history(),
+            history=session.get_history(self.history_window),
             current_message=msg.content,
+            semantic_memory=_semantic_mem,
         )
 
         iteration = 0

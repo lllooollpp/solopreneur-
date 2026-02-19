@@ -48,6 +48,11 @@
       <ProviderConfig />
     </div>
 
+    <!-- 记忆搜索引擎配置 -->
+    <div class="config-section">
+      <MemorySearchConfig />
+    </div>
+
     <!-- Agent 个性配置区域 -->
     <div class="config-section">
       <h3>🎭 Agent 个性 (SOUL.md)</h3>
@@ -109,6 +114,7 @@ import { getAuthStatus } from '@/api/auth'
 import AgentEditor from '@/components/AgentEditorNew.vue'
 import AgentsManager from '@/components/AgentsManager.vue'
 import ProviderConfig from '@/components/ProviderConfig.vue'
+import MemorySearchConfig from '@/components/MemorySearchConfig.vue'
 
 const skillsStore = useSkillsStore()
 

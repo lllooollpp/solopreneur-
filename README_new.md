@@ -1,6 +1,6 @@
 ﻿<div align="center">
   <img src="solopreneur_logo.png" alt="solopreneur" width="420">
-  <h1>solopreneur：轻量级 AI 代理框架</h1>
+  <h1>solopreneur：一人软件公司的 AI 执行平台</h1>
   <p>
     <a href="https://pypi.org/project/solopreneur-ai/"><img src="https://img.shields.io/pypi/v/solopreneur-ai" alt="PyPI"></a>
     <a href="https://pepy.tech/project/solopreneur-ai"><img src="https://static.pepy.tech/badge/solopreneur-ai" alt="Downloads"></a>
@@ -11,13 +11,13 @@
   </p>
 </div>
 
-🐈 **solopreneur** 是一个轻量级的 AI 代理框架，基于 Python 构建，支持多种 LLM 提供者、聊天渠道和技能扩展。核心代码约 4,000 行，易于理解、修改和部署。
+🐈 **solopreneur** 是一个面向“一人软件公司”的轻量级 AI 执行平台，基于 Python 构建，支持多模型、项目上下文、工具执行和多 Agent 协作，帮助个人开发者从需求到上线完成完整交付。
 
 ## 核心特性
 
 - **多 LLM 提供者支持**：集成 GitHub Copilot、LiteLLM、OpenRouter 等，支持 token 池管理。
 - **聊天渠道**：Telegram、WhatsApp、WeCom（企业微信）等。
-- **技能系统**：内置 GitHub、天气、TMUX 等技能，可扩展。
+- **技能系统**：内置工程研发相关技能（代码、测试、发布、运维等），可扩展。
 - **Web UI**：Vue 3 + TypeScript 前端，支持实时聊天和配置。
 - **Agent 循环**：支持工具调用、记忆和上下文管理。
 - **轻量高效**：低资源占用，快速启动。
@@ -137,4 +137,4 @@ npm run dev
 
 ---
 
-<p align="center">🐈 solopreneur - 轻量级 AI 代理框架</p>
+<p align="center">🐈 solopreneur - 一人软件公司的 AI 执行平台</p>

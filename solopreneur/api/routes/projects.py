@@ -370,6 +370,9 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
         if data.note:
             task_desc += f"Note: {data.note}\n"
 
+        # 模型选择：优先使用请求指定模型；否则跟随当前会话 AgentLoop 模型
+        wiki_model = (data.model or "").strip() or agent_loop.model
+
         # 运行在后台，立即返回任务 id
         task_id = str(uuid.uuid4())[:8]
         task_store = SubagentTaskPersistence()
@@ -409,6 +412,7 @@ async def generate_project_wiki(project_id: str, data: WikiGenerateRequest):
                     task=task_desc,
                     context="",
                     project_dir=str(project.path),
+                    model_override=wiki_model,
                 )
 
                 logger.info("=" * 60)

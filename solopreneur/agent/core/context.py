@@ -19,12 +19,144 @@ class ContextBuilder:
     
     BOOTSTRAP_FILES = ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md", "IDENTITY.md"]
     
-    def __init__(self, workspace: Path):
+    def __init__(self, workspace: Path, memory_search_config: dict | None = None):
         self.workspace = workspace
-        self.memory = MemoryStore(workspace)
+        self._memory_search_config = memory_search_config
+        self.memory = MemoryStore(workspace, memory_search_config=memory_search_config)
         self.skills = SkillsLoader(workspace)
-    
-    def build_system_prompt(self, skill_names: list[str] | None = None, project_info: dict | None = None) -> str:
+        self._memory_indexed: bool = False  # 是否已触发过全局自动索引
+        # 每个项目独立的 MemoryStore 缓存 {project_id -> MemoryStore}
+        self._project_memories: dict[str, MemoryStore] = {}
+        # 已触发过自动索引的项目 ID 集合
+        self._project_indexed: set[str] = set()
+
+    def _get_or_create_project_memory(self, project_info: dict) -> MemoryStore | None:
+        """
+        懒加载：根据 project_info 获取或创建项目级 MemoryStore。
+
+        Returns:
+            MemoryStore 实例；若 project_info 无效或路径不存在，返回 None。
+        """
+        project_id = project_info.get("id", "")
+        project_path_str = project_info.get("path", "")
+        if not project_id or not project_path_str:
+            return None
+
+        # 全局 workspace 与项目 path 相同时无需重复
+        try:
+            proj_path = Path(project_path_str).expanduser().resolve()
+        except Exception:
+            return None
+        if proj_path == self.workspace.resolve():
+            return None
+
+        if project_id not in self._project_memories:
+            self._project_memories[project_id] = MemoryStore(
+                proj_path,
+                memory_search_config=self._memory_search_config,
+            )
+        return self._project_memories[project_id]
+
+    async def fetch_semantic_memory(
+        self,
+        query: str,
+        project_info: dict | None = None,
+    ) -> str:
+        """
+        用当前用户消息作为 query 检索语义记忆。
+
+        策略：
+        - 始终搜索全局记忆 (workspace/memory/)
+        - 若提供了 project_info，额外搜索项目目录的记忆 ({project.path}/memory/)
+        - 两处结果合并后返回
+
+        Returns:
+            格式化的记忆片段字符串，可直接注入 system prompt。
+            若搜索引擎未启用或无结果，返回空字符串。
+        """
+        from loguru import logger
+
+        # 确保索引已建立
+        await self.ensure_memory_indexed(project_info=project_info)
+
+        sections: list[str] = []
+
+        # 1. 全局记忆搜索
+        try:
+            global_result = await self.memory.semantic_search(query)
+            if global_result:
+                sections.append(global_result)
+        except Exception as e:
+            logger.debug(f"Global memory search failed: {e}")
+
+        # 2. 项目级记忆搜索（若有项目且路径不同于全局 workspace）
+        if project_info:
+            proj_memory = self._get_or_create_project_memory(project_info)
+            if proj_memory is not None:
+                try:
+                    proj_result = await proj_memory.semantic_search(query)
+                    if proj_result:
+                        proj_name = project_info.get("name", project_info.get("id", "项目"))
+                        sections.append(f"**[{proj_name} 项目记忆]**\n\n{proj_result}")
+                except Exception as e:
+                    logger.debug(f"Project memory search failed for '{project_info.get('id')}': {e}")
+
+        return "\n\n".join(sections)
+
+    async def ensure_memory_indexed(
+        self,
+        project_info: dict | None = None,
+    ) -> None:
+        """
+        确保记忆文件已被索引（auto_index_on_start）。
+
+        - 全局记忆：在 ContextBuilder 实例生命周期内只执行一次
+        - 项目记忆：每个项目 ID 只执行一次
+        """
+        search_cfg = self._memory_search_config or {}
+        if not search_cfg.get("enabled", True):
+            return
+        if not search_cfg.get("auto_index_on_start", True):
+            return
+
+        from loguru import logger
+
+        # 全局记忆索引（一次性）
+        if not self._memory_indexed:
+            self._memory_indexed = True
+            try:
+                result = await self.memory.index_memory_files()
+                if result:
+                    total = sum(result.values())
+                    logger.info(f"Memory auto-index (global): {len(result)} 文件, {total} 分块")
+            except Exception as e:
+                logger.debug(f"Memory auto-index (global) skipped: {e}")
+
+        # 项目级记忆索引（每个项目一次）
+        if project_info:
+            project_id = project_info.get("id", "")
+            if project_id and project_id not in self._project_indexed:
+                self._project_indexed.add(project_id)
+                proj_memory = self._get_or_create_project_memory(project_info)
+                if proj_memory is not None:
+                    try:
+                        result = await proj_memory.index_memory_files()
+                        if result:
+                            total = sum(result.values())
+                            proj_name = project_info.get("name", project_id)
+                            logger.info(
+                                f"Memory auto-index (project '{proj_name}'): "
+                                f"{len(result)} 文件, {total} 分块"
+                            )
+                    except Exception as e:
+                        logger.debug(f"Memory auto-index (project '{project_id}') skipped: {e}")
+
+    def build_system_prompt(
+        self,
+        skill_names: list[str] | None = None,
+        project_info: dict | None = None,
+        semantic_memory: str | None = None,
+    ) -> str:
         """
         Build the system prompt from bootstrap files, memory, and skills.
         
@@ -51,10 +183,14 @@ class ContextBuilder:
         if bootstrap:
             parts.append(bootstrap)
         
-        # Memory context
+        # Memory context (传统文件读取)
         memory = self.memory.get_memory_context()
         if memory:
             parts.append(f"# Memory\n\n{memory}")
+
+        # Semantic memory (向量+关键词搜索召回，按当前用户 query 检索)
+        if semantic_memory:
+            parts.append(f"# 相关记忆（语义搜索）\n\n{semantic_memory}")
         
         # Skills - progressive loading
         # 1. Always-loaded skills: include full content
@@ -298,6 +434,7 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         skill_names: list[str] | None = None,
         media: list[str] | None = None,
         project_info: dict | None = None,
+        semantic_memory: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         Build the complete message list for an LLM call.
@@ -308,14 +445,15 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
             skill_names: Optional skills to include.
             media: Optional list of local file paths for images/media.
             project_info: Optional project information to include in system prompt.
+            semantic_memory: Optional pre-fetched semantic memory for current query.
 
         Returns:
             List of messages including system prompt.
         """
         messages = []
 
-        # System prompt (with project context)
-        system_prompt = self.build_system_prompt(skill_names, project_info)
+        # System prompt (with project context and semantic memory)
+        system_prompt = self.build_system_prompt(skill_names, project_info, semantic_memory)
         messages.append({"role": "system", "content": system_prompt})
 
         # History

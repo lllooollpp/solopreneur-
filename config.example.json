@@ -35,7 +35,11 @@
 
       "_comment_max_tokens_per_session": "每个会话最大 Token 消耗",
       "_comment_max_tokens_per_session_note": "超限后自动压缩上下文继续执行",
-      "max_tokens_per_session": 500000
+      "max_tokens_per_session": 500000,
+
+      "_comment_history_window": "每次 LLM 调用携带的最大历史消息条数",
+      "_comment_history_window_note": "越大上下文越长、越贵；越小越节省但 Agent 记忆更短",
+      "history_window": 30
     }
   },
 
@@ -120,6 +124,39 @@
       "whitelist_mode": false,
       "max_output_size": 10000
     }
+  },
+
+  "memorySearch": {
+    "_comment": "语义记忆搜索引擎配置",
+    "enabled": true,
+    "_comment_enabled": "是否启用语义记忆搜索（禁用则仅使用传统文件读取）",
+
+    "embeddingProvider": "local",
+    "_comment_embeddingProvider": "嵌入提供商: local / auto / openai / litellm / custom / noop。local=本地 CPU 运行 sentence-transformers，零 API 开销；auto=优先本地，未安装则自动推断",
+
+    "embeddingModel": "all-MiniLM-L6-v2",
+    "_comment_embeddingModel": "本地推荐: all-MiniLM-L6-v2(英+中,384d,~80MB) / BAAI/bge-small-zh-v1.5(中文,512d) / paraphrase-multilingual-MiniLM-L12-v2(多语言,384d)",
+
+    "embeddingDevice": "auto",
+    "_comment_embeddingDevice": "运行设备: auto(自动检测) / cpu(稳定兼容) / cuda(NVIDIA GPU加速)",
+
+    "embeddingApiKey": "",
+    "_comment_embeddingApiKey": "嵌入 API key（local 模式无需填写，留空则自动从 providers 推断）",
+
+    "embeddingApiBase": "",
+    "_comment_embeddingApiBase": "嵌入 API base URL（local 模式无需填写，自定义嵌入服务时填写）",
+
+    "embeddingDimension": 384,
+    "embeddingBatchSize": 64,
+    "vectorWeight": 0.6,
+    "_comment_vectorWeight": "向量搜索权重 (0~1)，与 keywordWeight 之和应为 1",
+    "keywordWeight": 0.4,
+    "maxChunkSize": 1200,
+    "minChunkSize": 100,
+    "topK": 5,
+    "minScore": 0.1,
+    "autoIndexOnStart": true,
+    "_comment_autoIndexOnStart": "启动时自动索引 memory 目录"
   },
 
   "tokenPool": {

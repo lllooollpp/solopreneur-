@@ -69,6 +69,8 @@ class AgentLoop:
         max_session_tokens: int = 0,
         max_total_time: int = 0,
         validator_config: "ValidatorConfig | None" = None,
+        memory_search_config: dict | None = None,
+        history_window: int = 50,
     ):
         from solopreneur.config.schema import ExecToolConfig
         self.bus = bus
@@ -80,8 +82,9 @@ class AgentLoop:
         self.exec_config = exec_config or ExecToolConfig()
         self.max_session_tokens = max_session_tokens or DEFAULT_MAX_TOKENS_PER_SESSION
         self.max_total_time = max_total_time or DEFAULT_MAX_TOTAL_TIME
+        self.history_window = history_window
         
-        self.context = ContextBuilder(workspace)
+        self.context = ContextBuilder(workspace, memory_search_config=memory_search_config)
         self.usage_store = UsagePersistence()
         self.sessions = SessionManager(workspace)
         self.tools = ToolRegistry()
@@ -187,7 +190,7 @@ class AgentLoop:
             最后一次重试失败后抛出异常
         """
         import random
-        from httpx import ReadTimeout, ConnectTimeout, ReadError
+        from httpx import ReadTimeout, ConnectTimeout, ReadError, ConnectError
 
         last_error = None
 
@@ -208,7 +211,7 @@ class AgentLoop:
                     )
                 return response, True
 
-            except (ReadTimeout, ConnectTimeout, ReadError, asyncio.TimeoutError) as e:
+            except (ReadTimeout, ConnectTimeout, ReadError, ConnectError, asyncio.TimeoutError) as e:
                 last_error = e
                 if attempt < LLM_MAX_RETRIES - 1:
                     # 指数退避 + 随机抖动
@@ -259,6 +262,7 @@ class AgentLoop:
             timeout=self.exec_config.timeout,
             restrict_to_workspace=self.exec_config.restrict_to_workspace,
             whitelist_mode=self.exec_config.whitelist_mode,
+            console_stream=self.exec_config.console_stream,
         ))
         
         # Web 工具
@@ -335,6 +339,7 @@ class AgentLoop:
             timeout=self.exec_config.timeout,
             restrict_to_workspace=self.exec_config.restrict_to_workspace,
             whitelist_mode=self.exec_config.whitelist_mode,
+            console_stream=self.exec_config.console_stream,
         ))
 
         # 非路径敏感/状态工具：沿用已注册实例
@@ -437,11 +442,15 @@ class AgentLoop:
         if isinstance(spawn_tool, SpawnTool):
             spawn_tool.set_context(msg.channel, msg.chat_id)
         
+        # 语义记忆检索（将用户消息作为 query）
+        _semantic_mem = await self.context.fetch_semantic_memory(msg.content)
+
         # 构建初始消息（使用 get_history 获取 LLM 格式的消息）
         messages = self.context.build_messages(
-            history=session.get_history(),
+            history=session.get_history(self.history_window),
             current_message=msg.content,
             media=msg.media if msg.media else None,
+            semantic_memory=_semantic_mem,
         )
         
         # Agent 循环 - 添加安全限制
@@ -610,10 +619,14 @@ class AgentLoop:
         if isinstance(spawn_tool, SpawnTool):
             spawn_tool.set_context(origin_channel, origin_chat_id)
         
+        # 语义记忆检索
+        _semantic_mem = await self.context.fetch_semantic_memory(msg.content)
+
         # 使用宣告内容构建消息
         messages = self.context.build_messages(
-            history=session.get_history(),
-            current_message=msg.content
+            history=session.get_history(self.history_window),
+            current_message=msg.content,
+            semantic_memory=_semantic_mem,
         )
         
         # Agent 循环（针对宣告处理进行了限制）
@@ -760,9 +773,12 @@ class AgentLoop:
             harness_context = harness.get_session_context()
             logger.info(f"Harness 已初始化: {harness_context.get('statistics', {})}")
 
-            # effc.md 模式：会话开始时自动运行启动测试
+            # effc.md 模式：会话开始时自动运行启动测试（放入线程池，不阻塞 async 事件循环）
             try:
-                startup_tests = harness.run_session_startup_tests()
+                loop = asyncio.get_event_loop()
+                startup_tests = await loop.run_in_executor(
+                    None, harness.run_session_startup_tests
+                )
                 if not startup_tests["passed"]:
                     logger.warning(f"会话启动测试失败: {startup_tests['summary']}")
                 else:
@@ -779,10 +795,16 @@ class AgentLoop:
         if isinstance(spawn_tool, SpawnTool):
             spawn_tool.set_context(msg.channel, msg.chat_id)
 
+        # 语义记忆检索（含项目级记忆）
+        _semantic_mem = await self.context.fetch_semantic_memory(
+            msg.content, project_info=project_info
+        )
+
         messages = self.context.build_messages(
-            history=session.get_history(),
+            history=session.get_history(self.history_window),
             current_message=msg.content,
             project_info=project_info,
+            semantic_memory=_semantic_mem,
         )
 
         iteration = 0
@@ -1029,9 +1051,41 @@ class AgentLoop:
                         f"正在执行工具：{tool_call.name}，"
                         f"参数：{json.dumps(tool_args)}"
                     )
+
+                    # ── exec 工具：注入实时流式输出回调 ──────────────────────
+                    _exec_tool_for_stream = None
+                    if tool_call.name == "exec" and on_chunk is not None:
+                        _exec_tool_for_stream = request_tools.get("exec")
+                        if _exec_tool_for_stream is not None and hasattr(
+                            _exec_tool_for_stream, "set_stream_callback"
+                        ):
+                            _current_event_loop = asyncio.get_running_loop()
+
+                            def _make_exec_stream_cb(
+                                _loop: asyncio.AbstractEventLoop,
+                                _on_chunk: Any,
+                            ):
+                                def _exec_stream_cb(line: str) -> None:
+                                    asyncio.run_coroutine_threadsafe(
+                                        _on_chunk(line), _loop
+                                    )
+                                return _exec_stream_cb
+
+                            _exec_tool_for_stream.set_stream_callback(
+                                _make_exec_stream_cb(
+                                    _current_event_loop, on_chunk
+                                )
+                            )
+                        else:
+                            _exec_tool_for_stream = None
+
                     result = await request_tools.execute(
                         tool_call.name, tool_args
                     )
+
+                    # ── 清除 exec 流式回调 ────────────────────────────────────
+                    if _exec_tool_for_stream is not None:
+                        _exec_tool_for_stream.set_stream_callback(None)
                     if tool_call.name in {"run_workflow", "delegate", "delegate_parallel", "delegate_auto"}:
                         logger.info(f"请求作用域工作目录: {request_workspace}")
                     tool_end = time.time()

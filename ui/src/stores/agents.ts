@@ -26,6 +26,7 @@ export interface AgentDetail extends Agent {
   max_iterations: number
   temperature: number | null
   output_format: string
+  model: string | null  // 専用模型，null 表示使用全局默认
 }
 
 /**
@@ -43,6 +44,7 @@ export interface CreateAgentRequest {
   max_iterations?: number
   temperature?: number
   output_format?: string
+  model?: string | null  // 専用模型，空字符串或 null 表示使用全局默认
   metadata?: Record<string, any>
 }
 
@@ -110,8 +112,8 @@ export const useAgentsStore = defineStore('agents', () => {
     
     try {
       const response = await client.get(`/api/v1/agents/${name}`)
-      currentAgent.value = response.data
-      return response.data
+      currentAgent.value = response
+      return response
     } catch (err: any) {
       error.value = err.response?.data?.detail || '加载 Agent 详情失败'
       console.error('Failed to load agent detail:', err)
@@ -131,7 +133,7 @@ export const useAgentsStore = defineStore('agents', () => {
     try {
       const response = await client.post('/api/v1/agents', request)
       await loadAgents() // 刷新列表
-      return response.data
+      return response
     } catch (err: any) {
       error.value = err.response?.data?.detail || '创建 Agent 失败'
       console.error('Failed to create agent:', err)
@@ -154,7 +156,7 @@ export const useAgentsStore = defineStore('agents', () => {
       if (currentAgent.value?.name === name) {
         await loadAgentDetail(name) // 刷新当前详情
       }
-      return response.data
+      return response
     } catch (err: any) {
       error.value = err.response?.data?.detail || '更新 Agent 失败'
       console.error('Failed to update agent:', err)

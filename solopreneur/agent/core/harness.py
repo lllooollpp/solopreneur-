@@ -252,27 +252,29 @@ class LongRunningHarness:
 
     def _auto_detect_test_config(self) -> dict:
         """自动检测项目的测试配置"""
-        test_config = {"enabled": True, "commands": [], "block_on_failure": True}
+        commands = []
 
         # 检测 Python 项目
         if (self.workspace / "pyproject.toml").exists() or (self.workspace / "setup.py").exists():
-            test_config["commands"].append({"name": "pytest", "command": "pytest -x -q"})
+            commands.append({"name": "pytest", "command": "pytest -x -q"})
 
         # 检测 Node.js 项目
         if (self.workspace / "package.json").exists():
-            test_config["commands"].append({"name": "npm test", "command": "npm test --if-present"})
+            commands.append({"name": "npm test", "command": "npm test --if-present"})
 
         # 检测 Playwright E2E 测试
         if (self.workspace / "playwright.config.ts").exists() or (self.workspace / "e2e").exists():
-            test_config["commands"].append({"name": "playwright", "command": "npx playwright test --reporter=list"})
+            commands.append({"name": "playwright", "command": "npx playwright test --reporter=list"})
 
-        return test_config
+        # 未检测到任何测试框架 → 禁用，避免对无关目录跑默认命令
+        if not commands:
+            return {"enabled": False, "commands": []}
+
+        return {"enabled": True, "commands": commands, "block_on_failure": True}
 
     def _get_default_test_commands(self) -> list:
-        """获取默认测试命令"""
-        return [
-            {"name": "quick tests", "command": "pytest -x -q --ignore=tests/e2e"}
-        ]
+        """获取默认测试命令（无特征文件时返回空，不强行执行）"""
+        return []
 
     def _run_command(self, command: str) -> dict:
         """运行命令并返回结果"""
@@ -283,7 +285,7 @@ class LongRunningHarness:
                 capture_output=True,
                 text=True,
                 cwd=self.workspace,
-                timeout=300  # 5分钟超时
+                timeout=60  # 最大 60 秒，避免卡死 async 事件循环
             )
 
             return {
@@ -293,7 +295,7 @@ class LongRunningHarness:
                 "exit_code": result.returncode
             }
         except subprocess.TimeoutExpired:
-            return {"command": command, "passed": False, "output": "Command timed out", "exit_code": -1}
+            return {"command": command, "passed": False, "output": "Command timed out (60s)", "exit_code": -1}
         except Exception as e:
             return {"command": command, "passed": False, "output": str(e), "exit_code": -1}
     

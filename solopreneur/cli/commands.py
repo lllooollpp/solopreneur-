@@ -210,6 +210,7 @@ def gateway(
         exec_config=config.tools.exec,
         max_session_tokens=config.agents.defaults.max_tokens_per_session,
         max_total_time=config.agents.defaults.agent_timeout,
+        history_window=config.agents.defaults.history_window,
     )
     
     # 创建定时服务
@@ -320,6 +321,7 @@ def agent(
         exec_config=config.tools.exec,
         max_session_tokens=config.agents.defaults.max_tokens_per_session,
         max_total_time=config.agents.defaults.agent_timeout,
+        history_window=config.agents.defaults.history_window,
     )
     
     if message:

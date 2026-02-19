@@ -161,6 +161,62 @@ def check_dependencies():
     
     log_success("依赖检查完成")
 
+
+def preload_embedding_model():
+    """
+    预加载本地 embedding 模型。
+
+    读取用户配置，如果 embedding_provider 为 "local" 或 "auto"，
+    则在启动主服务之前加载 sentence-transformers 模型到内存，
+    避免首次语义搜索时出现数秒延迟。
+
+    模型会缓存在 LocalEmbedding 的类级别缓存中，
+    后续 uvicorn worker 中的 MemorySearchEngine 将直接复用。
+    """
+    try:
+        from solopreneur.config.loader import load_config
+        config = load_config()
+        ms = config.memory_search
+
+        if not ms.enabled:
+            log_info("Memory Search 已禁用，跳过 embedding 模型预加载")
+            return
+
+        provider = ms.embedding_provider.lower()
+        if provider not in ("local", "auto"):
+            log_info(f"Embedding provider 为 '{provider}'，无需本地预加载")
+            return
+
+        # 检查 sentence-transformers 是否已安装
+        try:
+            import sentence_transformers  # noqa: F401
+        except ImportError:
+            if provider == "local":
+                log_warning(
+                    "sentence-transformers 未安装！本地 embedding 不可用。\n"
+                    "  请运行: pip install sentence-transformers\n"
+                    "  或修改配置 embeddingProvider 为其他值（openai / litellm / noop）"
+                )
+            else:
+                log_info("sentence-transformers 未安装，auto 模式将回退到远程 API")
+            return
+
+        model_name = ms.embedding_model or "all-MiniLM-L6-v2"
+        device = ms.embedding_device or "auto"
+
+        log_info(f"预加载本地 embedding 模型: {model_name} (device={device}) ...")
+
+        from solopreneur.storage.memory_engine.embeddings import LocalEmbedding
+        emb = LocalEmbedding(model=model_name, device=device)
+        emb._ensure_model()  # 触发同步加载（下载 + 初始化）
+
+        dim = emb.dimension()
+        log_success(f"Embedding 模型就绪: {model_name} (dim={dim}, device={emb._get_device()})")
+
+    except Exception as e:
+        log_warning(f"Embedding 模型预加载失败（不影响启动）: {e}")
+        log_debug(f"详情: {e.__class__.__name__}: {e}")
+
 def start_backend():
     """启动后端服务"""
     log_info(f"启动后端服务 (http://{BACKEND_HOST}:{BACKEND_PORT})...")
@@ -178,6 +234,7 @@ def start_backend():
         "solopreneur.api.main:app",
         "--host", BACKEND_HOST,
         "--port", str(BACKEND_PORT),
+        "--ws", "wsproto",
         "--reload",
         "--log-level", "debug"
     ]
@@ -251,20 +308,23 @@ def main():
         # 1. 检查依赖
         check_dependencies()
         
-        # 2. 确保端口空闲
+        # 2. 预加载本地 embedding 模型（非阻塞，失败不影响启动）
+        preload_embedding_model()
+        
+        # 3. 确保端口空闲
         ensure_port_free(BACKEND_PORT, "后端")
         ensure_port_free(FRONTEND_PORT, "前端")
         
-        # 3. 启动后端
+        # 4. 启动后端
         backend_process = start_backend()
         log_success(f"后端进程已启动 (PID: {backend_process.pid})")
         time.sleep(2)  # 等待后端启动
         
-        # 4. 启动前端
+        # 5. 启动前端
         frontend_process = start_frontend()
         log_success(f"前端进程已启动 (PID: {frontend_process.pid})")
         
-        # 5. 显示访问信息
+        # 6. 显示访问信息
         print(f"\n{Colors.BOLD}{Colors.GREEN}{'='*60}{Colors.END}")
         print(f"{Colors.BOLD}{Colors.GREEN}[OK] All services started!{Colors.END}")
         print(f"{Colors.BOLD}{Colors.GREEN}{'='*60}{Colors.END}\n")
@@ -285,7 +345,7 @@ def main():
         print(f"\n  Press {Colors.YELLOW}Ctrl+C{Colors.END} to stop\n")
         print(f"{Colors.BOLD}{Colors.GREEN}{'='*60}{Colors.END}\n")
         
-        # 6. 流式输出日志
+        # 7. 流式输出日志
         import threading
         
         backend_thread = threading.Thread(
@@ -302,7 +362,7 @@ def main():
         backend_thread.start()
         frontend_thread.start()
         
-        # 7. 等待进程
+        # 8. 等待进程
         try:
             backend_process.wait()
             frontend_process.wait()

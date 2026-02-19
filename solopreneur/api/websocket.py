@@ -385,13 +385,19 @@ async def chat_websocket(websocket: WebSocket, token: str | None = Query(None)):
                     "type": "done",
                     "content": response_text
                 })
+            except WebSocketDisconnect:
+                # 客户端已断连，直接向外层抛出，不尝试再发任何消息
+                raise
             except Exception as e:
                 logger.error(f"Chat API error: {e!r}")
                 error_text = str(e) or repr(e)
-                await websocket.send_json({
-                    "type": "error",
-                    "content": f"API 调用失败: {error_text}"
-                })
+                try:
+                    await websocket.send_json({
+                        "type": "error",
+                        "content": f"API 调用失败: {error_text}"
+                    })
+                except Exception:
+                    pass  # 发送失败（如连接已关闭）则静默忽略
     
     except WebSocketDisconnect:
         manager.disconnect_chat(websocket)

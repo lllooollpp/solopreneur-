@@ -49,6 +49,10 @@ class AgentDefinition(BaseModel):
         le=100,
         description="Maximum tool call iterations per request"
     )
+    model: str | None = Field(
+        default=None,
+        description="Model override for this agent (None = use global default)"
+    )
     temperature: float | None = Field(
         default=None,
         ge=0,

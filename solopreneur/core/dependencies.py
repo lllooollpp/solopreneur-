@@ -168,7 +168,44 @@ class ComponentManager:
             max_continuation_prompts=validator_cfg.max_continuation_prompts,
             use_ai_validation=validator_cfg.use_ai_validation,
             ai_validation_threshold=validator_cfg.ai_validation_threshold,
+            validator_model=validator_cfg.validator_model,
         )
+
+        # 构建 memory_search 配置
+        memory_search_cfg = config.memory_search
+
+        # 序列化 providers 配置，供 embedding "auto" 模式推断 api_key / api_base
+        providers_dict = {
+            name: {"api_key": getattr(p, "api_key", ""), "api_base": getattr(p, "api_base", "")}
+            for name, p in [
+                ("vllm", config.providers.vllm),
+                ("zhipu", config.providers.zhipu),
+                ("openrouter", config.providers.openrouter),
+                ("anthropic", config.providers.anthropic),
+                ("openai", config.providers.openai),
+                ("groq", config.providers.groq),
+                ("gemini", config.providers.gemini),
+            ]
+        }
+
+        memory_search_config = {
+            "enabled": memory_search_cfg.enabled,
+            "embedding_provider": memory_search_cfg.embedding_provider,
+            "embedding_model": memory_search_cfg.embedding_model,
+            "embedding_device": memory_search_cfg.embedding_device,
+            "embedding_api_key": memory_search_cfg.embedding_api_key,
+            "embedding_api_base": memory_search_cfg.embedding_api_base,
+            "embedding_dimension": memory_search_cfg.embedding_dimension,
+            "embedding_batch_size": memory_search_cfg.embedding_batch_size,
+            "vector_weight": memory_search_cfg.vector_weight,
+            "keyword_weight": memory_search_cfg.keyword_weight,
+            "max_chunk_size": memory_search_cfg.max_chunk_size,
+            "min_chunk_size": memory_search_cfg.min_chunk_size,
+            "top_k": memory_search_cfg.top_k,
+            "min_score": memory_search_cfg.min_score,
+            "auto_index_on_start": memory_search_cfg.auto_index_on_start,
+            "providers": providers_dict,
+        }
 
         self._agent_loop = AgentLoop(
             bus=self.get_message_bus(),
@@ -181,6 +218,8 @@ class ComponentManager:
             max_session_tokens=config.agents.defaults.max_tokens_per_session,
             max_total_time=config.agents.defaults.agent_timeout,
             validator_config=validator_config,
+            memory_search_config=memory_search_config,
+            history_window=config.agents.defaults.history_window,
         )
 
         return self._agent_loop

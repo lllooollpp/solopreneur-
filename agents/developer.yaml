@@ -6,6 +6,7 @@ description: 负责功能实现、代码编写、Bug 修复和技术文档编写
 skills:
   - github
 max_iterations: 30
+# model: Qwen3-32B   # 可选：指定此 Agent 使用的模型，注释掉则使用全局默认模型
 output_format: |
   你必须使用 `write_file` 工具创建实际的源代码文件。完成后输出变更文件清单。
 
