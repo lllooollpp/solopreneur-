@@ -225,3 +225,93 @@ class SkillsLoader:
                 return metadata
         
         return None
+
+    def create_skill(self, name: str, description: str, content: str) -> Path:
+        """
+        在 workspace/skills 中创建新技能。
+
+        参数:
+            name: 技能名称（目录名），只允许字母数字和连字符下划线。
+            description: 技能描述。
+            content: SKILL.md 内容（不含 frontmatter，方法会自动生成）。
+
+        返回:
+            创建的 SKILL.md 路径。
+
+        异常:
+            ValueError: 名称不合法或已存在。
+        """
+        if not re.match(r'^[a-zA-Z0-9\-_]+$', name):
+            raise ValueError(f"技能名称不合法: {name}")
+
+        skill_dir = self.workspace_skills / name
+        if skill_dir.exists():
+            raise ValueError(f"技能已存在: {name}")
+
+        # 确保 workspace/skills 目录存在
+        self.workspace_skills.mkdir(parents=True, exist_ok=True)
+        skill_dir.mkdir()
+
+        # 构建带 frontmatter 的内容
+        full_content = f"---\ndescription: {description}\n---\n\n{content}"
+        skill_file = skill_dir / "SKILL.md"
+        skill_file.write_text(full_content, encoding="utf-8")
+        return skill_file
+
+    def update_skill(self, name: str, content: str) -> Path:
+        """
+        更新已有技能的 SKILL.md 内容。
+
+        仅允许更新 workspace 技能。如果技能是 builtin，将复制到 workspace 后再更新。
+
+        参数:
+            name: 技能名称。
+            content: 完整的 SKILL.md 内容（含 frontmatter）。
+
+        返回:
+            更新后的 SKILL.md 路径。
+
+        异常:
+            FileNotFoundError: 技能不存在。
+        """
+        workspace_skill = self.workspace_skills / name / "SKILL.md"
+        builtin_skill = self.builtin_skills / name / "SKILL.md" if self.builtin_skills else None
+
+        if workspace_skill.exists():
+            workspace_skill.write_text(content, encoding="utf-8")
+            return workspace_skill
+
+        if builtin_skill and builtin_skill.exists():
+            # 复制到 workspace 并修改
+            self.workspace_skills.mkdir(parents=True, exist_ok=True)
+            skill_dir = self.workspace_skills / name
+            skill_dir.mkdir(exist_ok=True)
+            workspace_skill.write_text(content, encoding="utf-8")
+            return workspace_skill
+
+        raise FileNotFoundError(f"技能不存在: {name}")
+
+    def delete_skill(self, name: str) -> bool:
+        """
+        删除 workspace 技能。不允许删除 builtin 技能。
+
+        参数:
+            name: 技能名称。
+
+        返回:
+            True 表示成功删除。
+
+        异常:
+            ValueError: 尝试删除 builtin 技能。
+            FileNotFoundError: workspace 中不存在该技能。
+        """
+        workspace_skill_dir = self.workspace_skills / name
+        if not workspace_skill_dir.exists():
+            # 检查是否是 builtin 技能
+            builtin_skill = self.builtin_skills / name / "SKILL.md" if self.builtin_skills else None
+            if builtin_skill and builtin_skill.exists():
+                raise ValueError(f"不允许删除内置技能: {name}")
+            raise FileNotFoundError(f"技能不存在: {name}")
+
+        shutil.rmtree(workspace_skill_dir)
+        return True

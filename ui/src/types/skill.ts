@@ -20,3 +20,14 @@ export interface SkillItem {
 export interface SkillConfig {
   skills: SkillItem[]
 }
+
+export interface SkillCreatePayload {
+  name: string
+  description: string
+  content: string
+}
+
+export interface SkillContentResponse {
+  name: string
+  content: string
+}

@@ -4,7 +4,10 @@
     
     <!-- 技能配置区域 -->
     <div class="config-section">
-      <h3>🔧 技能列表</h3>
+      <div class="section-header">
+        <h3>🔧 技能列表</h3>
+        <button class="btn-add" @click="openCreateSkill">＋ 新建技能</button>
+      </div>
       <div v-if="skillsStore.loading" class="loading">加载中...</div>
       <div v-else-if="skillsStore.skills.length === 0" class="empty">
         <p>暂无技能配置</p>
@@ -33,6 +36,15 @@
             </span>
             <span v-if="skill.overridden" class="overridden-tag">已重写</span>
           </div>
+          <div class="skill-actions">
+            <button class="btn-action btn-edit" @click="openEditSkill(skill.name)">编辑</button>
+            <button
+              class="btn-action btn-delete"
+              @click="confirmDeleteSkill(skill.name, skill.source)"
+              :disabled="skill.source === 'bundled' && !skill.overridden"
+              :title="skill.source === 'bundled' && !skill.overridden ? '内置技能不可删除' : '删除技能'"
+            >删除</button>
+          </div>
         </div>
       </div>
     </div>
@@ -51,17 +63,6 @@
     <!-- 记忆搜索引擎配置 -->
     <div class="config-section">
       <MemorySearchConfig />
-    </div>
-
-    <!-- Agent 个性配置区域 -->
-    <div class="config-section">
-      <h3>🎭 Agent 个性 (SOUL.md)</h3>
-      <div class="agent-config">
-        <button class="btn-primary" @click="openAgentEditor">
-          编辑 Agent 个性定义
-        </button>
-        <p class="hint">定义 Agent 的基本性格和价值观，将自动保存并热加载</p>
-      </div>
     </div>
 
     <!-- GitHub Copilot 认证区域 -->
@@ -95,13 +96,15 @@
         </div>
       </div>
     </div>
-    
-    <!-- Agent 编辑器模态框 -->
-    <AgentEditor
-      v-if="showAgentEditor"
-      :initial-content="agentContent"
-      @close="closeAgentEditor"
-      @save="saveAgentDefinition"
+
+    <!-- 技能编辑器模态框 -->
+    <SkillEditor
+      v-if="showSkillEditor"
+      :is-create="skillEditorMode === 'create'"
+      :skill-name="editingSkillName"
+      :initial-content="editingSkillContent"
+      @close="closeSkillEditor"
+      @save="handleSkillSave"
     />
   </div>
 </template>
@@ -111,10 +114,10 @@ import { onMounted, ref, reactive } from 'vue'
 import { useSkillsStore } from '@/stores/skills'
 import { SkillSource } from '@/types/skill'
 import { getAuthStatus } from '@/api/auth'
-import AgentEditor from '@/components/AgentEditorNew.vue'
 import AgentsManager from '@/components/AgentsManager.vue'
 import ProviderConfig from '@/components/ProviderConfig.vue'
 import MemorySearchConfig from '@/components/MemorySearchConfig.vue'
+import SkillEditor from '@/components/SkillEditor.vue'
 
 const skillsStore = useSkillsStore()
 
@@ -141,53 +144,68 @@ function toggleSkill(name: string) {
   skillsStore.toggleSkill(name)
 }
 
-// Agent 编辑器状态
-const showAgentEditor = ref(false)
-const agentContent = ref('')
+// ====== Skill CRUD ======
+const showSkillEditor = ref(false)
+const skillEditorMode = ref<'create' | 'edit'>('create')
+const editingSkillName = ref('')
+const editingSkillContent = ref('')
 
-async function openAgentEditor() {
-  try {
-    // 从 API 加载 Agent 定义
-    const response = await fetch('http://localhost:8000/api/agent/definition')
-    if (response.ok) {
-      agentContent.value = await response.text()
-    } else {
-      agentContent.value = '# Agent 定义\n\n在此编写你的 Agent 核心定义...'
-    }
-    showAgentEditor.value = true
-  } catch (error) {
-    console.error('加载 Agent 定义失败:', error)
-    agentContent.value = '# Agent 定义\n\n在此编写你的 Agent 核心定义...'
-    showAgentEditor.value = true
-  }
+function openCreateSkill() {
+  skillEditorMode.value = 'create'
+  editingSkillName.value = ''
+  editingSkillContent.value = ''
+  showSkillEditor.value = true
 }
 
-async function saveAgentDefinition(content: string) {
+async function openEditSkill(name: string) {
+  skillEditorMode.value = 'edit'
+  editingSkillName.value = name
   try {
-    const response = await fetch('http://localhost:8000/api/agent/definition', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ content })
-    })
-    
-    if (response.ok) {
-      agentContent.value = content
-      showAgentEditor.value = false
-      alert('✅ Agent 定义已保存')
+    editingSkillContent.value = await skillsStore.getSkillContent(name)
+  } catch {
+    editingSkillContent.value = ''
+  }
+  showSkillEditor.value = true
+}
+
+function closeSkillEditor() {
+  showSkillEditor.value = false
+}
+
+async function handleSkillSave(payload: { name: string; description: string; content: string }) {
+  try {
+    if (skillEditorMode.value === 'create') {
+      await skillsStore.createSkill({
+        name: payload.name,
+        description: payload.description,
+        content: payload.content,
+      })
+      alert('✅ 技能已创建')
     } else {
-      const errorData = await response.json().catch(() => ({ detail: '未知错误' }))
-      alert(`❌ 保存失败: ${errorData.detail || response.statusText}`)
+      await skillsStore.updateSkillContent(payload.name, payload.content)
+      alert('✅ 技能已更新')
     }
+    showSkillEditor.value = false
   } catch (error: any) {
-    console.error('保存 Agent 定义失败:', error)
-    alert(`❌ 保存失败: ${error.message || 'Network error'}`)
+    const msg = error?.response?.data?.detail || error.message || '操作失败'
+    alert(`❌ ${msg}`)
   }
 }
 
-function closeAgentEditor() {
-  showAgentEditor.value = false
+async function confirmDeleteSkill(name: string, source: string) {
+  if (source === 'bundled') {
+    alert('内置技能不可删除')
+    return
+  }
+  const confirmed = confirm(`确定要删除技能 "${name}" 吗？此操作不可恢复。`)
+  if (!confirmed) return
+  try {
+    await skillsStore.deleteSkill(name)
+    alert('✅ 技能已删除')
+  } catch (error: any) {
+    const msg = error?.response?.data?.detail || error.message || '删除失败'
+    alert(`❌ ${msg}`)
+  }
 }
 
 function formatExpiry(isoString: string): string {
@@ -271,6 +289,74 @@ h2 {
 
 .skill-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h3 {
+  margin-bottom: 0;
+}
+
+.btn-add {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add:hover {
+  background: #388e3c;
+}
+
+.skill-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.btn-action {
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s;
+}
+
+.btn-edit {
+  background: #e3f2fd;
+  color: #1976d2;
+  border-color: #bbdefb;
+}
+
+.btn-edit:hover {
+  background: #bbdefb;
+}
+
+.btn-delete {
+  background: #ffebee;
+  color: #c62828;
+  border-color: #ffcdd2;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #ffcdd2;
+}
+
+.btn-delete:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .skill-header {
@@ -367,11 +453,6 @@ input:checked + .slider:before {
 .overridden-tag {
   background: #fff3e0;
   color: #f57c00;
-}
-
-.agent-config {
-  text-align: center;
-  padding: 2rem;
 }
 
 .btn-primary {

@@ -1,5 +1,13 @@
 ﻿import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import {
+  getSkills as fetchSkillsApi,
+  getSkillContent as fetchSkillContentApi,
+  createSkill as createSkillApi,
+  updateSkillContent as updateSkillContentApi,
+  deleteSkill as deleteSkillApi,
+} from '@/api/skills'
+import type { SkillCreatePayload } from '@/types/skill'
 
 /**
  * 技能来源枚举
@@ -36,14 +44,8 @@ export const useSkillsStore = defineStore('skills', () => {
   async function loadSkills() {
     loading.value = true
     try {
-      const response = await fetch('http://localhost:8000/api/config/skills')
-      if (response.ok) {
-        const data = await response.json()
-        skills.value = data.skills || []
-      } else {
-        console.error('加载技能列表失败')
-        skills.value = []
-      }
+      const data = await fetchSkillsApi()
+      skills.value = data || []
     } catch (error) {
       console.error('加载技能列表失败:', error)
       skills.value = []
@@ -72,11 +74,47 @@ export const useSkillsStore = defineStore('skills', () => {
     }
   }
 
+  /**
+   * 获取技能内容
+   */
+  async function getSkillContent(skillName: string): Promise<string> {
+    const res = await fetchSkillContentApi(skillName)
+    return res.content
+  }
+
+  /**
+   * 创建新技能
+   */
+  async function createSkill(payload: SkillCreatePayload) {
+    await createSkillApi(payload)
+    await loadSkills()
+  }
+
+  /**
+   * 更新技能内容
+   */
+  async function updateSkillContent(skillName: string, content: string) {
+    await updateSkillContentApi(skillName, content)
+    await loadSkills()
+  }
+
+  /**
+   * 删除技能
+   */
+  async function deleteSkill(skillName: string) {
+    await deleteSkillApi(skillName)
+    await loadSkills()
+  }
+
   return {
     skills,
     loading,
     loadSkills,
     toggleSkill,
-    updateSkillVariables
+    updateSkillVariables,
+    getSkillContent,
+    createSkill,
+    updateSkillContent,
+    deleteSkill,
   }
 })

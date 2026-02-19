@@ -2,7 +2,7 @@
  * 技能管理 API
  */
 import apiClient from './client'
-import type { SkillItem, SkillConfig } from '@/types/skill'
+import type { SkillItem, SkillConfig, SkillCreatePayload, SkillContentResponse } from '@/types/skill'
 
 /**
  * 获取所有技能列表
@@ -37,16 +37,30 @@ export async function updateSkillVariables(
 }
 
 /**
- * 获取 Agent 定义内容 (SOUL.md)
+ * 获取技能内容
  */
-export async function getAgentDefinition(): Promise<string> {
-  const response = await apiClient.get<{ content: string }>('/api/config/agent')
-  return response.content
+export async function getSkillContent(skillName: string): Promise<SkillContentResponse> {
+  return await apiClient.get<SkillContentResponse>(`/api/config/skills/${skillName}/content`)
 }
 
 /**
- * 更新 Agent 定义
+ * 创建新技能
  */
-export async function updateAgentDefinition(content: string): Promise<void> {
-  await apiClient.put('/api/config/agent', { content })
+export async function createSkill(payload: SkillCreatePayload): Promise<void> {
+  await apiClient.post('/api/config/skills', payload)
 }
+
+/**
+ * 更新技能内容
+ */
+export async function updateSkillContent(skillName: string, content: string): Promise<void> {
+  await apiClient.put(`/api/config/skills/${skillName}/content`, { content })
+}
+
+/**
+ * 删除技能
+ */
+export async function deleteSkill(skillName: string): Promise<void> {
+  await apiClient.delete(`/api/config/skills/${skillName}`)
+}
+
