@@ -117,10 +117,38 @@ class ExecToolConfig(BaseModel):
     console_stream: bool = True   # 命令执行时将输出实时打印到服务端控制台
 
 
+class MCPServerConfig(BaseModel):
+    """单个 MCP 服务器配置。"""
+    name: str                          # 服务器标识符（工具名前缀 mcp_<name>_<tool>）
+    transport: str = "docker-stdio"    # docker-stdio | docker-sse | sse
+    enabled: bool = True
+
+    # docker-stdio 模式
+    image: str = ""                    # Docker 镜像名，如 ghcr.io/github/github-mcp-server
+    docker_args: list[str] = Field(default_factory=list)  # 额外 docker run 参数
+    env: dict[str, str] = Field(default_factory=dict)     # 环境变量（含 API Key 等）
+    cmd: list[str] = Field(default_factory=list)          # 覆盖容器 CMD（可选）
+
+    # docker-sse 模式
+    port: int = 0                      # 実机端口
+    container_port: int = 0            # 容器内端口（默认与 port 相同）
+    startup_delay: float = 2.0         # 容器启动后等待秒数
+
+    # sse 模式
+    url: str = ""                      # SSE endpoint URL，如 http://localhost:3000
+    headers: dict[str, str] = Field(default_factory=dict)  # HTTP 请求头（如 Authorization）
+
+
+class MCPConfig(BaseModel):
+    """MCP 服务器列表配置。"""
+    servers: list[MCPServerConfig] = Field(default_factory=list)
+
+
 class ToolsConfig(BaseModel):
     """Tools configuration."""
     web: WebToolsConfig = Field(default_factory=WebToolsConfig)
     exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
+    mcp: MCPConfig = Field(default_factory=MCPConfig)
 
 
 class MemorySearchConfig(BaseModel):

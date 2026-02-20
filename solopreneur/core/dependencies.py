@@ -35,6 +35,7 @@ class ComponentManager:
         self._llm_provider: Optional = None
         self._message_bus: Optional = None
         self._agent_manager: Optional = None
+        self._mcp_manager: Optional = None
 
         self._initialized = True
         logger.debug("ComponentManager initialized")
@@ -220,9 +221,25 @@ class ComponentManager:
             validator_config=validator_config,
             memory_search_config=memory_search_config,
             history_window=config.agents.defaults.history_window,
+            mcp_manager=await self._get_mcp_manager(config),
         )
 
         return self._agent_loop
+
+    async def _get_mcp_manager(self, config):
+        """获取或创建 MCPManager，并启动所有已配置的 MCP 服务器。"""
+        if self._mcp_manager is not None:
+            return self._mcp_manager
+        from solopreneur.agent.core.tools.mcp import MCPManager
+        servers_cfg = config.tools.mcp.servers
+        if not servers_cfg:
+            return None
+        # 将 Pydantic 模型列表转换为 dict 列表
+        servers_dicts = [s.model_dump() for s in servers_cfg]
+        manager = MCPManager(servers_dicts)
+        await manager.start_all()
+        self._mcp_manager = manager
+        return manager
 
     # ==================== Lifecycle ====================
 
@@ -236,6 +253,14 @@ class ComponentManager:
                 logger.info("Copilot provider closed")
             except Exception as e:
                 logger.error(f"Error closing copilot provider: {e}")
+
+        if self._mcp_manager:
+            try:
+                await self._mcp_manager.stop_all()
+                logger.info("MCP manager stopped")
+            except Exception as e:
+                logger.error(f"Error stopping MCP manager: {e}")
+            self._mcp_manager = None
 
         self._agent_loop = None
         self._llm_provider = None
@@ -251,6 +276,7 @@ class ComponentManager:
         self._llm_provider = None
         self._message_bus = None
         self._agent_manager = None
+        self._mcp_manager = None
         # 不重置 _copilot_provider，保持认证状态
         logger.debug("ComponentManager reset complete")
 

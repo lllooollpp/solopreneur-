@@ -123,6 +123,55 @@
       "restrict_to_workspace": false,
       "whitelist_mode": false,
       "max_output_size": 10000
+    },
+    "mcp": {
+      "_comment": "MCP（Model Context Protocol）服务器配置",
+      "_comment_transport": "支持三种传输模式：docker-stdio（默认）、docker-sse、sse",
+      "servers": [
+        {
+          "_comment": "示例1：GitHub MCP Server（docker-stdio 模式）",
+          "_comment_note": "docker pull ghcr.io/github/github-mcp-server:latest",
+          "name": "github",
+          "transport": "docker-stdio",
+          "image": "ghcr.io/github/github-mcp-server:latest",
+          "env": {
+            "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_your_token_here"
+          },
+          "enabled": false
+        },
+        {
+          "_comment": "示例2：文件系统 MCP Server（docker-stdio 模式，挂载目录）",
+          "name": "filesystem",
+          "transport": "docker-stdio",
+          "image": "mcp/filesystem",
+          "docker_args": ["-v", "/workspace:/workspace:rw"],
+          "enabled": false
+        },
+        {
+          "_comment": "示例3：自定义 MCP Server（docker-sse 模式，容器暴露 HTTP）",
+          "_comment_note": "容器启动 HTTP 服务，agent 通过 SSE 连接",
+          "name": "my-service",
+          "transport": "docker-sse",
+          "image": "my-org/my-mcp-server:latest",
+          "port": 3000,
+          "container_port": 3000,
+          "startup_delay": 3.0,
+          "env": {
+            "API_KEY": "your-key"
+          },
+          "enabled": false
+        },
+        {
+          "_comment": "示例4：连接已运行的 MCP 服务（sse 模式，无需 Docker）",
+          "name": "remote-service",
+          "transport": "sse",
+          "url": "http://localhost:3001",
+          "headers": {
+            "Authorization": "Bearer your-token"
+          },
+          "enabled": false
+        }
+      ]
     }
   },
 

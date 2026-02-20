@@ -33,6 +33,7 @@ from solopreneur.session.manager import SessionManager
 if TYPE_CHECKING:
     from solopreneur.agent.core.harness import LongRunningHarness
     from solopreneur.config.schema import ExecToolConfig
+    from solopreneur.agent.core.tools.mcp import MCPManager
 
 # 安全限制常量（默认值，可通过 config 覆盖）
 DEFAULT_MAX_TOTAL_TIME = 14400  # 4小时总时间限制（可通过 agent_timeout 配置覆盖）
@@ -71,6 +72,7 @@ class AgentLoop:
         validator_config: "ValidatorConfig | None" = None,
         memory_search_config: dict | None = None,
         history_window: int = 50,
+        mcp_manager: "MCPManager | None" = None,
     ):
         from solopreneur.config.schema import ExecToolConfig
         self.bus = bus
@@ -131,6 +133,8 @@ class AgentLoop:
         )
         
         self._running = False
+        # MCP Manager（可选）：管理 Docker/SSE MCP 服务器工具
+        self.mcp_manager = mcp_manager
         self._register_default_tools()
 
     def set_harness(self, harness: "LongRunningHarness | None") -> None:
@@ -307,6 +311,10 @@ class AgentLoop:
         control_tool = WorkflowControlTool(engine=self.workflow_engine)
         self.tools.register(control_tool)
 
+        # MCP tools（可选）：注册来自 Docker/SSE MCP 服务器的工具
+        if self.mcp_manager and not self.mcp_manager.is_empty():
+            self.mcp_manager.register_tools(self.tools)
+
     def _resolve_request_workspace(self, project_info: dict | None) -> Path:
         """根据项目上下文解析本次请求应使用的工作目录。"""
         if project_info and project_info.get("path"):
@@ -351,6 +359,13 @@ class AgentLoop:
             t = self.tools.get(name)
             if t is not None:
                 tools.register(t)
+
+        # MCP 工具（非路径敏感，直接透传）
+        for name in self.tools.tool_names:
+            if name.startswith("mcp_"):
+                t = self.tools.get(name)
+                if t is not None:
+                    tools.register(t)
 
         return tools
 
