@@ -216,12 +216,7 @@ class ExecTool(Tool):
             if not any(re.search(p, lower) for p in self.allow_patterns):
                 return "Error: Command blocked by safety guard (not in allowlist). Enable only safe commands."
 
-        # 3. 允许模式检查（如果指定了非空allow_patterns且不是白名单模式）
-        if self.allow_patterns and not self.whitelist_mode:
-            if not any(re.search(p, lower) for p in self.allow_patterns):
-                return "Error: Command blocked by safety guard (not in allowlist)"
-
-        # 4. 工作空间限制检查
+        # 3. 工作空间限制检查（原第4步，allow_patterns 非白名单模式不做强制过滤）
         if self.restrict_to_workspace:
             # 路径遍历检测
             if "..\\" in cmd or "../" in cmd or "/.." in cmd:

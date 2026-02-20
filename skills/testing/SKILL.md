@@ -99,12 +99,16 @@ make test                 # 使用 Makefile
 
 ### 安装配置
 ```bash
-# 安装 Playwright
-npm init playwright@latest
+# 安装 Playwright（在前端目录执行）
+npm install @playwright/test --save-dev
 
-# 或 Python 版本
-pip install playwright pytest-playwright
-playwright install
+# 安装 Chromium 浏览器（必须！否则测试无法运行）
+npx playwright install chromium
+# 或安装全部浏览器
+# npx playwright install
+
+# 验证安装是否成功
+npx playwright --version
 ```
 
 ### Playwright 配置文件
@@ -206,6 +210,18 @@ def test_send_message(page: Page):
     assert response is not None
     assert len(response) > 0
 ```
+
+### 运行 E2E 测试前的检查清单
+
+在运行 E2E 测试之前，确保：
+
+1. **`@playwright/test` 已在 `package.json`** - 否则先运行 `npm install @playwright/test --save-dev`
+2. **Chromium 浏览器已安装** - 运行 `npx playwright install chromium`
+3. **`e2e/` 目录存在且有测试文件** - 如不存在，需先创建测试文件
+4. **不要手动启动 dev server** - `playwright.config.ts` 的 `webServer` 配置会自动处理
+
+> ⚠️ 注意：`npm run dev`、`vite`、`yarn dev` 等命令被 exec 工具屏蔽（会永久挂起）。
+> Playwright 的 `webServer` 在内部管理 dev server，**直接运行 `npx playwright test` 即可**。
 
 ### 运行 E2E 测试
 ```bash

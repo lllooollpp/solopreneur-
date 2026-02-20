@@ -110,7 +110,7 @@ class WebToolsConfig(BaseModel):
 
 class ExecToolConfig(BaseModel):
     """Shell exec tool configuration."""
-    timeout: int = 60
+    timeout: int = 300  # 命令执行超时（秒），300s 可容纳 playwright 启动 dev server（120s）再跑测试
     restrict_to_workspace: bool = False  # If true, block commands accessing paths outside workspace
     whitelist_mode: bool = False  # 如果为True，只允许白名单中的命令
     max_output_size: int = 10000  # 最大输出大小（字符）

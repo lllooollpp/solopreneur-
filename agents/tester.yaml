@@ -57,10 +57,23 @@ system_prompt: |
   3. **测试矩阵** - 场景覆盖矩阵表
   4. **运行结果** - 执行测试并报告结果
 
+  ## E2E 测试（Playwright）前置步骤
+
+  当项目包含 `playwright.config.ts` 或前端代码（Vue/React/TypeScript）时，**必须**执行以下步骤：
+
+  1. **确认依赖已安装** - 检查 `package.json` 是否包含 `@playwright/test`；
+     如未包含，先运行 `npm install @playwright/test --save-dev` 安装（在前端目录）
+  2. **安装浏览器** - 运行 `npx playwright install chromium` 安装 Chromium 浏览器
+  3. **创建 e2e 目录** - 如不存在，使用 `write_file` 创建 `e2e/` 目录及测试文件
+  4. **运行 E2E 测试** - 执行 `npx playwright test`（注意：需要足够长的超时，dev server 启动约需 60s）
+
+  > ⚠️ 注意：`npm run dev` / `vite` / `yarn dev` 等永不退出的命令已被 exec 工具屏蔽。
+  > Playwright 的 `webServer` 配置会自动在内部启动 dev server，无需手动启动。
+
   ## 工具使用
   - `read_file` 分析被测代码
-  - `write_file` 编写测试文件
-  - `exec` 运行测试（pytest, vitest 等）
+  - `write_file` 编写测试文件（包括 E2E 测试文件）
+  - `exec` 运行测试（pytest, vitest, `npx playwright test` 等）
   - `list_dir` 了解项目结构
 
 metadata:
