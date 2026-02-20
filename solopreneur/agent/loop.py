@@ -23,7 +23,7 @@ from solopreneur.agent.subagent import SubagentManager
 from solopreneur.session.manager import SessionManager
 
 # 安全限制常量（默认值，可通过 config 覆盖）
-DEFAULT_MAX_TOTAL_TIME = 1800  # 30分钟总时间限制
+DEFAULT_MAX_TOTAL_TIME = 14400  # 4小时总时间限制（可通过 agent_timeout 配置覆盖）
 DEFAULT_MAX_TOKENS_PER_SESSION = 500000  # 每次会话最大Token数
 # 自动压缩最大次数
 MAX_COMPACTION_ROUNDS = 10
@@ -253,8 +253,8 @@ class AgentLoop:
             # 时间检查
             elapsed_time = time.time() - start_time
             if elapsed_time > self.max_total_time:
-                final_content = f"处理超时（超过{self.max_total_time // 60}分钟），请简化您的请求或开始新的对话。"
-                logger.warning(f"Agent循环超时: {elapsed_time:.1f}秒")
+                final_content = f"⚠️ 执行时间已超过 {self.max_total_time // 60} 分钟上限，任务已暂停。如需延长，请在配置中增大 agent_timeout 值后重试。"
+                logger.warning(f"Agent循环超时: {elapsed_time:.1f}秒 (上限: {self.max_total_time}秒)")
                 break
             
             # 调用 LLM 前：主动检测是否需要压缩 (78% 阈值)
@@ -544,8 +544,8 @@ class AgentLoop:
 
             elapsed = time.time() - start_time
             if elapsed > self.max_total_time:
-                timeout_msg = f"处理超时（超过{self.max_total_time // 60}分钟），请简化您的请求或开始新的对话。"
-                logger.warning(f"Agent循环超时: {elapsed:.1f}秒")
+                timeout_msg = f"⚠️ 执行时间已超过 {self.max_total_time // 60} 分钟上限，任务已暂停。如需延长，请在配置中增大 agent_timeout 值后重试。"
+                logger.warning(f"Agent循环超时: {elapsed:.1f}秒 (上限: {self.max_total_time}秒)")
                 if on_chunk:
                     await on_chunk(timeout_msg)
                 all_streamed.append(timeout_msg)

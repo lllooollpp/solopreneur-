@@ -60,7 +60,7 @@ class AgentDefaults(BaseModel):
     max_subagents: int = 5  # 最大并发子Agent数
     review_mode: Literal["auto", "manual"] = "auto"  # 审批模式：自动/人工
     session_cache_size: int = 100  # Session LRU缓存大小
-    agent_timeout: int = 1800  # Agent执行总超时（秒），30分钟
+    agent_timeout: int = 14400  # Agent执行总超时（秒），默认4小时（可按需调大）
     max_tokens_per_session: int = 500000  # 每个会话最大Token消耗（超限后自动压缩上下文继续执行）
     history_window: int = 50  # 每次 LLM 调用携带的最大历史消息条数（越大上下文越长）
     task_validator: TaskValidatorConfig = Field(default_factory=TaskValidatorConfig)  # 任务完成验证器
