@@ -12,6 +12,52 @@ from solopreneur.agent.tools.base import Tool
 class ExecTool(Tool):
     """Tool to execute shell commands."""
     
+    # 长期运行的服务型命令模式：这类命令不会退出，exec 工具无法等待其完成
+    _SERVER_PATTERNS: list[tuple[str, str]] = [
+        # npm/yarn/pnpm dev servers
+        (r"\bnpm\s+(run\s+)?(start|dev|serve|preview)\b",
+         "Use 'npm run build' to check compilation, or run the server in the background manually."),
+        (r"\byarn\s+(run\s+)?(start|dev|serve|preview)\b",
+         "Use 'yarn build' to check compilation, or run the server in the background manually."),
+        (r"\bpnpm\s+(run\s+)?(start|dev|serve|preview)\b",
+         "Use 'pnpm build' to check compilation, or run the server in the background manually."),
+        # Common framework dev servers
+        (r"\breact-scripts\s+start\b",
+         "react-scripts start runs an indefinite dev server. Use 'react-scripts build' instead."),
+        (r"\bnext\s+dev\b",
+         "next dev runs an indefinite dev server. Use 'next build' to check compilation."),
+        (r"\bvite(\s+dev)?\s*$",
+         "vite dev runs an indefinite dev server. Use 'vite build' instead."),
+        (r"\bvite\s+preview\b",
+         "vite preview runs an indefinite HTTP server. Use 'vite build' to check compilation."),
+        (r"\bnuxt\s+dev\b",
+         "nuxt dev runs an indefinite dev server. Use 'nuxt build' instead."),
+        (r"\bng\s+serve\b",
+         "ng serve runs an indefinite dev server. Use 'ng build' to check compilation."),
+        (r"\bvue-cli-service\s+serve\b",
+         "vue-cli-service serve runs an indefinite dev server. Use 'vue-cli-service build' instead."),
+        # Backend servers
+        (r"\buvicorn\b(?!.*--workers\s*1.*--limit-max-requests)",
+         "uvicorn starts an indefinite HTTP server that exec cannot await. Run it in the background separately."),
+        (r"\bgunicorn\b",
+         "gunicorn starts an indefinite HTTP server. Run it in the background separately."),
+        (r"\bflask\s+run\b",
+         "flask run starts an indefinite dev server. Run it in the background separately."),
+        (r"\bdjango.*runserver\b",
+         "runserver starts an indefinite dev server. Run it in the background separately."),
+        (r"\bfastapi\s+dev\b",
+         "fastapi dev starts an indefinite dev server. Run it in the background separately."),
+        (r"\bpython\s+-m\s+http\.server\b",
+         "http.server starts an indefinite HTTP server. Run it in the background separately."),
+        # Watchers / long-running processes
+        (r"\bnodemon\b",
+         "nodemon is a file watcher that runs indefinitely. Run it in the background separately."),
+        (r"\bnpm\s+run\s+watch\b",
+         "'npm run watch' is a long-running process. Run it in the background separately."),
+        (r"\btsc\s+(-w|--watch)\b",
+         "tsc --watch runs indefinitely. Use 'tsc' (without --watch) for a one-shot compile check."),
+    ]
+
     def __init__(
         self,
         timeout: int = 60,
@@ -150,6 +196,15 @@ class ExecTool(Tool):
         """Best-effort safety guard for potentially destructive commands."""
         cmd = command.strip()
         lower = cmd.lower()
+
+        # 0. 检查长期运行的服务型命令（会导致 exec 永久阻塞）
+        for pattern, hint in self._SERVER_PATTERNS:
+            if re.search(pattern, lower):
+                return (
+                    f"Error: Command blocked — '{cmd}' starts a long-running server/watcher "
+                    f"that never exits, which would cause exec to hang until timeout.\n"
+                    f"Hint: {hint}"
+                )
 
         # 1. 检查危险命令模式（黑名单）
         for pattern in self.deny_patterns:
